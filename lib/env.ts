@@ -3,28 +3,22 @@
  * Si falta alguna, el servidor falla rápido con un mensaje claro.
  */
 
-const serverEnvVars = [
+// Requeridas para el core de la app (falla al startup si faltan)
+const requiredServerEnvVars = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'OPENAI_API_KEY',
   'ANTHROPIC_API_KEY',
-  'GOOGLE_CLIENT_ID',
-  'GOOGLE_CLIENT_SECRET',
-  'GOOGLE_REDIRECT_URI',
-  'MICROSOFT_CLIENT_ID',
-  'MICROSOFT_CLIENT_SECRET',
-  'MICROSOFT_REDIRECT_URI',
 ] as const
 
-const publicEnvVars = [
+const requiredPublicEnvVars = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'NEXT_PUBLIC_APP_URL',
 ] as const
 
-type ServerEnvKey = (typeof serverEnvVars)[number]
-type PublicEnvKey = (typeof publicEnvVars)[number]
+type RequiredServerKey = (typeof requiredServerEnvVars)[number]
+type RequiredPublicKey = (typeof requiredPublicEnvVars)[number]
 
-function getEnv(key: ServerEnvKey | PublicEnvKey): string {
+function getEnv(key: RequiredServerKey | RequiredPublicKey): string {
   const value = process.env[key]
   if (!value) {
     throw new Error(
@@ -41,15 +35,27 @@ export const env = {
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
 
-  // Solo servidor
+  // Core — requeridas
   get supabaseServiceRoleKey() { return getEnv('SUPABASE_SERVICE_ROLE_KEY') },
   get openaiApiKey() { return getEnv('OPENAI_API_KEY') },
   get anthropicApiKey() { return getEnv('ANTHROPIC_API_KEY') },
-  get googleClientId() { return getEnv('GOOGLE_CLIENT_ID') },
-  get googleClientSecret() { return getEnv('GOOGLE_CLIENT_SECRET') },
-  get googleRedirectUri() { return getEnv('GOOGLE_REDIRECT_URI') },
-  get microsoftClientId() { return getEnv('MICROSOFT_CLIENT_ID') },
-  get microsoftClientSecret() { return getEnv('MICROSOFT_CLIENT_SECRET') },
-  get microsoftRedirectUri() { return getEnv('MICROSOFT_REDIRECT_URI') },
+
+  // Calendario Google — opcionales (feature desactivada si no están)
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
+
+  // Calendario Microsoft — opcionales (feature desactivada si no están)
+  microsoftClientId: process.env.MICROSOFT_CLIENT_ID,
+  microsoftClientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+  microsoftRedirectUri: process.env.MICROSOFT_REDIRECT_URI,
   microsoftTenantId: process.env.MICROSOFT_TENANT_ID ?? 'common',
+
+  // Helpers para chequear si los calendarios están configurados
+  get isGoogleCalendarEnabled() {
+    return !!(this.googleClientId && this.googleClientSecret && this.googleRedirectUri)
+  },
+  get isMicrosoftCalendarEnabled() {
+    return !!(this.microsoftClientId && this.microsoftClientSecret && this.microsoftRedirectUri)
+  },
 }

@@ -5,41 +5,43 @@ on:
     branches: [main]
     paths:
       - 'infra/terraform/**'
+      - 'infra/config/**'
   pull_request:
     branches: [main]
     paths:
       - 'infra/terraform/**'
-  workflow_dispatch: # permite correr manualmente desde GitHub UI
+      - 'infra/config/**'
+  workflow_dispatch:
 
 defaults:
   run:
     working-directory: infra/terraform
 
-env:
-  # Variables de Terraform — inyectadas desde GitHub secrets/vars
-  # Equivalente a tener terraform.tfvars en CI sin commitear el archivo
-  TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
-  TF_VAR_do_region: ${{ vars.DO_REGION }}
-  TF_VAR_app_name: ${{ vars.APP_NAME }}
-  TF_VAR_environment: ${{ vars.ENVIRONMENT }}
-  TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-  TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
-  TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
-  TF_VAR_droplet_size: ${{ vars.DROPLET_SIZE }}
-  # Credenciales del backend S3-compatible (DO Spaces)
-  # Son distintas al DO_TOKEN — se generan en DO → API → Spaces Keys
-  AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
-
 jobs:
-  # ── Plan — corre en PRs y en push a main ─────────────────────
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
+    env:
+      # Sensibles — desde GitHub Secrets
+      TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+      TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Load environment config and map to TF_VAR_*
+        working-directory: ${{ github.workspace }}
+        run: |
+          source infra/config/dev.env
+          echo "TF_VAR_do_region=$DO_REGION"       >> $GITHUB_ENV
+          echo "TF_VAR_app_name=$APP_NAME"         >> $GITHUB_ENV
+          echo "TF_VAR_environment=$ENVIRONMENT"   >> $GITHUB_ENV
+          echo "TF_VAR_domain_name=$DOMAIN_NAME"   >> $GITHUB_ENV
+          echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
+          echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -54,19 +56,33 @@ jobs:
 
       - name: Terraform Plan
         run: terraform plan -no-color
-        continue-on-error: false
 
-  # ── Apply — solo en push a main ───────────────────────────────
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: plan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
+    env:
+      TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+      TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Load environment config and map to TF_VAR_*
+        working-directory: ${{ github.workspace }}
+        run: |
+          source infra/config/dev.env
+          echo "TF_VAR_do_region=$DO_REGION"       >> $GITHUB_ENV
+          echo "TF_VAR_app_name=$APP_NAME"         >> $GITHUB_ENV
+          echo "TF_VAR_environment=$ENVIRONMENT"   >> $GITHUB_ENV
+          echo "TF_VAR_domain_name=$DOMAIN_NAME"   >> $GITHUB_ENV
+          echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
+          echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -79,5 +95,19 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color
 
-      - name: Show outputs
-        run: terraform output -no-color
+      # Después del apply, actualiza automáticamente los GitHub Variables
+      # para que deploy.yml tenga la IP y el registry correctos
+      - name: Update GitHub Variables from outputs
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DROPLET_IP=$(cd infra/terraform && terraform output -raw droplet_ip)
+          REGISTRY_ENDPOINT=$(cd infra/terraform && terraform output -raw registry_endpoint)
+          REGISTRY_NAME="${REGISTRY_ENDPOINT#registry.digitalocean.com/}"
+
+          gh variable set DO_DROPLET_IP    --body "$DROPLET_IP"
+          gh variable set DO_REGISTRY_NAME --body "$REGISTRY_NAME"
+
+          echo "✓ DO_DROPLET_IP=$DROPLET_IP"
+          echo "✓ DO_REGISTRY_NAME=$REGISTRY_NAME"
