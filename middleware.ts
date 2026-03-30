@@ -49,8 +49,7 @@ export async function middleware(request: NextRequest) {
   // No procesar assets estáticos
   if (isStaticAsset) return response
 
-  // Rutas de API sin autenticación: las rutas de API de negocio
-  // necesitan autenticación. Las devuelven 401 ellas mismas.
+  // Rutas de API: requieren autenticación.
   if (isApiRoute && !isPublicPath) {
     if (!user) {
       return Response.json(
@@ -58,9 +57,22 @@ export async function middleware(request: NextRequest) {
         { status: 401 }
       )
     }
-    // Inyectar userId en headers para que los handlers lo lean de forma segura
-    response.headers.set('x-user-id', user.id)
-    return response
+
+    // Inyectar userId en los headers del REQUEST (no del response).
+    // NextResponse.next({ request: { headers } }) es el único mecanismo
+    // en Next.js App Router para pasar datos del middleware al route handler.
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-user-id', user.id)
+    const apiResponse = NextResponse.next({ request: { headers: requestHeaders } })
+
+    // Propagar Set-Cookie del refresh de sesión de Supabase al cliente
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() === 'set-cookie') {
+        apiResponse.headers.append(key, value)
+      }
+    })
+
+    return apiResponse
   }
 
   // Redirigir al login si no está autenticado
