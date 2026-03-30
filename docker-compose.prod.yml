@@ -1,0 +1,45 @@
+# ─── Producción — DigitalOcean Droplet ────────────────────────
+# Este archivo se copia al Droplet via Terraform cloud-init.
+# Uso manual:
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# App:  https://<domain_name>
+# Logs: docker compose -f docker-compose.prod.yml logs -f
+
+name: ebuddy-prod
+
+services:
+  app:
+    image: registry.digitalocean.com/ebuddy-prod/ebuddy:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"  # solo accesible desde Caddy (localhost)
+    env_file: /opt/ebuddy/.env
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - /opt/ebuddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # certificados Let's Encrypt
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

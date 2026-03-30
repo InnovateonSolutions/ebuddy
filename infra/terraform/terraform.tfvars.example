@@ -1,0 +1,30 @@
+# Copiar a terraform.tfvars y completar valores reales
+# NUNCA commitear terraform.tfvars — está en .gitignore
+
+# Token de API de DigitalOcean
+# Generar en: https://cloud.digitalocean.com/account/api/tokens
+do_token = "dop_v1_..."
+
+# Región — otras opciones: sfo3, ams3, fra1, sgp1, lon1
+do_region = "nyc3"
+
+app_name    = "ebuddy"
+environment = "prod"
+
+# Dominio donde se desplegará la app
+# Pre-requisito: apuntar nameservers a DO (ns1/ns2/ns3.digitalocean.com)
+domain_name = "app.ebuddy.io"
+
+# Email para recibir alertas de CPU/memoria/disco
+alert_email = "martin@ebuddy.io"
+
+# Llave SSH pública para acceder al Droplet
+# Generar con: ssh-keygen -t ed25519 -C "ebuddy-deploy"
+# Luego: cat ~/.ssh/id_ed25519.pub
+ssh_pub_key = "ssh-ed25519 AAAA..."
+
+# Tamaño del Droplet
+# s-1vcpu-2gb = $12/mes (recomendado MVP)
+# s-2vcpu-2gb = $18/mes (si el MVP crece)
+# Ver todos: doctl compute size list
+droplet_size = "s-1vcpu-2gb"
