@@ -35,7 +35,7 @@ jobs:
       - name: Load environment config and map to TF_VAR_*
         working-directory: ${{ github.workspace }}
         run: |
-          source infra/config/dev.env
+          source infra/config/main.env
           echo "TF_VAR_do_region=$DO_REGION"       >> $GITHUB_ENV
           echo "TF_VAR_app_name=$APP_NAME"         >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT"   >> $GITHUB_ENV
@@ -76,7 +76,7 @@ jobs:
       - name: Load environment config and map to TF_VAR_*
         working-directory: ${{ github.workspace }}
         run: |
-          source infra/config/dev.env
+          source infra/config/main.env
           echo "TF_VAR_do_region=$DO_REGION"       >> $GITHUB_ENV
           echo "TF_VAR_app_name=$APP_NAME"         >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT"   >> $GITHUB_ENV
