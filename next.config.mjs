@@ -17,9 +17,7 @@ const nextConfig = {
       },
     ]
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@azure/msal-node', 'googleapis'],
-  },
+  serverExternalPackages: ['@azure/msal-node', 'googleapis'],
 }
 
 export default nextConfig

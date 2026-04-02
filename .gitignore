@@ -25,12 +25,10 @@ yarn-error.log*
 # local env files
 .env
 .env.local
+.bootstrap.env
 .env.development.local
 .env.test.local
 .env.production.local
-
-# vercel
-.vercel
 
 # env files de ambientes con secrets (main.env es público, los demás no)
 infra/config/dev.env

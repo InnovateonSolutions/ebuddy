@@ -1,17 +1,16 @@
 name: Terraform — Infrastructure
 
+# Ejecución manual únicamente — la infra no cambia en cada deploy
+# Para correr: GitHub → Actions → Terraform — Infrastructure → Run workflow
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'infra/terraform/**'
-      - 'infra/config/**'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'infra/terraform/**'
-      - 'infra/config/**'
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Acción a ejecutar'
+        required: true
+        default: 'plan'
+        type: choice
+        options: [plan, apply]
 
 defaults:
   run:
@@ -22,17 +21,27 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest
     env:
-      # Sensibles — desde GitHub Secrets
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
       TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
       AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Load environment config and map to TF_VAR_*
+      # Crea el DO Space para estado de Terraform si no existe.
+      # Debe existir ANTES de terraform init (es el backend remoto).
+      # AWS CLI viene preinstalado en ubuntu-latest con endpoint de DO Spaces.
+      - name: Create Terraform state bucket (idempotent)
+        working-directory: ${{ github.workspace }}
+        run: |
+          aws s3api create-bucket \
+            --bucket ebuddy-tfstate \
+            --region us-east-1 \
+            --endpoint-url https://nyc3.digitaloceanspaces.com 2>&1 \
+            | grep -v "BucketAlreadyOwnedByYou" || true
+
+      - name: Load config → TF_VAR_*
         working-directory: ${{ github.workspace }}
         run: |
           source infra/config/main.env
@@ -43,8 +52,7 @@ jobs:
           echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '~> 1.7'
 
@@ -61,8 +69,7 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: plan
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
+    if: github.event.inputs.action == 'apply'
     env:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
       TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
@@ -70,10 +77,18 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Load environment config and map to TF_VAR_*
+      - name: Create Terraform state bucket (idempotent)
+        working-directory: ${{ github.workspace }}
+        run: |
+          aws s3api create-bucket \
+            --bucket ebuddy-tfstate \
+            --region us-east-1 \
+            --endpoint-url https://nyc3.digitaloceanspaces.com 2>&1 \
+            | grep -v "BucketAlreadyOwnedByYou" || true
+
+      - name: Load config → TF_VAR_*
         working-directory: ${{ github.workspace }}
         run: |
           source infra/config/main.env
@@ -84,8 +99,7 @@ jobs:
           echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '~> 1.7'
 
@@ -95,9 +109,8 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color
 
-      # Después del apply, actualiza automáticamente los GitHub Variables
-      # para que deploy.yml tenga la IP y el registry correctos
-      - name: Update GitHub Variables from outputs
+      # Actualiza GitHub Variables con outputs — deploy.yml las usa
+      - name: Set GitHub Variables from Terraform outputs
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -111,3 +124,6 @@ jobs:
 
           echo "✓ DO_DROPLET_IP=$DROPLET_IP"
           echo "✓ DO_REGISTRY_NAME=$REGISTRY_NAME"
+
+      # NEXT_PUBLIC_SUPABASE_ANON_KEY ya fue seteado como GitHub Variable
+      # por setup-secrets.sh — no es necesario fetchearlo aquí.

@@ -1,5 +1,5 @@
 # ebuddy — Plataforma de Gestión Personal + Profesional con IA
-> MVP v1.0 · Martín Cuevas Tavizón · Marzo 2026
+> MVP v1.0 · Martín Cuevas Tavizón · Abril 2026
 
 ## Qué es este sistema
 
@@ -14,13 +14,15 @@ El usuario es un solo founder (Martín). No hay clientes reales todavía. El MVP
 | Capa | Tecnología |
 |---|---|
 | Frontend | Next.js 14 (App Router) · React · Tailwind CSS · shadcn/ui |
-| Backend | Next.js API Routes compiladas como Vercel Serverless Functions |
+| Backend | Next.js API Routes · Node.js server (`output: standalone`) |
 | Base de datos | Supabase (PostgreSQL) con Row Level Security |
-| Autenticación | Supabase Auth · JWT · Next.js Middleware (edge runtime) |
+| Autenticación | Supabase Auth · JWT · Next.js Middleware |
 | Transcripción de voz | OpenAI Whisper API (REST/HTTPS) |
 | Motor de IA | Claude API — Anthropic (claude-sonnet-4-6 o superior) |
 | Calendarios | Google Calendar API v3 (OAuth2) · Microsoft Graph API (MSAL) |
-| Deploy | Vercel (build automático en push a main, preview en PRs) |
+| Contenedores | Docker multi-stage · DigitalOcean Container Registry (DOCR) |
+| Deploy | DigitalOcean Droplet (s-1vcpu-2gb · nyc3) · GitHub Actions · Terraform |
+| Infra como código | Terraform (estado remoto en DO Spaces) |
 | Lenguaje | TypeScript estricto en todo el proyecto |
 
 ---
@@ -34,7 +36,7 @@ El usuario es un solo founder (Martín). No hay clientes reales todavía. El MVP
 - Desktop-first en MVP. Mobile-responsive es bonus, no requisito bloqueante.
 - Usa Supabase Realtime para actualizar tickets en pantalla sin polling ni recarga.
 
-### 2. API Routes — `Next.js API Routes · Vercel Serverless Functions`
+### 2. API Routes — `Next.js API Routes · Node.js (Docker)`
 - Orquestador del backend. Coordina el flujo entre todos los contenedores internos.
 - **Endpoints principales:**
   - `POST /api/tickets/capture` — recibe audio (multipart) o texto
@@ -45,14 +47,14 @@ El usuario es un solo founder (Martín). No hay clientes reales todavía. El MVP
 - **Seguridad:** todas las rutas validadas por Auth Middleware antes de procesarse. Nunca expone credenciales de APIs externas al cliente.
 - Lee/escribe en Database via Supabase JS SDK.
 
-### 3. IA Processing Worker — `Vercel Function · TypeScript`
+### 3. IA Processing Worker — `Next.js Route Handler · TypeScript`
 - Toda la lógica de inteligencia artificial. Aislada para cambiar de proveedor sin afectar el resto.
 - **Flujo:** audio → Whisper API → texto · texto + contexto → Claude API → JSON ticket estructurado.
-- Timeout configurado a 30 segundos en Vercel.
+- Timeout configurado a 30 segundos (AbortController en la route handler).
 - Las llamadas a Whisper y Claude están encapsuladas en interfaces: `ITranscriptionService`, `IAIService`.
 - **El audio NO se almacena.** Solo se persiste el texto transcrito.
 
-### 4. Calendar Service — `Vercel Function · Google API · MSAL`
+### 4. Calendar Service — `Next.js Route Handlers · Google API · MSAL`
 - Gestión completa de integración con calendarios externos. Aislado de la lógica de negocio.
 - Lee eventos del día actual y siguientes 7 días: título, hora inicio/fin, descripción, ubicación.
 - Los tokens OAuth (access + refresh) se almacenan cifrados en Supabase.
@@ -65,9 +67,36 @@ El usuario es un solo founder (Martín). No hay clientes reales todavía. El MVP
 - Login por: email + password, OAuth Google (recomendado), magic link.
 
 ### 6. Database — `Supabase (PostgreSQL) · Row Level Security`
-- Única fuente de verdad. Acceso via Supabase JS SDK desde las funciones serverless.
+- Única fuente de verdad. Acceso via Supabase JS SDK desde el servidor Node.js.
 - RLS activo en todas las tablas. Segunda línea de defensa: aunque haya un bug en el middleware, la DB nunca devuelve datos de otro usuario.
 - Supabase Realtime habilitado en tabla `tickets` para actualizaciones en vivo.
+
+---
+
+## Infraestructura & Deploy
+
+### Stack de Infra
+- **DigitalOcean Droplet:** `s-1vcpu-2gb` en `nyc3`. El servidor Node.js corre como contenedor Docker.
+- **DOCR:** DigitalOcean Container Registry almacena las imágenes Docker.
+- **Terraform:** provisiona y gestiona toda la infra (Droplet, DOCR, VPC, firewall, monitoring). Estado remoto en DO Spaces.
+- **GitHub Actions:** dos workflows principales:
+  - `deploy.yml` — push a `main` → build Docker image → push a DOCR → SSH al Droplet → ejecuta script de deploy.
+  - `terraform.yml` — cambios en `infra/terraform/` o `infra/config/` → `terraform plan` + `terraform apply`.
+
+### Configuración
+- **`infra/config/main.env`** — configuración no secreta versionada en git: `APP_NAME`, `DO_REGION`, `DOMAIN_NAME`, `DROPLET_SIZE`, `NEXT_PUBLIC_*`, etc.
+- **GitHub Secrets** — solo los secretos reales: `DO_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, claves OAuth. Nunca en código.
+- **`.env.local`** en `.gitignore`. Para desarrollo local, copiar `.env.example`.
+- El CI/CD escribe el `.env` en el Droplet combinando `main.env` + secretos de GitHub Secrets en cada deploy.
+
+### Docker
+- `Dockerfile` multi-stage: build (instala deps + compila) → runner (solo artefactos standalone).
+- `next.config.mjs` con `output: 'standalone'` — imagen mínima sin `node_modules` completo.
+- `docker-compose.yml` para desarrollo local. `docker-compose.prod.yml` para producción en Droplet.
+
+### URLs
+- Producción: `https://app.ebuddy.io`
+- Supabase proyecto: `https://nncikrxfpchwaqeuvrll.supabase.co`
 
 ---
 
@@ -167,26 +196,50 @@ El system prompt de Claude debe incluir:
 - Estructura de carpetas App Router:
   ```
   app/
-    (auth)/          -- páginas de autenticación
-    (dashboard)/     -- vistas principales (today, future, settings)
+    (auth)/login/         -- página de autenticación
+    (dashboard)/          -- vistas protegidas
+      today/              -- plan del día
+      future/             -- horizonte futuro
+      settings/           -- timezone, horario de trabajo
     api/
-      tickets/       -- endpoints de tickets
-      calendar/      -- endpoints de calendario
-  components/        -- componentes React reutilizables
+      tickets/            -- capture, today, future, [id]
+      calendar/events/    -- agregación de calendarios
+      auth/calendar/      -- OAuth callbacks Google + Microsoft
+      health/             -- health check
+    auth/callback/        -- callback de Supabase Auth
+  components/             -- componentes React reutilizables
+    ui/                   -- primitivos shadcn/ui
+  hooks/                  -- custom hooks React
+    use-audio-recorder.ts
+    use-realtime-tickets.ts
   lib/
-    supabase/        -- cliente Supabase y helpers
-    ai/              -- ITranscriptionService, IAIService y sus implementaciones
-    calendar/        -- lógica OAuth y lectura de calendarios
-  types/             -- tipos TypeScript compartidos
+    supabase/             -- client.ts (browser), server.ts (server + admin)
+    ai/                   -- types.ts, claude.ts, whisper.ts
+    calendar/             -- google.ts, microsoft.ts
+    env.ts                -- validación de env vars en startup
+    utils.ts              -- helpers: apiSuccess, apiError, logEvent, etc.
+  types/
+    database.ts           -- tipos TypeScript del esquema DB
+    api.ts                -- ApiResponse<T>, ApiErrorCode, TodayResponse, etc.
+  supabase/migrations/    -- migraciones versionadas en git
+  infra/
+    config/main.env       -- config no secreta (versionada)
+    terraform/            -- Droplet, DOCR, VPC, firewall, monitoring
+  .github/workflows/
+    deploy.yml            -- CI/CD: build Docker → DOCR → SSH deploy
+    terraform.yml         -- Terraform plan + apply
+  next.config.mjs         -- output: standalone, security headers
   ```
 - Interfaces primero: `ITranscriptionService` e `IAIService` antes de implementar los clientes concretos.
 - Variables de entorno con prefijo claro:
-  - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-  - `OPENAI_API_KEY`
-  - `ANTHROPIC_API_KEY`
-  - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-  - `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`
+  - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — públicas, van en `main.env`
+  - `NEXT_PUBLIC_APP_URL` — URL de producción (`https://app.ebuddy.io`), va en `main.env`
+  - `SUPABASE_SERVICE_ROLE_KEY` — GitHub Secret
+  - `OPENAI_API_KEY` — GitHub Secret
+  - `ANTHROPIC_API_KEY` — GitHub Secret
+  - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — GitHub Secrets (opcional MVP)
+  - `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` — GitHub Secrets (opcional MVP)
+  - `DO_TOKEN` — GitHub Secret (solo para Terraform/CI)
 
 ---
 
@@ -206,23 +259,25 @@ El system prompt de Claude debe incluir:
 > Este es un entorno de **desarrollo/validación** de uso propio. Priorizar velocidad de iteración y costo < $35/mes sobre completitud de features.
 
 ### Must Have (MVP — construir ahora)
-- Captura de input por **voz** (Whisper API)
-- Captura de input por **texto** directo
-- **Clasificación automática**: Negocio / Personal (Claude API)
-- **Ticket estructurado**: título, overview, qué hacer, siguientes pasos, prioridad
-- **Vista del día**: tickets del día por contexto + eventos de calendario
-- **Vista de horizonte futuro**: tickets sin fecha o con fecha futura, paginados
-- **Lectura de Google Calendar** con OAuth2
-- **Autenticación**: email + OAuth Google (Supabase Auth)
-- **Actualización en tiempo real** de tickets en UI (Supabase Realtime)
-- Web app **desktop-first**, responsive es bonus
+> Todos implementados ✅
+
+- Captura de input por **voz** (Whisper API) ✅
+- Captura de input por **texto** directo ✅
+- **Clasificación automática**: Negocio / Personal (Claude API) ✅
+- **Ticket estructurado**: título, overview, qué hacer, siguientes pasos, prioridad ✅
+- **Vista del día**: tickets del día por contexto + eventos de calendario ✅
+- **Vista de horizonte futuro**: tickets sin fecha o con fecha futura, paginados ✅
+- **Lectura de Google Calendar** con OAuth2 ✅
+- **Autenticación**: email + OAuth Google (Supabase Auth) ✅
+- **Actualización en tiempo real** de tickets en UI (Supabase Realtime) ✅
+- Web app **desktop-first**, responsive es bonus ✅
 
 ### Should Have (antes de abrir a más usuarios)
-- Lectura de Microsoft Outlook Calendar
-- Cambio de estado de tickets (PENDING → IN_PROGRESS → DONE)
-- Rate limiting por userId en API Routes
-- Configuración de timezone y horario de trabajo en Settings
-- Tests de integración para políticas RLS
+- Lectura de Microsoft Outlook Calendar ✅ (ya implementado)
+- Cambio de estado de tickets (PENDING → IN_PROGRESS → DONE) ✅ (ya implementado)
+- Configuración de timezone y horario de trabajo en Settings ✅ (ya implementado)
+- Rate limiting por userId en API Routes ⬜ (pendiente)
+- Tests de integración para políticas RLS ⬜ (pendiente — Vitest instalado, no configurado)
 
 ### Could Have (Fase 2 — post validación)
 - Escritura de eventos en Google Calendar / Outlook
@@ -245,7 +300,7 @@ El system prompt de Claude debe incluir:
 | Atributo | Meta |
 |---|---|
 | Rendimiento | P95 < 5s end-to-end (Whisper + Claude + DB) |
-| Disponibilidad | 99% uptime en horario 6am-10pm (Vercel SLA) |
+| Disponibilidad | 99% uptime en horario 6am-10pm (DigitalOcean Droplet) |
 | Seguridad | JWT en todas las peticiones + RLS en DB + HTTPS everywhere |
 | Privacidad | Audio procesado y descartado. Solo texto transcrito en DB |
 | Usabilidad | Primer ticket en < 2 minutos desde el registro |
@@ -262,7 +317,8 @@ El system prompt de Claude debe incluir:
 - **Rotación de tokens OAuth:** los refresh tokens de Google/Outlook se almacenan cifrados en DB. El Calendar Service renueva el access token automáticamente sin intervención del usuario.
 
 ### Gestión de Secretos
-- Todas las claves de API viven en variables de entorno de Vercel. Nunca en el código fuente ni en commits.
+- Las claves de API viven en **GitHub Secrets** (injected al Droplet vía CI/CD). Nunca en el código fuente ni en commits.
+- La config no secreta vive en `infra/config/main.env` (versionada en git).
 - `.env.local` en `.gitignore` siempre. El repositorio nunca contiene credenciales reales.
 - Variables del cliente solo con prefijo `NEXT_PUBLIC_` y solo si son seguras de exponer (Supabase URL y anon key son diseñadas para ser públicas).
 - Patrón para acceder a env vars en server-side:
@@ -294,7 +350,7 @@ const CaptureTextSchema = z.object({
 - Validar también la respuesta JSON de Claude API con `zod` antes de persistir en DB.
 
 ### Headers de Seguridad HTTP
-Configurar en `next.config.ts`:
+Configurar en `next.config.mjs`:
 ```typescript
 headers: [
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -308,7 +364,7 @@ headers: [
 - **SQL Injection:** imposible usando Supabase JS SDK (queries parametrizadas por defecto). Nunca construir queries SQL con interpolación de strings.
 - **XSS:** Next.js escapa contenido por defecto. No usar `dangerouslySetInnerHTML` con datos del usuario.
 - **Rate limiting:** en MVP de un usuario no es crítico, pero preparar la API para añadir rate limiting por `userId` en Fase 2 sin refactorización mayor.
-- **CORS:** Vercel restringe origins por defecto. No habilitar CORS abierto (`*`) en las API Routes.
+- **CORS:** Next.js no habilita CORS por defecto. No añadir headers `Access-Control-Allow-Origin: *` en las API Routes.
 - **Prompt injection:** sanitizar el input del usuario antes de insertarlo en el prompt de Claude. Encapsular el texto del usuario entre delimitadores claros:
 ```
 <user_input>
@@ -326,9 +382,9 @@ headers: [
 ## Escalabilidad — Estándares y Patrones
 
 ### Arquitectura Stateless
-- Las Vercel Functions no mantienen estado entre invocaciones. Todo el estado vive en Supabase.
-- No usar variables globales en módulos para estado de sesión. Cada invocación es independiente.
-- El cliente Supabase se inicializa por request, no como singleton global en funciones serverless.
+- El servidor Docker es un proceso Node.js persistente, pero el código debe ser stateless por diseño — todo el estado vive en Supabase.
+- No usar variables globales en módulos para estado de sesión. Cada request es independiente.
+- El cliente Supabase se inicializa por request, no como singleton global.
 
 ### Base de Datos — Índices Obligatorios
 Crear estos índices desde las primeras migraciones:
@@ -364,10 +420,9 @@ const [tickets, calendarEvents] = await Promise.all([
 ])
 ```
 
-### Cold Start de Serverless
-- Las funciones críticas (API Routes de tickets) se mantienen "calientes" por el uso frecuente.
-- IA Worker puede tener cold start en la primera petición del día — aceptable en MVP.
-- Para Fase 2 con más usuarios: considerar Vercel Pro con instancias "fluid compute" o warmup cron.
+### Sin Cold Start
+- El servidor Node.js en Droplet es un proceso persistente — no hay cold start.
+- Para Fase 2 con más tráfico: considerar escalar el Droplet o añadir load balancing en DigitalOcean.
 
 ### Manejo de Errores — Patrón Consistente
 Todas las API Routes devuelven el mismo formato de error:
@@ -387,7 +442,7 @@ return Response.json(
 - Nunca exponer stack traces ni mensajes internos al cliente.
 
 ### Logging Estructurado
-- Loggear en formato JSON para que Vercel pueda indexar y filtrar.
+- Loggear en formato JSON (visible en `docker logs` y en DigitalOcean Monitoring).
 - Incluir siempre: `userId`, `requestId`, `durationMs`, `endpoint`.
 - **Nunca loggear:** tokens OAuth, claves de API, contenido de audio, texto completo del usuario.
 ```typescript
@@ -403,7 +458,7 @@ console.log(JSON.stringify({
 ### Resiliencia ante Fallos de APIs Externas
 - **Whisper o Claude no responden:** devolver error HTTP 504 con mensaje claro. El usuario puede reintentar.
 - **Token OAuth expirado:** el Calendar Service intenta renovarlo automáticamente. Si falla, devolver error específico `CALENDAR_AUTH_REQUIRED` para que el frontend muestre el flujo de re-autorización.
-- **Supabase no disponible:** Vercel Functions fallarán. No implementar fallback en MVP — registrar el error y dejar que el usuario reintente.
+- **Supabase no disponible:** el servidor devuelve 503. No implementar fallback en MVP — registrar el error y dejar que el usuario reintente.
 - Patrón retry solo para renovación de tokens OAuth (max 1 reintento). No implementar retry genérico en MVP.
 
 ### Migraciones de DB
