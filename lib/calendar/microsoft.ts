@@ -36,10 +36,10 @@ export async function exchangeCodeForTokens(code: string): Promise<{
   expires_at: string
 }> {
   const body = new URLSearchParams({
-    client_id: env.microsoftClientId,
-    client_secret: env.microsoftClientSecret,
+    client_id: env.microsoftClientId ?? '',
+    client_secret: env.microsoftClientSecret ?? '',
     code,
-    redirect_uri: env.microsoftRedirectUri,
+    redirect_uri: env.microsoftRedirectUri ?? '',
     grant_type: 'authorization_code',
     scope: SCOPES.join(' '),
   })
@@ -83,8 +83,8 @@ export async function refreshMicrosoftToken(
   refreshToken: string
 ): Promise<{ access_token: string; expires_at: string }> {
   const body = new URLSearchParams({
-    client_id: env.microsoftClientId,
-    client_secret: env.microsoftClientSecret,
+    client_id: env.microsoftClientId ?? '',
+    client_secret: env.microsoftClientSecret ?? '',
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
     scope: SCOPES.join(' '),
