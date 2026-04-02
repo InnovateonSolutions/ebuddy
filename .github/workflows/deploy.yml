@@ -34,6 +34,25 @@ jobs:
 
       - run: doctl registry login --expiry-seconds 1200
 
+      # Elimina tags viejos — mantiene solo latest y el sha anterior
+      # Luego corre garbage collection para liberar espacio real en disco
+      - name: Cleanup old images
+        run: |
+          source infra/config/main.env
+          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
+          REPO="${APP_NAME}"
+
+          # Borra todos los tags excepto latest y buildcache
+          doctl registry repository list-tags "$REGISTRY/$REPO" \
+            --no-header --format Tag \
+          | grep -v -E "^latest$|^buildcache$" \
+          | while read tag; do
+              doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
+            done
+
+          # Garbage collection para liberar el espacio físico
+          doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests
+
       - id: meta
         uses: docker/metadata-action@v5
         with:
