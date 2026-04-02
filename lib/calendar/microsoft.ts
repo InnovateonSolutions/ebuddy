@@ -15,9 +15,9 @@ const SCOPES = [
 
 export function getMicrosoftAuthUrl(state?: string): string {
   const params = new URLSearchParams({
-    client_id: env.microsoftClientId,
+    client_id: env.microsoftClientId ?? '',
     response_type: 'code',
-    redirect_uri: env.microsoftRedirectUri,
+    redirect_uri: env.microsoftRedirectUri ?? '',
     scope: SCOPES.join(' '),
     response_mode: 'query',
     ...(state ? { state } : {}),
