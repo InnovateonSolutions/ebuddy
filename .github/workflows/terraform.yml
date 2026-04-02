@@ -109,21 +109,9 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color
 
-      # Actualiza GitHub Variables con outputs — deploy.yml las usa
-      - name: Set GitHub Variables from Terraform outputs
-        working-directory: ${{ github.workspace }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # deploy.yml obtiene la IP del Droplet via API de DO en tiempo real
+      # y deriva el registry name desde main.env — no necesita GitHub Variables.
+      - name: Print outputs
         run: |
-          DROPLET_IP=$(cd infra/terraform && terraform output -raw droplet_ip)
-          REGISTRY_ENDPOINT=$(cd infra/terraform && terraform output -raw registry_endpoint)
-          REGISTRY_NAME="${REGISTRY_ENDPOINT#registry.digitalocean.com/}"
-
-          gh variable set DO_DROPLET_IP    --body "$DROPLET_IP"
-          gh variable set DO_REGISTRY_NAME --body "$REGISTRY_NAME"
-
-          echo "✓ DO_DROPLET_IP=$DROPLET_IP"
-          echo "✓ DO_REGISTRY_NAME=$REGISTRY_NAME"
-
-      # NEXT_PUBLIC_SUPABASE_ANON_KEY ya fue seteado como GitHub Variable
-      # por setup-secrets.sh — no es necesario fetchearlo aquí.
+          echo "✓ Droplet IP: $(terraform output -raw droplet_ip)"
+          echo "✓ Registry:   $(terraform output -raw registry_endpoint)"

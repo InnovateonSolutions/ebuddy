@@ -1,7 +1,5 @@
 name: Deploy
 
-# Corre solo en push a main (no en PRs — MVP de un solo usuario)
-# paths-ignore: cambios solo en infra o docs no disparan un re-deploy
 on:
   push:
     branches: [main]
@@ -11,11 +9,8 @@ on:
       - '*.md'
 
 env:
-  IMAGE_NAME: registry.digitalocean.com/${{ vars.DO_REGISTRY_NAME }}/ebuddy
   NEXT_PUBLIC_APP_URL: https://app.ebuddy.io
   NEXT_PUBLIC_SUPABASE_URL: https://nncikrxfpchwaqeuvrll.supabase.co
-  # Anon key es pública por diseño — guardar como GitHub Variable (no Secret)
-  # Settings → Secrets and variables → Actions → Variables → NEXT_PUBLIC_SUPABASE_ANON_KEY
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
 jobs:
@@ -26,6 +21,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # Deriva IMAGE_NAME desde main.env — sin GitHub Variables
+      - name: Load config
+        run: |
+          source infra/config/main.env
+          echo "IMAGE_NAME=registry.digitalocean.com/${APP_NAME}-${ENVIRONMENT}/${APP_NAME}" >> $GITHUB_ENV
 
       - uses: digitalocean/action-doctl@v2
         with:
@@ -80,9 +81,36 @@ jobs:
     needs: [build, migrate]
 
     steps:
+      - uses: actions/checkout@v4
+
+      # Obtiene la IP del Droplet en tiempo real — sin GitHub Variables
+      - name: Get Droplet IP
+        id: droplet
+        run: |
+          source infra/config/main.env
+          DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet"
+
+          pip install --quiet doctl 2>/dev/null || true
+
+          IP=$(curl -sf \
+            "https://api.digitalocean.com/v2/droplets?name=${DROPLET_NAME}" \
+            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          droplets = data.get('droplets', [])
+          if not droplets:
+              raise SystemExit(f'Droplet {\"$DROPLET_NAME\"} not found')
+          nets = droplets[0]['networks']['v4']
+          ip = next(n['ip_address'] for n in nets if n['type'] == 'public')
+          print(ip)
+          ")
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+          echo "✓ Droplet IP: $IP"
+
       - uses: appleboy/ssh-action@v1
         with:
-          host: ${{ vars.DO_DROPLET_IP }}
+          host: ${{ steps.droplet.outputs.ip }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           envs: NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_APP_URL
@@ -98,14 +126,13 @@ jobs:
             chmod 600 /opt/ebuddy/.env
             /usr/local/bin/ebuddy-deploy
 
-  # ── 3. Smoke tests E2E contra producción ───────────────────
+  # ── 4. Smoke tests E2E ──────────────────────────────────────
   e2e:
     name: E2E Smoke Tests
     runs-on: ubuntu-latest
     needs: deploy
 
     steps:
-      # El healthcheck del contenedor tiene start_period: 60s
       - name: Wait for container startup
         run: sleep 60
 
