@@ -32,10 +32,7 @@ jobs:
         with:
           token: ${{ secrets.DO_TOKEN }}
 
-      - run: doctl registry login --expiry-seconds 1200
-
-      # Elimina tags viejos — mantiene solo latest y el sha anterior
-      # Luego corre garbage collection para liberar espacio real en disco
+      # Elimina tags viejos y libera espacio — antes del login para no invalidar credenciales
       - name: Cleanup old images
         run: |
           source infra/config/main.env
@@ -44,7 +41,7 @@ jobs:
 
           # Borra todos los tags excepto latest y buildcache
           doctl registry repository list-tags "$REGISTRY/$REPO" \
-            --no-header --format Tag \
+            --no-header --format Tag 2>/dev/null \
           | grep -v -E "^latest$|^buildcache$" \
           | while read tag; do
               doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
@@ -52,6 +49,9 @@ jobs:
 
           # Garbage collection para liberar el espacio físico
           doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests
+
+      # Login DESPUÉS del cleanup para que las credenciales sean válidas al hacer push
+      - run: doctl registry login --expiry-seconds 1200
 
       - id: meta
         uses: docker/metadata-action@v5
