@@ -47,8 +47,9 @@ jobs:
               doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
             done
 
-          # Garbage collection para liberar el espacio físico
-          doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests
+          # Garbage collection — si ya hay una activa la ignora
+          doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests 2>&1 \
+            | grep -v "only one active garbage collection" || true
 
       # Login DESPUÉS del cleanup para que las credenciales sean válidas al hacer push
       - run: doctl registry login --expiry-seconds 1200
