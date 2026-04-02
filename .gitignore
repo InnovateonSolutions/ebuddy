@@ -32,6 +32,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# env files de ambientes con secrets (main.env es público, los demás no)
+infra/config/dev.env
+infra/config/staging.env
+infra/config/prod.env
+
 # terraform
 infra/terraform/.terraform/
 infra/terraform/*.tfvars
