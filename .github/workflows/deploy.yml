@@ -1,28 +1,8 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/**'
-      - 'components/**'
-      - 'hooks/**'
-      - 'lib/**'
-      - 'types/**'
-      - 'public/**'
-      - 'db/**'
-      - 'drizzle/**'
-      - 'middleware.ts'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig.json'
-      - 'next.config.*'
-      - 'tailwind.config.ts'
-      - 'postcss.config.js'
-      - 'drizzle.config.ts'
-      - 'Dockerfile'
-      - 'docker-compose.yml'
-      - 'docker-compose.prod.yml'
+  workflow_call:
+  workflow_dispatch:
 
 concurrency:
   group: deploy-${{ github.ref }}

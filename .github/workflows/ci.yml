@@ -10,9 +10,62 @@ on:
     branches: [main]
 
 jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      app_changed: ${{ steps.filter.outputs.app_changed }}
+      infra_changed: ${{ steps.filter.outputs.infra_changed }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect application and infrastructure changes
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+          echo "$CHANGED_FILES"
+
+          app_changed=false
+          infra_changed=false
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+
+            case "$file" in
+              app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*|middleware.ts|package.json|package-lock.json|tsconfig.json|next.config.*|tailwind.config.ts|postcss.config.js|drizzle.config.ts|Dockerfile|docker-compose.yml|docker-compose.prod.yml)
+                app_changed=true
+                ;;
+            esac
+
+            case "$file" in
+              infra/*|.github/workflows/terraform.yml|.github/workflows/bootstrap-deploy.yml)
+                infra_changed=true
+                ;;
+            esac
+          done <<EOF
+          $CHANGED_FILES
+          EOF
+
+          echo "app_changed=$app_changed" >> "$GITHUB_OUTPUT"
+          echo "infra_changed=$infra_changed" >> "$GITHUB_OUTPUT"
+
   node-tests:
     name: Node Tests
     runs-on: ubuntu-latest
+    needs: detect-changes
 
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +92,7 @@ jobs:
   python-tests:
     name: Python Tests
     runs-on: ubuntu-latest
+    needs: detect-changes
 
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +112,7 @@ jobs:
   terratest:
     name: Terraform Module Tests
     runs-on: ubuntu-latest
+    needs: detect-changes
 
     steps:
       - uses: actions/checkout@v4
@@ -84,3 +139,24 @@ jobs:
       - name: Run Terratest
         working-directory: scripts
         run: go test ./terratest/... -v
+
+  terraform-plan:
+    name: Terraform Plan
+    needs: [detect-changes, terratest]
+    if: needs.detect-changes.outputs.infra_changed == 'true'
+    uses: ./.github/workflows/terraform.yml
+    with:
+      action: plan
+      manage_dns: false
+    secrets: inherit
+
+  deploy:
+    name: Deploy
+    needs: [detect-changes, node-tests, python-tests, terratest, terraform-plan]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.detect-changes.outputs.app_changed == 'true' &&
+      (needs.terraform-plan.result == 'success' || needs.terraform-plan.result == 'skipped')
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
