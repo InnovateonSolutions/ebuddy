@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Trash2, Circle, Clock, CheckCircle2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Trash2, Circle, Clock, CheckCircle2, FlaskConical } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Ticket, TicketStatus } from '@/types/database'
@@ -13,10 +13,11 @@ interface TicketCardProps {
   onDelete: (id: string) => void
 }
 
-const STATUS_CYCLE: TicketStatus[] = ['PENDING', 'IN_PROGRESS', 'DONE']
+const STATUS_CYCLE: TicketStatus[] = ['PENDING', 'IN_PROGRESS', 'QA', 'DONE']
 const STATUS_LABELS: Record<TicketStatus, string> = {
   PENDING: 'Pendiente',
   IN_PROGRESS: 'En progreso',
+  QA: 'En revisión',
   DONE: 'Listo',
 }
 
@@ -53,6 +54,8 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
       ? CheckCircle2
       : ticket.status === 'IN_PROGRESS'
       ? Clock
+      : ticket.status === 'QA'
+      ? FlaskConical
       : Circle
 
   return (
@@ -72,7 +75,7 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
           title={STATUS_LABELS[ticket.status]}
           className={cn(
             'mt-0.5 flex-shrink-0 transition-colors',
-            ticket.status === 'DONE' ? 'text-green-500' : ticket.status === 'IN_PROGRESS' ? 'text-blue-500' : 'text-slate-300 hover:text-slate-500',
+            ticket.status === 'DONE' ? 'text-green-500' : ticket.status === 'IN_PROGRESS' ? 'text-blue-500' : ticket.status === 'QA' ? 'text-violet-500' : 'text-slate-300 hover:text-slate-500',
             updating && 'opacity-50'
           )}
         >

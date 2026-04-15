@@ -17,16 +17,16 @@ export default function RootPage() {
 
         <div className="mt-10 flex flex-wrap gap-4">
           <a
-            href="/login"
+            href="/kanban"
             className="rounded-2xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:bg-sky-700"
           >
-            Ver acceso
+            Ver tablero
           </a>
           <a
-            href="/api/health"
+            href="/status"
             className="rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
           >
-            Probar healthcheck
+            Estado del sistema
           </a>
         </div>
       </section>

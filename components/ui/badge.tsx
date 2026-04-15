@@ -18,6 +18,7 @@ const badgeVariants = cva(
         baja: 'bg-slate-100 text-slate-600',
         pending: 'bg-slate-100 text-slate-600',
         in_progress: 'bg-blue-100 text-blue-700',
+        qa: 'bg-violet-100 text-violet-700',
         done: 'bg-green-100 text-green-700',
       },
     },

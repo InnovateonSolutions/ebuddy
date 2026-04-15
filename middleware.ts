@@ -6,6 +6,9 @@ const PUBLIC_PATHS = [
   '/login',
   '/api/auth',
   '/api/health',
+  '/api/status',
+  '/kanban',
+  '/status',
 ]
 
 export default auth((req: NextRequest & { auth: { user?: { id?: string } } | null }) => {

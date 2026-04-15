@@ -10,5 +10,5 @@ export type {
 
 export type TicketContext = 'NEGOCIO' | 'PERSONAL'
 export type TicketPriority = 'ALTA' | 'MEDIA' | 'BAJA'
-export type TicketStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE'
+export type TicketStatus = 'PENDING' | 'IN_PROGRESS' | 'QA' | 'DONE'
 export type CalendarProvider = 'GOOGLE' | 'MICROSOFT'

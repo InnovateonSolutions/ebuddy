@@ -20,6 +20,7 @@ jobs:
     outputs:
       app_changed: ${{ steps.filter.outputs.app_changed }}
       infra_changed: ${{ steps.filter.outputs.infra_changed }}
+      scripts_changed: ${{ steps.filter.outputs.scripts_changed }}
 
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +45,7 @@ jobs:
 
           app_changed=false
           infra_changed=false
+          scripts_changed=false
 
           while IFS= read -r file; do
             [ -n "$file" ] || continue
@@ -59,17 +61,25 @@ jobs:
                 infra_changed=true
                 ;;
             esac
+
+            case "$file" in
+              scripts/*|docs/iam/*)
+                scripts_changed=true
+                ;;
+            esac
           done <<EOF
           $CHANGED_FILES
           EOF
 
           echo "app_changed=$app_changed" >> "$GITHUB_OUTPUT"
           echo "infra_changed=$infra_changed" >> "$GITHUB_OUTPUT"
+          echo "scripts_changed=$scripts_changed" >> "$GITHUB_OUTPUT"
 
   node-tests:
     name: Node Tests
     runs-on: ubuntu-latest
     needs: detect-changes
+    if: needs['detect-changes'].outputs.app_changed == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +107,7 @@ jobs:
     name: Python Tests
     runs-on: ubuntu-latest
     needs: detect-changes
+    if: needs['detect-changes'].outputs.scripts_changed == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -117,6 +128,7 @@ jobs:
     name: Terraform Module Tests
     runs-on: ubuntu-latest
     needs: detect-changes
+    if: needs['detect-changes'].outputs.infra_changed == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -161,6 +173,9 @@ jobs:
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs['detect-changes'].outputs.app_changed == 'true' &&
+      (needs['node-tests'].result == 'success' || needs['node-tests'].result == 'skipped') &&
+      (needs['python-tests'].result == 'success' || needs['python-tests'].result == 'skipped') &&
+      (needs['terratest'].result == 'success' || needs['terratest'].result == 'skipped') &&
       (needs['terraform-plan'].result == 'success' || needs['terraform-plan'].result == 'skipped')
     uses: ./.github/workflows/deploy.yml
     secrets: inherit

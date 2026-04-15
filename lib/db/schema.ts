@@ -15,7 +15,7 @@ import type { AdapterAccountType } from 'next-auth/adapters'
 
 export const ticketContextEnum = pgEnum('ticket_context', ['NEGOCIO', 'PERSONAL'])
 export const ticketPriorityEnum = pgEnum('ticket_priority', ['ALTA', 'MEDIA', 'BAJA'])
-export const ticketStatusEnum = pgEnum('ticket_status', ['PENDING', 'IN_PROGRESS', 'DONE'])
+export const ticketStatusEnum = pgEnum('ticket_status', ['PENDING', 'IN_PROGRESS', 'QA', 'DONE'])
 export const calendarProviderEnum = pgEnum('calendar_provider', ['GOOGLE', 'MICROSOFT'])
 
 // ─── Auth.js required tables ─────────────────────────────────
