@@ -109,8 +109,6 @@ jobs:
           source infra/config/main.env
           DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet"
 
-          pip install --quiet doctl 2>/dev/null || true
-
           IP=$(curl -sf \
             "https://api.digitalocean.com/v2/droplets?name=${DROPLET_NAME}" \
             -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
@@ -132,12 +130,14 @@ jobs:
           host: ${{ steps.droplet.outputs.ip }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-          envs: NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_APP_URL
+          envs: NEXT_PUBLIC_APP_URL
           script: |
             cat > /opt/ebuddy/.env << ENVEOF
-            NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
@@ -157,25 +157,25 @@ jobs:
 
       - name: Health endpoint returns ok
         run: |
-          BODY=$(curl -sf https://app.ebuddy.io/api/health)
+          BODY=$(curl -sf https://ebuddy.innovateoncorp.com/api/health)
           echo "$BODY"
           echo "$BODY" | grep -q '"status":"ok"' || { echo "FAIL: health check"; exit 1; }
           echo "PASS: /api/health"
 
       - name: Login page is reachable
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.ebuddy.io/login)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ebuddy.innovateoncorp.com/login)
           [ "$STATUS" = "200" ] || { echo "FAIL: /login returned $STATUS"; exit 1; }
           echo "PASS: /login"
 
       - name: Protected routes reject unauthenticated requests
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.ebuddy.io/api/tickets/today)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ebuddy.innovateoncorp.com/api/tickets/today)
           [ "$STATUS" = "401" ] || { echo "FAIL: /api/tickets/today returned $STATUS (expected 401)"; exit 1; }
           echo "PASS: auth protection on /api/tickets/today"
 
       - name: Root redirects to dashboard or login
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L https://app.ebuddy.io/)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L https://ebuddy.innovateoncorp.com/)
           [ "$STATUS" = "200" ] || { echo "FAIL: / returned $STATUS"; exit 1; }
           echo "PASS: root redirect"
