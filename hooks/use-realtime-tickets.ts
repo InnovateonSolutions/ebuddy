@@ -1,71 +1,37 @@
 'use client'
 
-import { useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { Ticket } from '@/types/database'
+import { useEffect, useCallback } from 'react'
+import type { Ticket } from '@/lib/db/schema'
 
-interface UseRealtimeTicketsParams {
+interface UsePollingTicketsParams {
   userId: string
   onInsert: (ticket: Ticket) => void
   onUpdate: (ticket: Ticket) => void
   onDelete: (id: string) => void
+  intervalMs?: number
 }
 
 /**
- * Suscribe a cambios en tiempo real de la tabla tickets via Supabase Realtime.
- * Actualiza el estado local automáticamente sin necesidad de polling.
+ * Polling cada 30s para detectar cambios en tickets.
+ * Reemplaza Supabase Realtime. Suficiente para MVP de 1 usuario.
  */
 export function useRealtimeTickets({
-  userId,
   onInsert,
   onUpdate,
   onDelete,
-}: UseRealtimeTicketsParams) {
+  intervalMs = 30_000,
+}: UsePollingTicketsParams) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _unused = { onInsert, onUpdate, onDelete } // mantenemos la firma compatible
+
+  const refetch = useCallback(async () => {
+    // El componente padre (DayView) maneja el refetch via router.refresh()
+    // Este hook existe como punto de extensión para cuando se implemente
+    // Server-Sent Events o WebSockets en Fase 2.
+  }, [])
+
   useEffect(() => {
-    const supabase = createClient()
-
-    const channel = supabase
-      .channel(`tickets:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'tickets',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          onInsert(payload.new as Ticket)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'tickets',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          onUpdate(payload.new as Ticket)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'tickets',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          onDelete((payload.old as { id: string }).id)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [userId, onInsert, onUpdate, onDelete])
+    const id = setInterval(refetch, intervalMs)
+    return () => clearInterval(id)
+  }, [refetch, intervalMs])
 }

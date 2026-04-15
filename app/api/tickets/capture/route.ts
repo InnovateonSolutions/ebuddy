@@ -1,9 +1,9 @@
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { tickets } from '@/lib/db/schema'
 import { WhisperTranscriptionService } from '@/lib/ai/whisper'
 import { ClaudeAIService } from '@/lib/ai/claude'
 import { apiSuccess, apiError, getUserIdFromRequest, logEvent } from '@/lib/utils'
-import type { Ticket } from '@/types/database'
 
 const TextInputSchema = z.object({
   text: z.string().min(1, 'El texto no puede estar vacío').max(2000),
@@ -28,16 +28,11 @@ export async function POST(request: Request) {
       const audioFile = formData.get('audio') as File | null
       dueDate = (formData.get('due_date') as string) ?? undefined
 
-      if (!audioFile) {
-        return apiError('No se recibió archivo de audio', 'VALIDATION_ERROR')
-      }
-      if (audioFile.size > MAX_AUDIO_SIZE_BYTES) {
-        return apiError('El archivo de audio supera el límite de 10MB', 'VALIDATION_ERROR')
-      }
+      if (!audioFile) return apiError('No se recibió archivo de audio', 'VALIDATION_ERROR')
+      if (audioFile.size > MAX_AUDIO_SIZE_BYTES) return apiError('El archivo de audio supera el límite de 10MB', 'VALIDATION_ERROR')
 
       const audioBuffer = Buffer.from(await audioFile.arrayBuffer())
       const transcriber = new WhisperTranscriptionService()
-
       try {
         rawText = await transcriber.transcribe(audioBuffer, audioFile.type)
       } catch (err) {
@@ -48,16 +43,11 @@ export async function POST(request: Request) {
     // ---- CAPTURA POR TEXTO ----
     } else {
       let body: unknown
-      try {
-        body = await request.json()
-      } catch {
+      try { body = await request.json() } catch {
         return apiError('Body inválido: se esperaba JSON', 'VALIDATION_ERROR')
       }
-
       const parsed = TextInputSchema.safeParse(body)
-      if (!parsed.success) {
-        return apiError(parsed.error.errors[0].message, 'VALIDATION_ERROR')
-      }
+      if (!parsed.success) return apiError(parsed.error.errors[0].message, 'VALIDATION_ERROR')
       rawText = parsed.data.text
       dueDate = parsed.data.due_date
     }
@@ -73,29 +63,21 @@ export async function POST(request: Request) {
     }
 
     // ---- GUARDAR EN DB ----
-    const supabase = await createClient()
-    const insertPayload: import('@/types/database').TicketInsert = {
-      user_id: userId,
-      title: structured.title,
-      context: structured.context,
-      overview: structured.overview,
-      what_to_do: structured.what_to_do,
-      next_steps: structured.next_steps,
-      priority: structured.priority,
-      status: 'PENDING',
-      due_date: dueDate ?? null,
-      raw_input: rawText,
-    }
-    const { data: ticket, error: dbError } = await supabase
-      .from('tickets')
-      .insert(insertPayload as never)
-      .select()
-      .single() as { data: Ticket | null; error: unknown }
-
-    if (dbError || !ticket) {
-      logEvent('db.error', { userId, error: (dbError as { message?: string } | null)?.message ?? 'sin ticket' })
-      return apiError('Error al guardar el ticket', 'DATABASE_ERROR', 500)
-    }
+    const [ticket] = await db
+      .insert(tickets)
+      .values({
+        userId,
+        title: structured.title,
+        context: structured.context,
+        overview: structured.overview,
+        whatToDo: structured.what_to_do,
+        nextSteps: structured.next_steps,
+        priority: structured.priority,
+        status: 'PENDING',
+        dueDate: dueDate ?? null,
+        rawInput: rawText,
+      })
+      .returning()
 
     logEvent('ticket.created', {
       userId,

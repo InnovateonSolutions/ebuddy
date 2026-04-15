@@ -2,7 +2,7 @@ import { ConfidentialClientApplication } from '@azure/msal-node'
 import { env } from '@/lib/env'
 import { isTokenExpired } from '@/lib/utils'
 import type { CalendarEvent } from '@/types/api'
-import type { CalendarToken } from '@/types/database'
+import type { CalendarToken } from '@/lib/db/schema'
 
 const SCOPES = [
   'https://graph.microsoft.com/Calendars.Read',
@@ -122,15 +122,15 @@ export async function getMicrosoftCalendarEvents(
   token: CalendarToken,
   daysAhead = 7
 ): Promise<{ events: CalendarEvent[]; newToken?: Partial<CalendarToken> }> {
-  let accessToken = token.access_token
+  let accessToken = token.accessToken
   let newToken: Partial<CalendarToken> | undefined
 
-  if (isTokenExpired(token.expires_at)) {
-    const refreshed = await refreshMicrosoftToken(token.refresh_token)
+  if (isTokenExpired(token.expiresAt)) {
+    const refreshed = await refreshMicrosoftToken(token.refreshToken)
     accessToken = refreshed.access_token
     newToken = {
-      access_token: refreshed.access_token,
-      expires_at: refreshed.expires_at,
+      accessToken: refreshed.access_token,
+      expiresAt: new Date(refreshed.expires_at),
     }
   }
 

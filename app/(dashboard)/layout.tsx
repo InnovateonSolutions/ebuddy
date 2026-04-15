@@ -1,24 +1,15 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/logout-button'
-import type { User } from '@/types/database'
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single() as { data: User | null; error: unknown }
+  const session = await auth()
+  if (!session?.user) redirect('/login')
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -59,7 +50,7 @@ export default async function DashboardLayout({
           {/* User */}
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-500 hidden sm:block">
-              {profile?.display_name ?? user.email}
+              {session.user.name ?? session.user.email}
             </span>
             <LogoutButton />
           </div>

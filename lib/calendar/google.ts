@@ -2,7 +2,7 @@ import { google } from 'googleapis'
 import { env } from '@/lib/env'
 import { isTokenExpired } from '@/lib/utils'
 import type { CalendarEvent } from '@/types/api'
-import type { CalendarToken } from '@/types/database'
+import type { CalendarToken } from '@/lib/db/schema'
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
@@ -81,16 +81,16 @@ export async function getGoogleCalendarEvents(
 ): Promise<{ events: CalendarEvent[]; newToken?: Partial<CalendarToken> }> {
   const oauth2Client = createOAuth2Client()
 
-  let accessToken = token.access_token
+  let accessToken = token.accessToken
   let newToken: Partial<CalendarToken> | undefined
 
   // Renovar token si está por expirar
-  if (isTokenExpired(token.expires_at)) {
-    const refreshed = await refreshGoogleToken(token.refresh_token)
+  if (isTokenExpired(token.expiresAt)) {
+    const refreshed = await refreshGoogleToken(token.refreshToken)
     accessToken = refreshed.access_token
     newToken = {
-      access_token: refreshed.access_token,
-      expires_at: refreshed.expires_at,
+      accessToken: refreshed.access_token,
+      expiresAt: new Date(refreshed.expires_at),
     }
   }
 

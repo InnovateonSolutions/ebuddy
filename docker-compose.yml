@@ -1,7 +1,7 @@
-# ─── Local dev: Next.js + Supabase self-hosted ────────────────
+# ─── Local dev: Next.js + PostgreSQL ───────────────────────────
 # Uso: docker compose up -d
-# Supabase Studio: http://localhost:54323
-# App:             http://localhost:3000
+# App:  http://localhost:3000
+# DB:   localhost:5432
 
 name: ebuddy-local
 
@@ -11,8 +11,6 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_APP_URL: http://localhost:3000
     ports:
       - "3000:3000"
@@ -20,58 +18,32 @@ services:
     environment:
       NODE_ENV: production
     depends_on:
-      supabase-db:
+      db:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - ebuddy
 
-  # ── Supabase self-hosted (para desarrollo local) ─────────────
-  supabase-db:
-    image: supabase/postgres:15.1.0.117
+  db:
+    image: postgres:16-alpine
     ports:
-      - "54322:5432"
+      - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ebuddy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ebuddy_local}
+      POSTGRES_DB: ebuddy
     volumes:
-      - supabase-db-data:/var/lib/postgresql/data
-      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+      - pg-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ebuddy"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
       - ebuddy
 
-  supabase-kong:
-    image: kong:2.8.1
-    ports:
-      - "54321:8000"  # API Gateway
-      - "54320:8443"  # API Gateway (HTTPS)
-    environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
-      KONG_DNS_ORDER: LAST,A,CNAME
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
-    networks:
-      - ebuddy
-
-  supabase-studio:
-    image: supabase/studio:20240101-8e4a94c
-    ports:
-      - "54323:3000"
-    environment:
-      SUPABASE_URL: http://supabase-kong:8000
-      STUDIO_PG_META_URL: http://supabase-meta:8080
-    depends_on:
-      - supabase-db
-    networks:
-      - ebuddy
-
 volumes:
-  supabase-db-data:
+  pg-data:
 
 networks:
   ebuddy:

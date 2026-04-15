@@ -1,7 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { calendarTokens } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { apiSuccess, apiError, getUserIdFromRequest } from '@/lib/utils'
 import type { CalendarEventsResponse } from '@/types/api'
-import type { CalendarToken } from '@/types/database'
+import type { CalendarToken } from '@/lib/db/schema'
 
 export async function GET(request: Request) {
   const userId = getUserIdFromRequest(request)
@@ -11,19 +13,13 @@ export async function GET(request: Request) {
   const daysAhead = Math.min(parseInt(searchParams.get('days') ?? '7'), 30)
 
   try {
-    const supabase = await createClient()
+    const tokens = await db
+      .select()
+      .from(calendarTokens)
+      .where(eq(calendarTokens.userId, userId))
 
-    const { data: tokens } = await supabase
-      .from('calendar_tokens')
-      .select('*')
-      .eq('user_id', userId) as { data: CalendarToken[] | null; error: unknown }
-
-    if (!tokens || tokens.length === 0) {
-      const response: CalendarEventsResponse = {
-        events: [],
-        providers_connected: [],
-      }
-      return apiSuccess(response)
+    if (tokens.length === 0) {
+      return apiSuccess<CalendarEventsResponse>({ events: [], providers_connected: [] })
     }
 
     const [googleLib, microsoftLib] = await Promise.all([
@@ -33,51 +29,44 @@ export async function GET(request: Request) {
 
     const providers_connected = tokens.map((t) => t.provider) as ('GOOGLE' | 'MICROSOFT')[]
 
-    const eventPromises = tokens.map(async (token) => {
+    const eventPromises = tokens.map(async (token: CalendarToken) => {
       try {
         if (token.provider === 'GOOGLE') {
           const result = await googleLib.getGoogleCalendarEvents(token, daysAhead)
           if (result.newToken) {
-            await supabase
-              .from('calendar_tokens')
-              .update(result.newToken as never)
-              .eq('user_id', userId)
-              .eq('provider', 'GOOGLE')
+            await db
+              .update(calendarTokens)
+              .set(result.newToken)
+              .where(and(eq(calendarTokens.userId, userId), eq(calendarTokens.provider, 'GOOGLE')))
           }
           return result.events
         } else {
           const result = await microsoftLib.getMicrosoftCalendarEvents(token, daysAhead)
           if (result.newToken) {
-            await supabase
-              .from('calendar_tokens')
-              .update(result.newToken as never)
-              .eq('user_id', userId)
-              .eq('provider', 'MICROSOFT')
+            await db
+              .update(calendarTokens)
+              .set(result.newToken)
+              .where(and(eq(calendarTokens.userId, userId), eq(calendarTokens.provider, 'MICROSOFT')))
           }
           return result.events
         }
       } catch (err) {
         const message = String(err)
-        if (message === 'CALENDAR_AUTH_REQUIRED') {
-          return apiError('Token de calendario inválido. Reconecta tu calendario.', 'CALENDAR_AUTH_REQUIRED', 401)
+        if (message.includes('CALENDAR_AUTH_REQUIRED')) {
+          throw new Error('CALENDAR_AUTH_REQUIRED')
         }
         return []
       }
     })
 
-    const results = await Promise.all(eventPromises)
+    const results = await Promise.allSettled(eventPromises)
 
-    // Si algún proveedor devolvió un Response (error), propagarlo
-    for (const r of results) {
-      if (r instanceof Response) return r
-    }
-
-    const events = (results as Awaited<ReturnType<typeof googleLib.getGoogleCalendarEvents>>['events'][])
-      .flat()
+    const events = results
+      .filter((r): r is PromiseFulfilledResult<typeof googleLib.getGoogleCalendarEvents extends (...args: never[]) => Promise<{ events: infer E }> ? E : never[]> => r.status === 'fulfilled')
+      .flatMap((r) => r.value as { start: string }[])
       .sort((a, b) => a.start.localeCompare(b.start))
 
-    const response: CalendarEventsResponse = { events, providers_connected }
-    return apiSuccess(response)
+    return apiSuccess<CalendarEventsResponse>({ events: events as CalendarEventsResponse['events'], providers_connected })
   } catch {
     return apiError('Error al obtener eventos del calendario', 'CALENDAR_ERROR', 500)
   }

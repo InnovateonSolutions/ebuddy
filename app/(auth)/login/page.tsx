@@ -1,7 +1,7 @@
 'use client'
 
+import { signIn } from 'next-auth/react'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -9,22 +9,19 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
-
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const result = await signIn('resend', {
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      redirect: false,
+      callbackUrl: '/today',
     })
 
-    if (error) {
-      setError(error.message)
+    if (result?.error) {
+      setError('Error al enviar el email. Intenta de nuevo.')
     } else {
       setSent(true)
     }
@@ -33,18 +30,12 @@ export default function LoginPage() {
 
   async function handleGoogleLogin() {
     setLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    await signIn('google', { callbackUrl: '/today' })
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4">
             <span className="text-white text-2xl font-bold">e</span>
@@ -68,7 +59,6 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
-              {/* Google OAuth */}
               <button
                 onClick={handleGoogleLogin}
                 disabled={loading}
@@ -92,7 +82,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Magic Link */}
               <form onSubmit={handleMagicLink} className="space-y-3">
                 <input
                   type="email"
@@ -102,9 +91,7 @@ export default function LoginPage() {
                   required
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                {error && (
-                  <p className="text-red-500 text-sm">{error}</p>
-                )}
+                {error && <p className="text-red-500 text-sm">{error}</p>}
                 <button
                   type="submit"
                   disabled={loading || !email}

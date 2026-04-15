@@ -111,10 +111,10 @@ function groupByWeek(tickets: Ticket[]) {
   for (const ticket of tickets) {
     let label: string
 
-    if (!ticket.due_date) {
+    if (!ticket.dueDate) {
       label = 'Sin fecha'
     } else {
-      const date = new Date(ticket.due_date + 'T00:00:00')
+      const date = new Date(ticket.dueDate + 'T00:00:00')
       const now = new Date()
       const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 

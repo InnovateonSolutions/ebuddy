@@ -39,7 +39,7 @@ export default function DayView({ initialData, userId }: DayViewProps) {
   // Realtime — nuevo ticket
   const handleInsert = useCallback(
     (ticket: Ticket) => {
-      const isToday = ticket.due_date === initialData.date || !ticket.due_date
+      const isToday = ticket.dueDate === initialData.date || !ticket.dueDate
       if (!isToday) return
 
       if (ticket.context === 'NEGOCIO') {
@@ -65,7 +65,7 @@ export default function DayView({ initialData, userId }: DayViewProps) {
 
   // Captura nueva desde el formulario inline
   function handleTicketCreated(ticket: Ticket) {
-    const isToday = ticket.due_date === initialData.date || !ticket.due_date
+    const isToday = ticket.dueDate === initialData.date || !ticket.dueDate
     if (!isToday) return
     // Realtime ya lo va a insertar, pero por si llega antes:
     handleInsert(ticket)

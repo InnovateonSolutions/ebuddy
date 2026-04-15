@@ -1,22 +1,23 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth/config'
+import { db } from '@/lib/db'
+import { calendarTokens } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { env } from '@/lib/env'
-import type { CalendarToken } from '@/types/database'
 
 export default async function SettingsPage({
   searchParams,
 }: {
   searchParams: { calendar_connected?: string; calendar_error?: string }
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const session = await auth()
+  if (!session?.user?.id) return null
 
-  const { data: tokens } = await supabase
-    .from('calendar_tokens')
-    .select('provider')
-    .eq('user_id', user.id) as { data: Pick<CalendarToken, 'provider'>[] | null; error: unknown }
+  const tokens = await db
+    .select({ provider: calendarTokens.provider })
+    .from(calendarTokens)
+    .where(eq(calendarTokens.userId, session.user.id))
 
-  const connectedProviders = new Set(tokens?.map((t) => t.provider) ?? [])
+  const connectedProviders = new Set(tokens.map((t) => t.provider))
   const googleConnected = connectedProviders.has('GOOGLE')
   const microsoftConnected = connectedProviders.has('MICROSOFT')
 
@@ -27,7 +28,6 @@ export default async function SettingsPage({
         <p className="text-slate-500 text-sm mt-0.5">Conecta tus calendarios para ver tu agenda integrada</p>
       </div>
 
-      {/* Notificaciones de resultado OAuth */}
       {searchParams.calendar_connected && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700">
           ✓ Calendario {searchParams.calendar_connected === 'google' ? 'Google' : 'Microsoft'} conectado correctamente.
@@ -39,7 +39,6 @@ export default async function SettingsPage({
         </div>
       )}
 
-      {/* Calendarios */}
       <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100">
         <div className="p-4">
           <h2 className="text-sm font-semibold text-slate-700 mb-3">Calendarios</h2>
@@ -103,7 +102,6 @@ export default async function SettingsPage({
         </div>
       </div>
 
-      {/* Info */}
       <p className="text-xs text-slate-400">
         Solo leemos tu calendario. No modificamos, creamos ni eliminamos eventos.
         Los tokens de acceso se almacenan cifrados.

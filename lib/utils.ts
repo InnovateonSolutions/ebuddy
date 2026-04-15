@@ -42,7 +42,7 @@ export function todayInTimezone(timezone: string): string {
 }
 
 // Chequea si un access_token de OAuth está expirado (con margen de 60s)
-export function isTokenExpired(expiresAt: string): boolean {
+export function isTokenExpired(expiresAt: Date | string): boolean {
   const expiresMs = new Date(expiresAt).getTime()
   return Date.now() >= expiresMs - 60_000
 }

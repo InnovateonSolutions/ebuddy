@@ -1,46 +1,50 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth/config'
+import { db } from '@/lib/db'
+import { tickets, userPreferences } from '@/lib/db/schema'
+import { eq, and, ne } from 'drizzle-orm'
 import { todayInTimezone } from '@/lib/utils'
 import DayView from '@/components/day-view'
 import CaptureForm from '@/components/capture-form'
 import type { TodayResponse } from '@/types/api'
-import type { Ticket, UserPreferences } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
 export default async function TodayPage() {
-  const supabase = await createClient()
+  const session = await auth()
+  if (!session?.user?.id) return null
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const userId = session.user.id
 
-  const { data: prefs } = await supabase
-    .from('user_preferences')
-    .select('timezone')
-    .eq('user_id', user.id)
-    .single() as { data: Pick<UserPreferences, 'timezone'> | null; error: unknown }
+  const prefs = await db
+    .select({ timezone: userPreferences.timezone })
+    .from(userPreferences)
+    .where(eq(userPreferences.userId, userId))
+    .limit(1)
 
-  const timezone = prefs?.timezone ?? 'America/Tijuana'
+  const timezone = prefs[0]?.timezone ?? 'America/Tijuana'
   const today = todayInTimezone(timezone)
 
-  // Obtener tickets de hoy del servidor directamente
-  const { data: tickets } = await supabase
-    .from('tickets')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('due_date', today)
-    .neq('status', 'DONE')
-    .order('created_at', { ascending: false }) as { data: Ticket[] | null; error: unknown }
+  const todayTickets = await db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.userId, userId),
+        eq(tickets.dueDate, today),
+        ne(tickets.status, 'DONE')
+      )
+    )
+    .orderBy(tickets.createdAt)
 
   const todayData: TodayResponse = {
     tickets: {
-      negocio: (tickets ?? []).filter((t) => t.context === 'NEGOCIO'),
-      personal: (tickets ?? []).filter((t) => t.context === 'PERSONAL'),
+      negocio: todayTickets.filter((t) => t.context === 'NEGOCIO'),
+      personal: todayTickets.filter((t) => t.context === 'PERSONAL'),
     },
-    calendar_events: [], // Los carga el cliente via SWR
+    calendar_events: [],
     date: today,
   }
 
-  // Formatear fecha legible
   const dateLabel = new Intl.DateTimeFormat('es-MX', {
     weekday: 'long',
     year: 'numeric',
@@ -51,19 +55,14 @@ export default async function TodayPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 capitalize">{dateLabel}</h1>
         <p className="text-slate-500 text-sm mt-0.5">
           {(todayData.tickets.negocio.length + todayData.tickets.personal.length)} tareas pendientes hoy
         </p>
       </div>
-
-      {/* Captura */}
       <CaptureForm />
-
-      {/* Vista del día */}
-      <DayView initialData={todayData} userId={user.id} />
+      <DayView initialData={todayData} userId={userId} />
     </div>
   )
 }

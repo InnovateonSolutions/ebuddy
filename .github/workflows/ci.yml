@@ -33,6 +33,5 @@ jobs:
           # Estas vars satisfacen la importación del módulo sin ejecutar validación.
           ANTHROPIC_API_KEY: test-dummy
           OPENAI_API_KEY: test-dummy
-          SUPABASE_SERVICE_ROLE_KEY: test-dummy
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-dummy
+          AUTH_SECRET: test-dummy-secret-32-chars-minimum
+          DATABASE_URL: postgresql://ebuddy:ebuddy@localhost:5432/ebuddy

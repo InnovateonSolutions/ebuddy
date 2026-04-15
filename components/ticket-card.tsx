@@ -97,9 +97,9 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
             <Badge variant={ticket.priority.toLowerCase() as 'alta' | 'media' | 'baja'}>
               {ticket.priority}
             </Badge>
-            {ticket.due_date && (
+            {ticket.dueDate && (
               <span className="text-xs text-slate-400">
-                {formatDate(ticket.due_date)}
+                {formatDate(ticket.dueDate)}
               </span>
             )}
           </div>
@@ -132,17 +132,17 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
                 <p className="text-sm text-slate-600 leading-relaxed">{ticket.overview}</p>
               </div>
             )}
-            {ticket.what_to_do && (
+            {ticket.whatToDo && (
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Qué hacer</p>
-                <p className="text-sm text-slate-700 font-medium">{ticket.what_to_do}</p>
+                <p className="text-sm text-slate-700 font-medium">{ticket.whatToDo}</p>
               </div>
             )}
-            {ticket.next_steps.length > 0 && (
+            {ticket.nextSteps.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Siguientes pasos</p>
                 <ol className="space-y-1">
-                  {ticket.next_steps.map((step, i) => (
+                  {ticket.nextSteps.map((step, i) => (
                     <li key={i} className="flex gap-2 text-sm text-slate-600">
                       <span className="text-slate-400 flex-shrink-0">{i + 1}.</span>
                       <span>{step}</span>
