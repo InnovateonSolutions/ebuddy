@@ -29,7 +29,7 @@ de larga duración de los secrets. Esta es la arquitectura actualmente en uso en
 
 La política de permisos (`route53-policy.json`) permite:
 - Listar hosted zones (necesario para que Terraform encuentre `innovateoncorp.com.`)
-- Leer y modificar record sets dentro de cualquier zona (`hostedzone/*`)
+- Leer tags y modificar record sets dentro de cualquier zona (`hostedzone/*`)
 - Leer el estado de un cambio (`change/*`)
 
 Si quieres escopar a una sola zona, reemplaza `hostedzone/*` con el ARN exacto:
