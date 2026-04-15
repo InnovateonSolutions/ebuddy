@@ -9,7 +9,7 @@ on:
       - '*.md'
 
 env:
-  NEXT_PUBLIC_APP_URL: https://app.ebuddy.io
+  NEXT_PUBLIC_APP_URL: https://ebuddy.innovateoncorp.com
 
 jobs:
   # ── 1. Build + Migrations en paralelo ──────────────────────

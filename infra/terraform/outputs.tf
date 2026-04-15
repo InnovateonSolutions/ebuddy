@@ -19,9 +19,9 @@ output "registry_push_credentials" {
   sensitive   = true
 }
 
-output "route53_record_instructions" {
-  description = "Instrucciones para crear el registro A en Route 53 manualmente"
-  value       = "En Route 53 → Hosted Zone → Crear registro A: nombre=${var.domain_name}, valor=${digitalocean_reserved_ip.app.ip_address}, TTL=300"
+output "dns_record" {
+  description = "Registro A creado en Route 53"
+  value       = "${aws_route53_record.app.name} → ${digitalocean_reserved_ip.app.ip_address}"
 }
 
 output "ssh_connect" {

@@ -23,6 +23,9 @@ jobs:
     env:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
       TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
+      TF_VAR_aws_access_key: ${{ secrets.AWS_ROUTE53_ACCESS_KEY }}
+      TF_VAR_aws_secret_key: ${{ secrets.AWS_ROUTE53_SECRET_KEY }}
+      # DO Spaces backend (no son AWS reales — son DO Spaces keys)
       AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 
@@ -73,6 +76,9 @@ jobs:
     env:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
       TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
+      TF_VAR_aws_access_key: ${{ secrets.AWS_ROUTE53_ACCESS_KEY }}
+      TF_VAR_aws_secret_key: ${{ secrets.AWS_ROUTE53_SECRET_KEY }}
+      # DO Spaces backend (no son AWS reales — son DO Spaces keys)
       AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 

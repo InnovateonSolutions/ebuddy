@@ -6,6 +6,10 @@ terraform {
       source  = "digitalocean/digitalocean"
       version = "~> 2.40"
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
   }
 
   # State en DO Spaces (S3-compatible)
@@ -32,6 +36,14 @@ terraform {
 
 provider "digitalocean" {
   token = var.do_token
+}
+
+# Credenciales explícitas para Route 53 — separadas de las DO Spaces keys
+# que usan las mismas env vars para el backend S3
+provider "aws" {
+  region     = "us-east-1"
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
 }
 
 locals {

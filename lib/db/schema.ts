@@ -7,6 +7,7 @@ import {
   time,
   integer,
   primaryKey,
+  index,
 } from 'drizzle-orm/pg-core'
 import type { AdapterAccountType } from 'next-auth/adapters'
 
@@ -88,25 +89,33 @@ export const userPreferences = pgTable('user_preferences', {
   workEnd: time('work_end').notNull().default('19:00'),
 })
 
-export const tickets = pgTable('tickets', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  title: text('title').notNull(),
-  context: ticketContextEnum('context').notNull(),
-  overview: text('overview').notNull().default(''),
-  whatToDo: text('what_to_do').notNull().default(''),
-  nextSteps: text('next_steps').array().notNull().default([]),
-  priority: ticketPriorityEnum('priority').notNull().default('MEDIA'),
-  status: ticketStatusEnum('status').notNull().default('PENDING'),
-  dueDate: date('due_date'),
-  rawInput: text('raw_input').notNull().default(''),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+export const tickets = pgTable(
+  'tickets',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    context: ticketContextEnum('context').notNull(),
+    overview: text('overview').notNull().default(''),
+    whatToDo: text('what_to_do').notNull().default(''),
+    nextSteps: text('next_steps').array().notNull().default([]),
+    priority: ticketPriorityEnum('priority').notNull().default('MEDIA'),
+    status: ticketStatusEnum('status').notNull().default('PENDING'),
+    dueDate: date('due_date'),
+    rawInput: text('raw_input').notNull().default(''),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => ({
+    userDateIdx: index('idx_tickets_user_date').on(t.userId, t.dueDate),
+    userStatusIdx: index('idx_tickets_user_status').on(t.userId, t.status),
+    userContextIdx: index('idx_tickets_user_context').on(t.userId, t.context),
+  })
+)
 
 export const calendarTokens = pgTable(
   'calendar_tokens',

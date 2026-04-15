@@ -46,3 +46,15 @@ variable "droplet_size" {
   type        = string
   default     = "s-1vcpu-2gb" # $12/mes — suficiente para MVP
 }
+
+variable "aws_access_key" {
+  description = "AWS Access Key ID con permisos sobre Route 53 (route53:ChangeResourceRecordSets, route53:ListHostedZonesByName)"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_key" {
+  description = "AWS Secret Access Key correspondiente a aws_access_key"
+  type        = string
+  sensitive   = true
+}
