@@ -1,0 +1,49 @@
+name: Infra — State Verification
+
+# Corre manualmente o automáticamente tras terraform apply.
+# Verifica que todos los recursos DO están en estado consistente.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Terraform — Infrastructure']
+    types: [completed]
+
+jobs:
+  verify:
+    name: DO Infrastructure State
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: scripts/go.mod
+
+      - name: Build infra-verify
+        working-directory: scripts
+        run: go build -o /tmp/infra-verify ./infra-verify/
+
+      - name: Verify infrastructure state
+        run: /tmp/infra-verify
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+          APP_NAME: ebuddy
+          ENVIRONMENT: prod
+
+      # Si infra-verify falla, corre el DR check automáticamente
+      - name: Run smoke test after successful verify
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'droplet-smoke-test.yml',
+              ref: 'main',
+            })

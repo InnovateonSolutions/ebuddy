@@ -70,17 +70,33 @@ export class ClaudeAIService implements IAIService {
     // Sanitizar el input del usuario con delimitadores claros
     const sanitizedText = text.slice(0, 2000).trim()
 
-    const message = await this.client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 30_000)
+
+    let message: Awaited<ReturnType<typeof this.client.messages.create>>
+    try {
+      message = await this.client.messages.create(
         {
-          role: 'user',
-          content: `<user_input>\n${sanitizedText}\n</user_input>`,
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: `<user_input>\n${sanitizedText}\n</user_input>`,
+            },
+          ],
         },
-      ],
-    })
+        { signal: controller.signal }
+      )
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('AI_TIMEOUT: Claude no respondió en 30 segundos')
+      }
+      throw err
+    } finally {
+      clearTimeout(timer)
+    }
 
     const rawContent = message.content[0]
     if (rawContent.type !== 'text') {

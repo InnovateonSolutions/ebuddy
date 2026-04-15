@@ -33,3 +33,30 @@ output "app_url" {
   description = "URL de la app en producción"
   value       = "https://${var.domain_name}"
 }
+
+# ─── Database outputs ────────────────────────────────────────
+output "db_host" {
+  description = "Host del DO Managed PostgreSQL"
+  value       = digitalocean_database_cluster.postgres.host
+}
+
+output "db_port" {
+  description = "Puerto del DO Managed PostgreSQL"
+  value       = digitalocean_database_cluster.postgres.port
+}
+
+output "db_name" {
+  description = "Nombre de la base de datos de la app"
+  value       = digitalocean_database_db.app.name
+}
+
+output "db_user" {
+  description = "Usuario de la app en PostgreSQL"
+  value       = digitalocean_database_user.app.name
+}
+
+output "db_uri" {
+  description = "Connection string completo — agregar como DATABASE_URL en GitHub Secrets"
+  value       = "postgresql://${digitalocean_database_user.app.name}:${digitalocean_database_user.app.password}@${digitalocean_database_cluster.postgres.host}:${digitalocean_database_cluster.postgres.port}/${digitalocean_database_db.app.name}?sslmode=require"
+  sensitive   = true
+}
