@@ -52,3 +52,13 @@ variable "droplet_size" {
   type        = string
   default     = "s-1vcpu-2gb" # $12/mes — suficiente para MVP
 }
+
+variable "registry_subscription_tier" {
+  description = "Tier del DigitalOcean Container Registry"
+  type        = string
+  default     = "basic"
+  validation {
+    condition     = contains(["starter", "basic", "professional"], var.registry_subscription_tier)
+    error_message = "registry_subscription_tier debe ser starter, basic o professional."
+  }
+}

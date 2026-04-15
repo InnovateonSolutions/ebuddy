@@ -5,7 +5,7 @@
 
 resource "digitalocean_container_registry" "main" {
   name                   = local.name_prefix
-  subscription_tier_slug = "starter" # gratis — 1 repo, 500 MB
+  subscription_tier_slug = var.registry_subscription_tier
   region                 = var.do_region
 }
 
