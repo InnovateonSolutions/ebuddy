@@ -9,6 +9,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   detect-changes:
     name: Detect Changes
@@ -143,7 +147,7 @@ jobs:
   terraform-plan:
     name: Terraform Plan
     needs: [detect-changes, terratest]
-    if: needs.detect-changes.outputs.infra_changed == 'true'
+    if: needs['detect-changes'].outputs.infra_changed == 'true'
     uses: ./.github/workflows/terraform.yml
     with:
       action: plan
@@ -156,7 +160,7 @@ jobs:
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      needs.detect-changes.outputs.app_changed == 'true' &&
-      (needs.terraform-plan.result == 'success' || needs.terraform-plan.result == 'skipped')
+      needs['detect-changes'].outputs.app_changed == 'true' &&
+      (needs['terraform-plan'].result == 'success' || needs['terraform-plan'].result == 'skipped')
     uses: ./.github/workflows/deploy.yml
     secrets: inherit

@@ -24,9 +24,14 @@ def test_ci_workflow_detects_application_and_infrastructure_changes():
     workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
 
     for expected_path in (
+        "permissions:",
+        "id-token: write",
         "app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*",
         "infra/*|.github/workflows/terraform.yml|.github/workflows/bootstrap-deploy.yml",
         "terraform-plan:",
+        "needs['detect-changes'].outputs.infra_changed",
+        "needs['detect-changes'].outputs.app_changed",
+        "needs['terraform-plan'].result",
         "uses: ./.github/workflows/deploy.yml",
         "uses: ./.github/workflows/terraform.yml",
     ):
