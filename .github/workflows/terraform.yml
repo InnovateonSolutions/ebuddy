@@ -1,8 +1,16 @@
 name: Terraform — Infrastructure
 
-# Ejecución manual únicamente — la infra no cambia en cada deploy
-# Para correr: GitHub → Actions → Terraform — Infrastructure → Run workflow
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/terraform.yml'
   workflow_dispatch:
     inputs:
       action:
@@ -11,30 +19,63 @@ on:
         default: 'plan'
         type: choice
         options: [plan, apply]
+      manage_dns:
+        description: 'Crear/actualizar Route 53 desde Terraform'
+        required: true
+        default: false
+        type: boolean
 
 # OIDC requiere permiso para solicitar el token JWT de GitHub
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     working-directory: infra/terraform
 
 jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    outputs:
+      manage_dns: ${{ steps.config.outputs.manage_dns }}
+
+    steps:
+      - name: Determine Terraform mode
+        id: config
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "manage_dns=${{ github.event.inputs.manage_dns }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "manage_dns=false" >> "$GITHUB_OUTPUT"
+          fi
+
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
+    needs: preflight
+    timeout-minutes: 20
     env:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
-      TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Derive SSH public key from deploy key
+        run: |
+          umask 077
+          printf '%s\n' '${{ secrets.DO_SSH_PRIVATE_KEY }}' > /tmp/ebuddy-deploy-key
+          echo "TF_VAR_ssh_pub_key=$(ssh-keygen -y -f /tmp/ebuddy-deploy-key)" >> $GITHUB_ENV
+
       # Asume el rol IAM vía OIDC — inyecta AWS_ACCESS_KEY_ID/SECRET/SESSION_TOKEN
       # El rol tiene permisos mínimos: solo Route 53 (ver docs/iam/README.md)
       - name: Configure AWS credentials (OIDC)
+        if: ${{ needs.preflight.outputs.manage_dns == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROUTE53_ROLE_ARN }}
@@ -64,6 +105,7 @@ jobs:
           echo "TF_VAR_domain_name=$DOMAIN_NAME"   >> $GITHUB_ENV
           echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
+          echo "TF_VAR_enable_route53=${{ needs.preflight.outputs.manage_dns }}" >> $GITHUB_ENV
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -85,16 +127,23 @@ jobs:
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: plan
-    if: github.event.inputs.action == 'apply'
+    needs: [preflight, plan]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+    timeout-minutes: 30
     env:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
-      TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Derive SSH public key from deploy key
+        run: |
+          umask 077
+          printf '%s\n' '${{ secrets.DO_SSH_PRIVATE_KEY }}' > /tmp/ebuddy-deploy-key
+          echo "TF_VAR_ssh_pub_key=$(ssh-keygen -y -f /tmp/ebuddy-deploy-key)" >> $GITHUB_ENV
+
       - name: Configure AWS credentials (OIDC)
+        if: ${{ needs.preflight.outputs.manage_dns == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROUTE53_ROLE_ARN }}
@@ -121,6 +170,7 @@ jobs:
           echo "TF_VAR_domain_name=$DOMAIN_NAME"   >> $GITHUB_ENV
           echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
+          echo "TF_VAR_enable_route53=${{ needs.preflight.outputs.manage_dns }}" >> $GITHUB_ENV
 
       - uses: hashicorp/setup-terraform@v3
         with:

@@ -1,0 +1,200 @@
+name: Operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Operacion a ejecutar'
+        required: true
+        default: infra-verify
+        type: choice
+        options:
+          - sync-secrets
+          - infra-verify
+          - droplet-smoke
+          - db-connectivity
+          - db-init
+          - whatsapp-config
+
+jobs:
+  sync-secrets:
+    name: Sync Runtime Secrets
+    if: ${{ github.event.inputs.task == 'sync-secrets' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load config
+        id: config
+        run: |
+          source infra/config/main.env
+          echo "droplet_name=${APP_NAME}-${ENVIRONMENT}-droplet" >> $GITHUB_OUTPUT
+          echo "app_url=$NEXT_PUBLIC_APP_URL" >> $GITHUB_OUTPUT
+
+      - name: Get Droplet IP
+        id: droplet
+        run: |
+          IP=$(curl -sf \
+            "https://api.digitalocean.com/v2/droplets?name=${{ steps.config.outputs.droplet_name }}" \
+            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          droplets = data.get('droplets', [])
+          if not droplets:
+              raise SystemExit('Droplet not found')
+          nets = droplets[0]['networks']['v4']
+          ip = next(n['ip_address'] for n in nets if n['type'] == 'public')
+          print(ip)
+          ")
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Write runtime env
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          envs: NEXT_PUBLIC_APP_URL
+          script: |
+            cat > /opt/ebuddy/.env << ENVEOF
+            NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+            MICROSOFT_CLIENT_ID=${{ secrets.MICROSOFT_CLIENT_ID }}
+            MICROSOFT_CLIENT_SECRET=${{ secrets.MICROSOFT_CLIENT_SECRET }}
+            MICROSOFT_TENANT_ID=${{ secrets.MICROSOFT_TENANT_ID }}
+            MICROSOFT_REDIRECT_URI=${{ secrets.MICROSOFT_REDIRECT_URI }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            ENVEOF
+            chmod 600 /opt/ebuddy/.env
+            echo "✓ /opt/ebuddy/.env actualizado"
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ steps.config.outputs.app_url }}
+
+  infra-verify:
+    name: Verify Infrastructure State
+    if: ${{ github.event.inputs.task == 'infra-verify' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: |
+            scripts/go.mod
+            scripts/go.sum
+
+      - name: Build infra-verify
+        working-directory: scripts
+        run: go build -o /tmp/infra-verify ./infra-verify/
+
+      - name: Verify infrastructure state
+        run: /tmp/infra-verify
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+          APP_NAME: ebuddy
+          ENVIRONMENT: dev
+
+  droplet-smoke:
+    name: Droplet Smoke Test
+    if: ${{ github.event.inputs.task == 'droplet-smoke' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: |
+            scripts/go.mod
+            scripts/go.sum
+
+      - name: Build smoke test
+        working-directory: scripts
+        run: go build -o /tmp/smoke-droplet ./smoke-droplet/
+
+      - name: Resolve Droplet IP
+        id: ip
+        run: echo "droplet_ip=$(python3 scripts/get-droplet-ip.py)" >> "$GITHUB_OUTPUT"
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+          DROPLET_NAME: ebuddy-dev-droplet
+
+      - name: Run smoke test
+        run: /tmp/smoke-droplet
+        env:
+          DROPLET_IP: ${{ steps.ip.outputs.droplet_ip }}
+          APP_URL: https://ebuddy.innovateoncorp.com
+
+  db-connectivity:
+    name: DB Connectivity
+    if: ${{ github.event.inputs.task == 'db-connectivity' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: |
+            scripts/go.mod
+            scripts/go.sum
+
+      - name: Build connectivity checker
+        working-directory: scripts
+        run: go build -o /tmp/check-db ./check-db/
+
+      - name: Check TCP + TLS connectivity to PostgreSQL
+        run: /tmp/check-db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  db-init:
+    name: Initialize DB Schema
+    if: ${{ github.event.inputs.task == 'db-init' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install jinja2
+
+      - name: Render init SQL
+        run: python3 scripts/db-init.py --output /tmp/init.sql
+        env:
+          ENVIRONMENT: prod
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Apply schema
+        run: psql "$DATABASE_URL" -f /tmp/init.sql
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  whatsapp-config:
+    name: Validate WhatsApp Config
+    if: ${{ github.event.inputs.task == 'whatsapp-config' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate WhatsApp configuration
+        run: bash scripts/check-whatsapp-config.sh
+        env:
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}

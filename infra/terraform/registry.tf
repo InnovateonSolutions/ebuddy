@@ -12,8 +12,8 @@ resource "digitalocean_container_registry" "main" {
 # Credenciales de solo-lectura para que el Droplet pueda hacer pull
 # Se generan como Docker config JSON y se escriben en el Droplet via cloud-init
 resource "digitalocean_container_registry_docker_credentials" "pull" {
-  registry_name = digitalocean_container_registry.main.name
-  write         = false
+  registry_name  = digitalocean_container_registry.main.name
+  write          = false
   expiry_seconds = 0 # no expira — rotar manualmente si es necesario
 }
 

@@ -11,7 +11,8 @@ const PUBLIC_PATHS = [
 export default auth((req: NextRequest & { auth: { user?: { id?: string } } | null }) => {
   const { pathname } = req.nextUrl
   const session = req.auth
-  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+  const isRootPath = pathname === '/'
+  const isPublicPath = isRootPath || PUBLIC_PATHS.some((p) => pathname.startsWith(p))
   const isStaticAsset = pathname.startsWith('/_next/')
 
   if (isStaticAsset) return NextResponse.next()

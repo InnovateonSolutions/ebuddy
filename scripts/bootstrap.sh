@@ -147,7 +147,6 @@ success "GitHub Secrets configurados en $REPO"
 # ── 6. GitHub Variables (conocidas antes de Terraform) ───────
 info "Configurando GitHub Variables..."
 
-gh variable set DO_SSH_PUB_KEY              --body "$SSH_PUB_KEY"
 gh variable set NEXT_PUBLIC_SUPABASE_ANON_KEY --body "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
 
 success "GitHub Variables base configuradas"

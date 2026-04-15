@@ -21,7 +21,7 @@ output "registry_push_credentials" {
 
 output "dns_record" {
   description = "Registro A creado en Route 53"
-  value       = "${aws_route53_record.app.name} → ${digitalocean_reserved_ip.app.ip_address}"
+  value       = var.enable_route53 ? "${aws_route53_record.app[0].name} → ${digitalocean_reserved_ip.app.ip_address}" : "DNS manual: crear un registro A para ${var.domain_name} → ${digitalocean_reserved_ip.app.ip_address}"
 }
 
 output "ssh_connect" {

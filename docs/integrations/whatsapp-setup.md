@@ -74,7 +74,7 @@ gh secret set WHATSAPP_WEBHOOK_VERIFY_TOKEN --body "$(openssl rand -hex 32)"
 Después de configurar los secrets, correr el workflow de validación:
 
 ```
-GitHub → Actions → WhatsApp — Config Validation → Run workflow
+GitHub → Actions → Operations → Run workflow → `task = whatsapp-config`
 ```
 
 O localmente:
@@ -116,5 +116,5 @@ Meta Cloud API envía respuesta a Martín
 - [ ] `WHATSAPP_API_TOKEN` configurado en GitHub Secrets
 - [ ] `WHATSAPP_PHONE_NUMBER_ID` configurado en GitHub Secrets
 - [ ] `WHATSAPP_BUSINESS_ACCOUNT_ID` configurado en GitHub Secrets
-- [ ] Workflow **WhatsApp — Config Validation** pasa en GitHub Actions
+- [ ] Workflow **Operations** con `task = whatsapp-config` pasa en GitHub Actions
 - [ ] Martín puede enviar un mensaje de prueba al número y recibirlo en el webhook

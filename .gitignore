@@ -40,7 +40,15 @@ infra/terraform/.terraform/
 infra/terraform/*.tfvars
 infra/terraform/*.tfstate
 infra/terraform/*.tfstate.backup
+*.tfstate
+*.tfstate.*
+.terragrunt-cache/
 # .terraform.lock.hcl se commitea — fija versiones de providers
+
+# go / terratest
+*.test
+coverage.out
+cover.out
 
 # typescript
 *.tsbuildinfo
@@ -48,3 +56,6 @@ next-env.d.ts
 
 # supabase
 supabase/.temp/
+
+# local tooling
+.codex

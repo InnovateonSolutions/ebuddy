@@ -59,10 +59,9 @@ ok "9 Secrets configurados"
 echo ""
 echo "→ Subiendo Variables..."
 
-gh variable set DO_SSH_PUB_KEY                --body "$(cat "${SSH_KEY}.pub")"
 gh variable set NEXT_PUBLIC_SUPABASE_ANON_KEY  --body "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
 
-ok "Variables DO_SSH_PUB_KEY y NEXT_PUBLIC_SUPABASE_ANON_KEY configuradas"
+ok "Variable NEXT_PUBLIC_SUPABASE_ANON_KEY configurada"
 
 # ── Resumen ───────────────────────────────────────────────────
 echo ""

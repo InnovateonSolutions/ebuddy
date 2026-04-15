@@ -13,25 +13,36 @@ Sin credenciales           Desarrollo local únicamente  Producción
                                                         como /opt/ebuddy/.env (chmod 600)
 ```
 
-**No hay servicio de secrets manager externo.** Los secrets de producción viven como GitHub Actions secrets y se escriben en el Droplet en cada deploy.
+**No hay servicio de secrets manager externo.** Los secrets de runtime viven en `/opt/ebuddy/.env` dentro del Droplet.
+GitHub Actions solo los sincroniza cuando se ejecuta manualmente el workflow `Operations`
+con la tarea `sync-secrets`.
 
 ---
 
-## Carga inicial de secrets en GitHub Actions
+## Secrets mínimos en GitHub Actions
 
 Ir a **GitHub → Settings → Secrets and variables → Actions → New repository secret** y agregar cada uno:
 
 | Secret | Descripción |
 |---|---|
-| `DO_TOKEN` | Token de API de DigitalOcean (también para Terraform) |
-| `DO_REGISTRY_NAME` | Nombre del registry DOCR (ej: `ebuddy-prod`) |
-| `DO_DROPLET_IP` | IP reservada del Droplet (output de `terraform output droplet_ip`) |
+| `DO_TOKEN` | Token de API de DigitalOcean (Terraform + deploy + sync manual) |
 | `DO_SSH_PRIVATE_KEY` | Clave SSH privada para deploy (par de `ssh_pub_key` en tfvars) |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Anon Key (pública por diseño) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Service Role Key (solo server-side) |
+| `DO_SPACES_ACCESS_KEY` | Key de DO Spaces para backend remoto de Terraform |
+| `DO_SPACES_SECRET_KEY` | Secret de DO Spaces para backend remoto de Terraform |
+
+## Secrets de aplicación
+
+Estos secrets ya **no son necesarios para el deploy normal**. Solo se usan si ejecutas
+manualmente el workflow `Operations` con la tarea `sync-secrets` para escribir o rotar
+`/opt/ebuddy/.env`:
+
+| Secret | Descripción |
+|---|---|
+| `DATABASE_URL` | Connection string PostgreSQL |
+| `AUTH_SECRET` | Secret de NextAuth/Auth.js |
 | `ANTHROPIC_API_KEY` | Anthropic Claude API Key |
 | `OPENAI_API_KEY` | OpenAI Whisper API Key |
+| `RESEND_API_KEY` | API key de Resend |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret |
 | `GOOGLE_REDIRECT_URI` | `https://<domain>/api/auth/calendar/google/callback` |
@@ -39,24 +50,32 @@ Ir a **GitHub → Settings → Secrets and variables → Actions → New reposit
 | `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth Client Secret |
 | `MICROSOFT_TENANT_ID` | `common` (o tenant ID específico) |
 | `MICROSOFT_REDIRECT_URI` | `https://<domain>/api/auth/calendar/microsoft/callback` |
-| `NEXT_PUBLIC_APP_URL` | `https://<domain>` |
 
 ---
 
 ## Cómo se inyectan en producción
 
-Cada push a `main` → GitHub Actions:
+`deploy.yml` ya no toca secrets de runtime. El flujo queda así:
 
 ```
-1. Conecta al Droplet via SSH (DO_SSH_PRIVATE_KEY + DO_DROPLET_IP)
-2. Sobreescribe /opt/ebuddy/.env con los valores de los secrets
-3. chmod 600 /opt/ebuddy/.env  (solo root puede leerlo)
-4. Ejecuta /usr/local/bin/ebuddy-deploy
+1. Push a main → build de imagen → push a DOCR
+2. GitHub conecta por SSH al Droplet
+3. Ejecuta /usr/local/bin/ebuddy-deploy
    → docker compose pull app
    → docker compose up -d
 ```
 
-El archivo `.env` **nunca aparece en logs, en el repositorio, ni en la imagen Docker**.
+Cuando se necesite cargar o rotar secrets:
+
+```
+1. GitHub Actions → Run workflow → `Operations`
+2. Elegir task = `sync-secrets`
+3. El workflow conecta por SSH al Droplet
+4. Sobreescribe /opt/ebuddy/.env con los valores actuales de GitHub Secrets
+5. chmod 600 /opt/ebuddy/.env
+```
+
+El archivo `.env` nunca aparece en el repositorio ni en la imagen Docker.
 
 ---
 

@@ -21,11 +21,11 @@ resource "digitalocean_droplet" "app" {
   monitoring = true
 
   user_data = templatefile("${path.module}/cloud-init.tpl", {
-    registry_name  = digitalocean_container_registry.main.name
-    app_name       = var.app_name
-    environment    = var.environment
-    domain_name    = var.domain_name
-    docker_config  = digitalocean_container_registry_docker_credentials.pull.docker_credentials
+    registry_name = digitalocean_container_registry.main.name
+    app_name      = var.app_name
+    environment   = var.environment
+    domain_name   = var.domain_name
+    docker_config = digitalocean_container_registry_docker_credentials.pull.docker_credentials
   })
 
   lifecycle {

@@ -31,6 +31,12 @@ variable "domain_name" {
   type        = string
 }
 
+variable "enable_route53" {
+  description = "Si es true, Terraform crea/actualiza el registro A en AWS Route 53"
+  type        = bool
+  default     = false
+}
+
 variable "alert_email" {
   description = "Email para alertas de monitoreo"
   type        = string

@@ -8,6 +8,10 @@ on:
       - 'docs/**'
       - '*.md'
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NEXT_PUBLIC_APP_URL: https://ebuddy.innovateoncorp.com
 
@@ -16,6 +20,7 @@ jobs:
   build:
     name: Build & Push
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -77,6 +82,7 @@ jobs:
   migrate:
     name: DB Migrations
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -89,7 +95,13 @@ jobs:
       - run: npm ci
 
       - name: Apply pending migrations
-        run: npx drizzle-kit migrate
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL no configurada; se omiten migraciones en este deploy bootstrap."
+            exit 0
+          fi
+
+          npx drizzle-kit migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
@@ -98,6 +110,7 @@ jobs:
     name: Deploy to Droplet
     runs-on: ubuntu-latest
     needs: [build, migrate]
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -130,26 +143,14 @@ jobs:
           host: ${{ steps.droplet.outputs.ip }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-          envs: NEXT_PUBLIC_APP_URL
-          script: |
-            cat > /opt/ebuddy/.env << ENVEOF
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            AUTH_SECRET=${{ secrets.AUTH_SECRET }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
-            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
-            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-            ENVEOF
-            chmod 600 /opt/ebuddy/.env
-            /usr/local/bin/ebuddy-deploy
+          script: /usr/local/bin/ebuddy-deploy
 
   # ── 4. Smoke tests E2E ──────────────────────────────────────
   e2e:
     name: E2E Smoke Tests
     runs-on: ubuntu-latest
     needs: deploy
+    timeout-minutes: 15
 
     steps:
       - name: Wait for container startup
