@@ -169,7 +169,10 @@ jobs:
   deploy:
     name: Deploy
     needs: [detect-changes, node-tests, python-tests, terratest, terraform-plan]
+    # always() fuerza la evaluación del if aunque haya dependencias skipped.
+    # Sin él, GitHub pre-saltea el job cuando any needed job fue skipped.
     if: |
+      always() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs['detect-changes'].outputs.app_changed == 'true' &&
