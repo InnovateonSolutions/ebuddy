@@ -12,6 +12,11 @@ on:
         type: choice
         options: [plan, apply]
 
+# OIDC requiere permiso para solicitar el token JWT de GitHub
+permissions:
+  id-token: write
+  contents: read
+
 defaults:
   run:
     working-directory: infra/terraform
@@ -23,21 +28,26 @@ jobs:
     env:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
       TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
-      TF_VAR_aws_access_key: ${{ secrets.AWS_ROUTE53_ACCESS_KEY }}
-      TF_VAR_aws_secret_key: ${{ secrets.AWS_ROUTE53_SECRET_KEY }}
-      # DO Spaces backend (no son AWS reales — son DO Spaces keys)
-      AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 
     steps:
       - uses: actions/checkout@v4
 
+      # Asume el rol IAM vía OIDC — inyecta AWS_ACCESS_KEY_ID/SECRET/SESSION_TOKEN
+      # El rol tiene permisos mínimos: solo Route 53 (ver docs/iam/README.md)
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROUTE53_ROLE_ARN }}
+          aws-region: us-east-1
+
       # Crea el DO Space para estado de Terraform si no existe.
       # Debe existir ANTES de terraform init (es el backend remoto).
-      # AWS CLI viene preinstalado en ubuntu-latest con endpoint de DO Spaces.
+      # Las credenciales de DO Spaces se pasan vía -backend-config en terraform init.
       - name: Create Terraform state bucket (idempotent)
         working-directory: ${{ github.workspace }}
         run: |
+          AWS_ACCESS_KEY_ID=${{ secrets.DO_SPACES_ACCESS_KEY }} \
+          AWS_SECRET_ACCESS_KEY=${{ secrets.DO_SPACES_SECRET_KEY }} \
           aws s3api create-bucket \
             --bucket ebuddy-tfstate \
             --region us-east-1 \
@@ -59,8 +69,12 @@ jobs:
         with:
           terraform_version: '~> 1.7'
 
+      # Credenciales DO Spaces vía -backend-config para no pisar las de OIDC (AWS)
       - name: Terraform Init
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="access_key=${{ secrets.DO_SPACES_ACCESS_KEY }}" \
+            -backend-config="secret_key=${{ secrets.DO_SPACES_SECRET_KEY }}"
 
       - name: Terraform Validate
         run: terraform validate
@@ -76,18 +90,21 @@ jobs:
     env:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
       TF_VAR_ssh_pub_key: ${{ vars.DO_SSH_PUB_KEY }}
-      TF_VAR_aws_access_key: ${{ secrets.AWS_ROUTE53_ACCESS_KEY }}
-      TF_VAR_aws_secret_key: ${{ secrets.AWS_ROUTE53_SECRET_KEY }}
-      # DO Spaces backend (no son AWS reales — son DO Spaces keys)
-      AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROUTE53_ROLE_ARN }}
+          aws-region: us-east-1
+
       - name: Create Terraform state bucket (idempotent)
         working-directory: ${{ github.workspace }}
         run: |
+          AWS_ACCESS_KEY_ID=${{ secrets.DO_SPACES_ACCESS_KEY }} \
+          AWS_SECRET_ACCESS_KEY=${{ secrets.DO_SPACES_SECRET_KEY }} \
           aws s3api create-bucket \
             --bucket ebuddy-tfstate \
             --region us-east-1 \
@@ -110,7 +127,10 @@ jobs:
           terraform_version: '~> 1.7'
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="access_key=${{ secrets.DO_SPACES_ACCESS_KEY }}" \
+            -backend-config="secret_key=${{ secrets.DO_SPACES_SECRET_KEY }}"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color

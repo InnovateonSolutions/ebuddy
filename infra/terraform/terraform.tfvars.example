@@ -12,8 +12,8 @@ app_name    = "ebuddy"
 environment = "prod"
 
 # Dominio donde se desplegará la app
-# Pre-requisito: apuntar nameservers a DO (ns1/ns2/ns3.digitalocean.com)
-domain_name = "app.ebuddy.io"
+# Pre-requisito: hosted zone pública en Route 53 (ver docs/iam/README.md)
+domain_name = "ebuddy.innovateoncorp.com"
 
 # Email para recibir alertas de CPU/memoria/disco
 alert_email = "martin@ebuddy.io"

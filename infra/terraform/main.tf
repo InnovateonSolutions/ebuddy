@@ -15,9 +15,10 @@ terraform {
   # State en DO Spaces (S3-compatible)
   # Antes del primer `terraform init`, crear el Space:
   #   doctl compute spaces create ebuddy-tfstate --region nyc3
-  # Pasar credenciales con env vars (NO son el DO token — son Spaces keys):
-  #   export AWS_ACCESS_KEY_ID=<spaces_access_key>
-  #   export AWS_SECRET_ACCESS_KEY=<spaces_secret_key>
+  # Pasar credenciales DO Spaces vía -backend-config (NO env vars — esas las usa OIDC para AWS):
+  #   terraform init \
+  #     -backend-config="access_key=<spaces_access_key>" \
+  #     -backend-config="secret_key=<spaces_secret_key>"
   backend "s3" {
     bucket = "ebuddy-tfstate"
     key    = "ebuddy/terraform.tfstate"
@@ -38,12 +39,10 @@ provider "digitalocean" {
   token = var.do_token
 }
 
-# Credenciales explícitas para Route 53 — separadas de las DO Spaces keys
-# que usan las mismas env vars para el backend S3
+# AWS provider usa la cadena estándar de credenciales (env vars inyectadas por OIDC en CI,
+# o perfil ~/.aws/credentials en local — ver docs/iam/README.md)
 provider "aws" {
-  region     = "us-east-1"
-  access_key = var.aws_access_key
-  secret_key = var.aws_secret_key
+  region = "us-east-1"
 }
 
 locals {
