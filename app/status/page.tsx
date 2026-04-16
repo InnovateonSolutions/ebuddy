@@ -1,85 +1,11 @@
-// Página de status — pública, sin autenticación
-// Server Component: ejecuta los checks directamente (sin fetch circular).
-
 import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
-import { db } from '@/lib/db'
-import { sql } from 'drizzle-orm'
 import PublicNav from '@/components/public-nav'
-
-// ─── Types ────────────────────────────────────────────────────
-
-type ServiceStatus = 'operational' | 'degraded' | 'outage'
-
-interface Service {
-  id: string
-  name: string
-  status: ServiceStatus
-  latencyMs?: number
-  detail?: string
-}
-
-interface StatusData {
-  overall: ServiceStatus
-  checkedAt: string
-  services: Service[]
-}
-
-// ─── Checks ───────────────────────────────────────────────────
-
-async function checkDatabase(): Promise<Service> {
-  if (!process.env.DATABASE_URL) {
-    return { id: 'database', name: 'Base de datos', status: 'degraded', detail: 'No configurada' }
-  }
-  const t0 = Date.now()
-  try {
-    await db.execute(sql`SELECT 1`)
-    return { id: 'database', name: 'Base de datos', status: 'operational', latencyMs: Date.now() - t0 }
-  } catch {
-    return { id: 'database', name: 'Base de datos', status: 'outage', latencyMs: Date.now() - t0, detail: 'Sin conexión' }
-  }
-}
-
-function checkAI(): Service {
-  const hasAnthropic = Boolean(process.env.ANTHROPIC_API_KEY)
-  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY)
-  if (hasAnthropic && hasOpenAI) return { id: 'ai', name: 'IA · Claude + Whisper', status: 'operational' }
-  if (hasAnthropic || hasOpenAI) return { id: 'ai', name: 'IA · Claude + Whisper', status: 'degraded', detail: 'Una clave de API faltante' }
-  return { id: 'ai', name: 'IA · Claude + Whisper', status: 'degraded', detail: 'Claves no configuradas' }
-}
-
-function checkCalendar(): Service {
-  const hasGoogle = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
-  const hasMicrosoft = Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET)
-  if (hasGoogle || hasMicrosoft) return { id: 'calendar', name: 'Integraciones de calendario', status: 'operational' }
-  return { id: 'calendar', name: 'Integraciones de calendario', status: 'degraded', detail: 'OAuth no configurado (opcional)' }
-}
-
-async function getStatus(): Promise<StatusData> {
-  const [dbService, aiService, calendarService] = await Promise.all([
-    checkDatabase(),
-    Promise.resolve(checkAI()),
-    Promise.resolve(checkCalendar()),
-  ])
-
-  const services: Service[] = [
-    { id: 'app', name: 'Aplicación web', status: 'operational' },
-    { id: 'api', name: 'API Routes', status: 'operational' },
-    dbService,
-    aiService,
-    calendarService,
-  ]
-
-  const hasOutage = services.some((s) => s.status === 'outage')
-  const hasDegraded = services.some((s) => s.status === 'degraded')
-  const overall: ServiceStatus = hasOutage ? 'outage' : hasDegraded ? 'degraded' : 'operational'
-
-  return { overall, checkedAt: new Date().toISOString(), services }
-}
+import { getSystemStatus, type ServiceCheck, type ServiceStatus } from '@/lib/status'
 
 // ─── Page ─────────────────────────────────────────────────────
 
 export default async function StatusPage() {
-  const data = await getStatus()
+  const data = await getSystemStatus()
 
   return (
     <div className="min-h-screen bg-[#f9f9f7]">
@@ -160,7 +86,7 @@ function OverallBanner({ status }: { status: ServiceStatus }) {
   )
 }
 
-function ServiceRow({ service }: { service: Service }) {
+function ServiceRow({ service }: { service: ServiceCheck }) {
   const dot =
     service.status === 'operational'
       ? 'bg-emerald-500'

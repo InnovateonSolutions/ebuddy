@@ -49,6 +49,10 @@ class TestDBInitRender:
         assert "'QA'" in sql
         assert "'DONE'" in sql
         assert 'ADD COLUMN "api_key"' in sql
+        assert 'ADD COLUMN "api_key_hash"' in sql
+        assert 'ADD COLUMN "api_key_preview"' in sql
+        assert 'DROP COLUMN "api_key"' in sql
+        assert 'DROP TABLE IF EXISTS "visit_counter"' in sql
 
     def test_rendered_sql_includes_visit_counter_seed_row(self):
         sql = db_init_mod.render_sql()
@@ -63,7 +67,6 @@ class TestDBInitRender:
             "'EN_PROGRESO'",
             "'HECHO'",
             "password_hash",
-            "api_key_hash",
         ]:
             assert legacy not in sql
 
@@ -75,6 +78,7 @@ class TestDBInitRender:
             "drizzle/0001_add_qa_status.sql",
             "drizzle/0002_add_api_key.sql",
             "drizzle/0003_add_visit_counter.sql",
+            "drizzle/0004_secure_api_keys_and_drop_visit_counter.sql",
         ]:
             content = (REPO_ROOT / rel_path).read_text().strip()
             assert content in sql

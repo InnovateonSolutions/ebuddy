@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { calendarTokens, type CalendarToken } from '@/lib/db/schema'
 import { getGoogleCalendarEvents } from '@/lib/calendar/google'
 import { getMicrosoftCalendarEvents } from '@/lib/calendar/microsoft'
+import { decryptSecret, encryptSecret } from '@/lib/secrets'
 import type { CalendarEventsResponse } from '@/lib/types'
 
 interface LoadCalendarEventsOptions {
@@ -15,9 +16,15 @@ async function persistRefreshedToken(
   provider: 'GOOGLE' | 'MICROSOFT',
   newToken: Partial<CalendarToken>
 ) {
+  const persistedToken = {
+    ...newToken,
+    ...(newToken.accessToken ? { accessToken: encryptSecret(newToken.accessToken) } : {}),
+    ...(newToken.refreshToken ? { refreshToken: encryptSecret(newToken.refreshToken) } : {}),
+  }
+
   await db
     .update(calendarTokens)
-    .set(newToken)
+    .set(persistedToken)
     .where(
       and(
         eq(calendarTokens.userId, userId),
@@ -57,6 +64,14 @@ async function loadProviderEvents(
   }
 }
 
+function decryptCalendarToken(token: CalendarToken): CalendarToken {
+  return {
+    ...token,
+    accessToken: decryptSecret(token.accessToken),
+    refreshToken: decryptSecret(token.refreshToken),
+  }
+}
+
 export async function loadCalendarEvents(
   userId: string,
   { daysAhead = 7, throwOnAuthRequired = false }: LoadCalendarEventsOptions = {}
@@ -73,7 +88,7 @@ export async function loadCalendarEvents(
   const providersConnected = tokens.map((token) => token.provider)
   const eventGroups = await Promise.all(
     tokens.map((token) =>
-      loadProviderEvents(userId, token, daysAhead, throwOnAuthRequired)
+      loadProviderEvents(userId, decryptCalendarToken(token), daysAhead, throwOnAuthRequired)
     )
   )
 

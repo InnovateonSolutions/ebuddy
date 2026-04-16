@@ -2,6 +2,7 @@ import { exchangeCodeForTokens } from '@/lib/calendar/google'
 import { db } from '@/lib/db'
 import { calendarTokens } from '@/lib/db/schema'
 import { auth } from '@/lib/auth/config'
+import { encryptSecret } from '@/lib/secrets'
 import { logEvent } from '@/lib/utils'
 import { env } from '@/lib/env'
 
@@ -28,15 +29,15 @@ export async function GET(request: Request) {
       .values({
         userId: session.user.id,
         provider: 'GOOGLE',
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encryptSecret(tokens.access_token),
+        refreshToken: encryptSecret(tokens.refresh_token),
         expiresAt: new Date(tokens.expires_at),
       })
       .onConflictDoUpdate({
         target: [calendarTokens.userId, calendarTokens.provider],
         set: {
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
+          accessToken: encryptSecret(tokens.access_token),
+          refreshToken: encryptSecret(tokens.refresh_token),
           expiresAt: new Date(tokens.expires_at),
           updatedAt: new Date(),
         },

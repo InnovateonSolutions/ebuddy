@@ -19,7 +19,10 @@ export default async function SettingsPage({
       .from(calendarTokens)
       .where(eq(calendarTokens.userId, session.user.id)),
     db
-      .select({ apiKey: userPreferences.apiKey })
+      .select({
+        apiKeyHash: userPreferences.apiKeyHash,
+        apiKeyPreview: userPreferences.apiKeyPreview,
+      })
       .from(userPreferences)
       .where(eq(userPreferences.userId, session.user.id))
       .then((rows) => rows[0] ?? null),
@@ -115,7 +118,10 @@ export default async function SettingsPage({
         Los tokens de acceso se almacenan cifrados.
       </p>
 
-      <ApiKeySection initialKey={prefs?.apiKey ?? null} />
+      <ApiKeySection
+        hasKey={Boolean(prefs?.apiKeyHash)}
+        initialPreview={prefs?.apiKeyPreview ?? null}
+      />
 
       <p className="text-xs text-slate-400 text-center pt-2">
         ebuddy — construido por{' '}

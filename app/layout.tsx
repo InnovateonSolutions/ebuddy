@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import VisitCounter from '@/components/visit-counter'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,10 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={inter.className}>
-        {children}
-        <VisitCounter />
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }

@@ -113,16 +113,6 @@ else
   check "auth /api/user/api-key" "fail" "HTTP $APIKEY_STATUS (expected 401)"
 fi
 
-# ── Visit counter accesible sin autenticación ────────────────────────────────
-
-VISITS_BODY=$(curl -sf -X POST "$APP_URL/api/visits" -H "Content-Type: application/json" || echo "")
-VISITS_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$APP_URL/api/visits")
-if [ "$VISITS_HTTP" = "200" ] && echo "$VISITS_BODY" | grep -q '"count"'; then
-  check "visits /api/visits" "ok" "HTTP 200, body: $VISITS_BODY"
-else
-  check "visits /api/visits" "fail" "HTTP $VISITS_HTTP, body: $VISITS_BODY (expected 200 with count)"
-fi
-
 # ── Resumen ───────────────────────────────────────────────────────────────────
 
 echo ""

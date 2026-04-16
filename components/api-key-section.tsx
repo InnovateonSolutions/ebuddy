@@ -3,18 +3,21 @@
 import { useState } from 'react'
 
 interface ApiKeySectionProps {
-  initialKey: string | null
+  hasKey: boolean
+  initialPreview: string | null
 }
 
-export function ApiKeySection({ initialKey }: ApiKeySectionProps) {
-  const [apiKey, setApiKey] = useState<string | null>(initialKey)
+function buildApiKeyPreview(apiKey: string) {
+  return `${apiKey.slice(0, 8)}${'•'.repeat(24)}${apiKey.slice(-8)}`
+}
+
+export function ApiKeySection({ hasKey, initialPreview }: ApiKeySectionProps) {
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(initialPreview)
   const [revealed, setRevealed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
-
-  const maskedKey = apiKey
-    ? apiKey.slice(0, 8) + '•'.repeat(24) + apiKey.slice(-8)
-    : null
+  const displayKey = generatedKey && revealed ? generatedKey : preview
 
   async function handleGenerate() {
     setLoading(true)
@@ -22,7 +25,8 @@ export function ApiKeySection({ initialKey }: ApiKeySectionProps) {
       const res = await fetch('/api/user/api-key', { method: 'POST' })
       const json = await res.json()
       if (json.success) {
-        setApiKey(json.data.key)
+        setGeneratedKey(json.data.key)
+        setPreview(json.data.preview ?? buildApiKeyPreview(json.data.key))
         setRevealed(true)
       }
     } finally {
@@ -31,8 +35,8 @@ export function ApiKeySection({ initialKey }: ApiKeySectionProps) {
   }
 
   async function handleCopy() {
-    if (!apiKey) return
-    await navigator.clipboard.writeText(apiKey)
+    if (!generatedKey) return
+    await navigator.clipboard.writeText(generatedKey)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -45,29 +49,33 @@ export function ApiKeySection({ initialKey }: ApiKeySectionProps) {
           Úsala para autenticar requests externos (OpenClaw, scripts, etc.)
         </p>
 
-        {apiKey ? (
+        {hasKey || generatedKey ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
               <code className="flex-1 text-xs text-slate-700 font-mono truncate">
-                {revealed ? apiKey : maskedKey}
+                {displayKey}
               </code>
-              <button
-                onClick={() => setRevealed((v) => !v)}
-                className="text-xs text-slate-500 hover:text-slate-700 shrink-0"
-                type="button"
-              >
-                {revealed ? 'Ocultar' : 'Ver'}
-              </button>
+              {generatedKey && (
+                <button
+                  onClick={() => setRevealed((value) => !value)}
+                  className="text-xs text-slate-500 hover:text-slate-700 shrink-0"
+                  type="button"
+                >
+                  {revealed ? 'Ocultar' : 'Ver'}
+                </button>
+              )}
             </div>
 
             <div className="flex gap-2">
-              <button
-                onClick={handleCopy}
-                type="button"
-                className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-              >
-                {copied ? '✓ Copiada' : 'Copiar'}
-              </button>
+              {generatedKey && (
+                <button
+                  onClick={handleCopy}
+                  type="button"
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                >
+                  {copied ? '✓ Copiada' : 'Copiar'}
+                </button>
+              )}
               <button
                 onClick={handleGenerate}
                 disabled={loading}
@@ -79,7 +87,7 @@ export function ApiKeySection({ initialKey }: ApiKeySectionProps) {
             </div>
 
             <p className="text-xs text-slate-400">
-              Regenerar invalida la key anterior. Actualiza tus integraciones.
+              Solo mostramos la key completa al momento de regenerarla. Después conservamos una vista enmascarada.
             </p>
           </div>
         ) : (

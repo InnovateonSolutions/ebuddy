@@ -87,7 +87,8 @@ export const userPreferences = pgTable('user_preferences', {
   timezone: text('timezone').notNull().default('America/Tijuana'),
   workStart: time('work_start').notNull().default('08:00'),
   workEnd: time('work_end').notNull().default('19:00'),
-  apiKey: text('api_key'),
+  apiKeyHash: text('api_key_hash'),
+  apiKeyPreview: text('api_key_preview'),
 })
 
 export const tickets = pgTable(
@@ -135,14 +136,6 @@ export const calendarTokens = pgTable(
     pk: primaryKey({ columns: [t.userId, t.provider] }),
   })
 )
-
-// ─── Visit counter (singleton row id=1) ──────────────────────
-
-export const visitCounter = pgTable('visit_counter', {
-  id: integer('id').primaryKey().default(1),
-  count: integer('count').notNull().default(0),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
 
 // ─── Inferred types ───────────────────────────────────────────
 
