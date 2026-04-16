@@ -70,14 +70,20 @@ jobs:
             type=sha,prefix=sha-
             type=raw,value=latest
 
-      - uses: docker/setup-buildx-action@v3
-
-      # doctl registry login obtiene un token de corta duración vía DO API
-      # y configura el credential helper de Docker para DOCR.
-      # Se hace DESPUÉS de setup-buildx para que el helper ya esté disponible
-      # cuando el daemon de buildx necesite autenticarse al hacer pull/push.
+      # docker/login-action DEBE ir ANTES de setup-buildx-action.
+      # El builder de buildx (docker-container driver) hereda las credenciales
+      # del daemon de Docker al momento de su creación. Si se hace login después,
+      # el container ya está corriendo y no ve las credenciales nuevas.
+      # Para DOCR: username = password = DO_TOKEN (token permanente vs el token
+      # temporal de 'doctl registry login' que causaba 401 intermitentes).
       - name: Login to DOCR
-        run: doctl registry login --expiry-seconds 1200
+        uses: docker/login-action@v3
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DO_TOKEN }}
+          password: ${{ secrets.DO_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
 
       - uses: docker/build-push-action@v5
         with:
