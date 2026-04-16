@@ -72,13 +72,12 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # Login DESPUÉS de setup-buildx para que el daemon de buildx
-      # tenga las credenciales disponibles desde el inicio
-      - uses: docker/login-action@v3
-        with:
-          registry: registry.digitalocean.com
-          username: ${{ secrets.DO_TOKEN }}
-          password: ${{ secrets.DO_TOKEN }}
+      # doctl registry login obtiene un token de corta duración vía DO API
+      # y configura el credential helper de Docker para DOCR.
+      # Se hace DESPUÉS de setup-buildx para que el helper ya esté disponible
+      # cuando el daemon de buildx necesite autenticarse al hacer pull/push.
+      - name: Login to DOCR
+        run: doctl registry login --expiry-seconds 1200
 
       - uses: docker/build-push-action@v5
         with:
