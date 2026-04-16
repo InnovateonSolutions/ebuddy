@@ -201,6 +201,7 @@ jobs:
             env | grep -E '^(DATABASE_URL|AUTH_SECRET|OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GOOGLE_REDIRECT_URI)=' \
               > /opt/ebuddy/.env
             echo "NODE_ENV=production" >> /opt/ebuddy/.env
+            echo "AUTH_URL=https://ebuddy.innovateoncorp.com" >> /opt/ebuddy/.env
             chmod 600 /opt/ebuddy/.env
 
             # Correr migraciones — el Droplet está en red confiable de DO (DB firewall: solo Droplet)
