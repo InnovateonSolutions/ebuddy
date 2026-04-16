@@ -176,3 +176,25 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L https://ebuddy.innovateoncorp.com/)
           [ "$STATUS" = "200" ] || { echo "FAIL: / returned $STATUS"; exit 1; }
           echo "PASS: root redirect"
+
+      - name: Security headers present (KAN-12)
+        run: |
+          HEADERS=$(curl -sI https://ebuddy.innovateoncorp.com/api/health)
+          echo "$HEADERS"
+          echo "$HEADERS" | grep -qi "x-frame-options: DENY"          || { echo "FAIL: X-Frame-Options missing"; exit 1; }
+          echo "$HEADERS" | grep -qi "x-content-type-options: nosniff" || { echo "FAIL: X-Content-Type-Options missing"; exit 1; }
+          echo "$HEADERS" | grep -qi "strict-transport-security"        || { echo "FAIL: HSTS missing"; exit 1; }
+          echo "$HEADERS" | grep -qi "referrer-policy"                  || { echo "FAIL: Referrer-Policy missing"; exit 1; }
+          echo "PASS: security headers"
+
+      - name: HTTP redirects to HTTPS (KAN-12)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-redirs 0 http://ebuddy.innovateoncorp.com/)
+          { [ "$STATUS" = "301" ] || [ "$STATUS" = "308" ]; } || { echo "FAIL: expected 301/308, got $STATUS"; exit 1; }
+          echo "PASS: HTTP→HTTPS redirect ($STATUS)"
+
+      - name: API key endpoint rejects unauthenticated requests (KAN-29)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://ebuddy.innovateoncorp.com/api/user/api-key)
+          [ "$STATUS" = "401" ] || { echo "FAIL: /api/user/api-key POST returned $STATUS (expected 401)"; exit 1; }
+          echo "PASS: /api/user/api-key auth protection"

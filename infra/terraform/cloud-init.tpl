@@ -78,6 +78,14 @@ COMPOSEEOF
 
 cat > "$APP_DIR/Caddyfile" << 'CADDYEOF'
 ${domain_name} {
+    header {
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "microphone=(self)"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
     reverse_proxy app:3000
 }
 CADDYEOF

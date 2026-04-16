@@ -1,8 +1,9 @@
 import { auth } from '@/lib/auth/config'
 import { db } from '@/lib/db'
-import { calendarTokens } from '@/lib/db/schema'
+import { calendarTokens, userPreferences } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { env } from '@/lib/env'
+import { ApiKeySection } from '@/components/api-key-section'
 
 export default async function SettingsPage({
   searchParams,
@@ -12,10 +13,17 @@ export default async function SettingsPage({
   const session = await auth()
   if (!session?.user?.id) return null
 
-  const tokens = await db
-    .select({ provider: calendarTokens.provider })
-    .from(calendarTokens)
-    .where(eq(calendarTokens.userId, session.user.id))
+  const [tokens, prefs] = await Promise.all([
+    db
+      .select({ provider: calendarTokens.provider })
+      .from(calendarTokens)
+      .where(eq(calendarTokens.userId, session.user.id)),
+    db
+      .select({ apiKey: userPreferences.apiKey })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, session.user.id))
+      .then((rows) => rows[0] ?? null),
+  ])
 
   const connectedProviders = new Set(tokens.map((t) => t.provider))
   const googleConnected = connectedProviders.has('GOOGLE')
@@ -25,7 +33,7 @@ export default async function SettingsPage({
     <div className="max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Ajustes</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Conecta tus calendarios para ver tu agenda integrada</p>
+        <p className="text-slate-500 text-sm mt-0.5">Conecta tus calendarios y gestiona tu acceso</p>
       </div>
 
       {searchParams.calendar_connected && (
@@ -105,6 +113,13 @@ export default async function SettingsPage({
       <p className="text-xs text-slate-400">
         Solo leemos tu calendario. No modificamos, creamos ni eliminamos eventos.
         Los tokens de acceso se almacenan cifrados.
+      </p>
+
+      <ApiKeySection initialKey={prefs?.apiKey ?? null} />
+
+      <p className="text-xs text-slate-400 text-center pt-2">
+        ebuddy — construido por{' '}
+        <span className="font-medium text-slate-500">Martín Cuevas Tavizón</span>
       </p>
     </div>
   )

@@ -26,6 +26,7 @@ export interface StructuredTicket {
   what_to_do: string
   next_steps: string[]
   priority: TicketPriority
+  due_date: string | null   // YYYY-MM-DD inferida por IA, o null si no se menciona
 }
 
 // Schema de validación para la respuesta JSON de Claude
@@ -40,4 +41,5 @@ export const STRUCTURED_TICKET_EXAMPLE: StructuredTicket = {
     'Enviar al cliente antes del jueves 18:00',
   ],
   priority: 'ALTA',
+  due_date: null,
 }

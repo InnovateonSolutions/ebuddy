@@ -61,6 +61,65 @@ func checkHealth(appURL string) result {
 	return result{"health /api/health", true, "ok"}
 }
 
+// checkHTTPSRedirect verifica que HTTP (puerto 80) redirige a HTTPS.
+func checkHTTPSRedirect(dropletIP string) result {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse // no seguir redirects
+		},
+	}
+	url := "http://" + net.JoinHostPort(dropletIP, "80") + "/"
+	resp, err := client.Get(url)
+	if err != nil {
+		return result{"HTTPS redirect (HTTP→HTTPS)", false, err.Error()}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 301 && resp.StatusCode != 308 {
+		return result{"HTTPS redirect (HTTP→HTTPS)", false,
+			fmt.Sprintf("expected 301/308, got %d", resp.StatusCode)}
+	}
+	loc := resp.Header.Get("Location")
+	if loc == "" || (len(loc) >= 8 && loc[:8] != "https://") {
+		return result{"HTTPS redirect (HTTP→HTTPS)", false,
+			fmt.Sprintf("Location header missing or not HTTPS: %q", loc)}
+	}
+	return result{"HTTPS redirect (HTTP→HTTPS)", true,
+		fmt.Sprintf("redirects to %s", loc)}
+}
+
+// checkSecurityHeaders verifica que los headers de seguridad clave están presentes.
+func checkSecurityHeaders(appURL string) result {
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(appURL + "/api/health")
+	if err != nil {
+		return result{"security headers", false, err.Error()}
+	}
+	defer resp.Body.Close()
+
+	required := map[string]string{
+		"X-Frame-Options":        "DENY",
+		"X-Content-Type-Options": "nosniff",
+	}
+	var missing []string
+	for header, expected := range required {
+		got := resp.Header.Get(header)
+		if got != expected {
+			missing = append(missing, fmt.Sprintf("%s (got %q, want %q)", header, got, expected))
+		}
+	}
+	if len(missing) > 0 {
+		return result{"security headers", false, fmt.Sprintf("missing/wrong: %v", missing)}
+	}
+	// Verificar HSTS está presente
+	hsts := resp.Header.Get("Strict-Transport-Security")
+	if hsts == "" {
+		return result{"security headers", false, "Strict-Transport-Security header missing"}
+	}
+	return result{"security headers", true, "X-Frame-Options, X-Content-Type-Options, HSTS present"}
+}
+
 func main() {
 	dropletIP := os.Getenv("DROPLET_IP")
 	if dropletIP == "" {
@@ -74,9 +133,13 @@ func main() {
 	checks := []checkFn{
 		func() result { return checkTCP("SSH  (port 22)", net.JoinHostPort(dropletIP, "22")) },
 		func() result { return checkTCP("HTTPS (port 443)", net.JoinHostPort(dropletIP, "443")) },
+		func() result { return checkHTTPSRedirect(dropletIP) },
 	}
 	if appURL != "" {
-		checks = append(checks, func() result { return checkHealth(appURL) })
+		checks = append(checks,
+			func() result { return checkHealth(appURL) },
+			func() result { return checkSecurityHeaders(appURL) },
+		)
 	}
 
 	var mu sync.Mutex

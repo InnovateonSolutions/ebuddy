@@ -63,6 +63,10 @@ export async function POST(request: Request) {
     }
 
     // ---- GUARDAR EN DB ----
+    // La fecha explícita del cliente tiene prioridad.
+    // Si no viene, se usa la inferida por Claude desde el texto.
+    const resolvedDueDate = dueDate ?? structured.due_date ?? null
+
     const [ticket] = await db
       .insert(tickets)
       .values({
@@ -74,7 +78,7 @@ export async function POST(request: Request) {
         nextSteps: structured.next_steps,
         priority: structured.priority,
         status: 'PENDING',
-        dueDate: dueDate ?? null,
+        dueDate: resolvedDueDate,
         rawInput: rawText,
       })
       .returning()

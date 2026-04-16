@@ -15,6 +15,13 @@
       "when": 1776600000000,
       "tag": "0001_add_qa_status",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776640000000,
+      "tag": "0002_add_api_key",
+      "breakpoints": true
     }
   ]
 }

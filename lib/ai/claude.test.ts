@@ -31,6 +31,7 @@ const VALID_RESPONSE = {
     'Enviar al cliente antes del jueves 18:00',
   ],
   priority: 'ALTA',
+  due_date: null,
 }
 
 function makeMessage(text: string) {
@@ -153,5 +154,84 @@ describe('ClaudeAIService', () => {
     const callOptions = mocks.messagesCreate.mock.calls[0][1]
     expect(callOptions).toHaveProperty('signal')
     expect(callOptions.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  // ── KAN-42: Inferencia de fecha límite ──────────────────────
+
+  it('retorna due_date cuando Claude infiere una fecha del texto', async () => {
+    const responseWithDate = { ...VALID_RESPONSE, due_date: '2026-04-18' }
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage(JSON.stringify(responseWithDate))
+    )
+
+    const result = await service.classifyAndStructure(
+      'hay que entregar el reporte el viernes'
+    )
+
+    expect(result.due_date).toBe('2026-04-18')
+  })
+
+  it('retorna due_date null cuando Claude no infiere fecha', async () => {
+    const responseNoDate = { ...VALID_RESPONSE, due_date: null }
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage(JSON.stringify(responseNoDate))
+    )
+
+    const result = await service.classifyAndStructure(
+      'revisar el código cuando pueda'
+    )
+
+    expect(result.due_date).toBeNull()
+  })
+
+  it('lanza error si due_date no tiene formato YYYY-MM-DD', async () => {
+    const badDate = { ...VALID_RESPONSE, due_date: 'viernes' }
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage(JSON.stringify(badDate))
+    )
+
+    await expect(
+      service.classifyAndStructure('tarea con fecha inválida')
+    ).rejects.toThrow('schema')
+  })
+
+  it('lanza error si due_date es string vacío', async () => {
+    const emptyDate = { ...VALID_RESPONSE, due_date: '' }
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage(JSON.stringify(emptyDate))
+    )
+
+    await expect(
+      service.classifyAndStructure('tarea con fecha vacía')
+    ).rejects.toThrow('schema')
+  })
+
+  it('inyecta la fecha de hoy en el system prompt', async () => {
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage(JSON.stringify({ ...VALID_RESPONSE, due_date: null }))
+    )
+
+    await service.classifyAndStructure('texto')
+
+    const callArgs = mocks.messagesCreate.mock.calls[0][0]
+    const systemPrompt = callArgs.system as string
+    // Debe contener una fecha ISO en el formato YYYY-MM-DD
+    expect(systemPrompt).toMatch(/FECHA DE HOY: \d{4}-\d{2}-\d{2}/)
+    // Debe contener el nombre del día en español
+    expect(systemPrompt).toMatch(
+      /lunes|martes|miércoles|jueves|viernes|sábado|domingo/i
+    )
+  })
+
+  it('acepta timezone personalizado para inyectar fecha correcta', async () => {
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage(JSON.stringify({ ...VALID_RESPONSE, due_date: null }))
+    )
+
+    await service.classifyAndStructure('texto', 'Asia/Tokyo')
+
+    const callArgs = mocks.messagesCreate.mock.calls[0][0]
+    const systemPrompt = callArgs.system as string
+    expect(systemPrompt).toMatch(/FECHA DE HOY: \d{4}-\d{2}-\d{2}/)
   })
 })

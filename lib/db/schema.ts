@@ -87,6 +87,7 @@ export const userPreferences = pgTable('user_preferences', {
   timezone: text('timezone').notNull().default('America/Tijuana'),
   workStart: time('work_start').notNull().default('08:00'),
   workEnd: time('work_end').notNull().default('19:00'),
+  apiKey: text('api_key'),
 })
 
 export const tickets = pgTable(
