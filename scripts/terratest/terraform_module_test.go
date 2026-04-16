@@ -69,3 +69,30 @@ func TestTerraformModuleValidateWithRoute53Enabled(t *testing.T) {
 	_, err = ttterraform.RunTerraformCommandE(t, opts, "validate")
 	require.NoError(t, err)
 }
+
+// TestAWSProviderNoCredsWhenRoute53Disabled verifica que el módulo de Terraform
+// no requiere credenciales AWS cuando enable_route53=false.
+//
+// Edge case: en CI, el step de OIDC se omite cuando manage_dns=false.
+// Sin skip_credentials_validation en el provider "aws", Terraform intenta
+// EC2 IMDS y falla con "no EC2 IMDS role found".
+func TestAWSProviderNoCredsWhenRoute53Disabled(t *testing.T) {
+	t.Parallel()
+
+	opts := newTerraformOptions(t, false)
+
+	// Simular entorno sin credenciales AWS: deshabilitar EC2 IMDS y borrar vars de entorno.
+	opts.EnvVars = map[string]string{
+		"AWS_EC2_METADATA_DISABLED": "true",
+		"AWS_ACCESS_KEY_ID":         "",
+		"AWS_SECRET_ACCESS_KEY":     "",
+		"AWS_SESSION_TOKEN":         "",
+		"AWS_PROFILE":               "",
+	}
+
+	_, err := ttterraform.RunTerraformCommandE(t, opts, "init", "-backend=false", "-input=false")
+	require.NoError(t, err, "terraform init debe pasar sin credenciales AWS cuando enable_route53=false")
+
+	_, err = ttterraform.RunTerraformCommandE(t, opts, "validate")
+	require.NoError(t, err, "terraform validate no debe requerir credenciales AWS cuando enable_route53=false")
+}

@@ -40,9 +40,16 @@ provider "digitalocean" {
 }
 
 # AWS provider usa la cadena estándar de credenciales (env vars inyectadas por OIDC en CI,
-# o perfil ~/.aws/credentials en local — ver docs/iam/README.md)
+# o perfil ~/.aws/credentials en local — ver docs/iam/README.md).
+# Los skip_* evitan que el provider intente EC2 IMDS cuando no hay credenciales AWS
+# (ej. cuando enable_route53=false y el step OIDC se omite en CI).
 provider "aws" {
   region = "us-east-1"
+
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  skip_metadata_api_check     = true
+  skip_region_validation      = true
 }
 
 locals {

@@ -163,7 +163,7 @@ jobs:
     uses: ./.github/workflows/terraform.yml
     with:
       action: plan
-      manage_dns: false
+      manage_dns: true
     secrets: inherit
 
   deploy:
