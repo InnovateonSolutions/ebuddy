@@ -1,10 +1,8 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { tickets } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 import KanbanBoard from '@/components/kanban-board'
 import PublicNav from '@/components/public-nav'
+import { getKanbanTickets } from '@/lib/tickets'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,15 +11,7 @@ export default async function KanbanPage() {
   if (!session?.user?.id) redirect('/login')
 
   const userId = session.user.id
-
-  const allTickets = await db
-    .select()
-    .from(tickets)
-    .where(eq(tickets.userId, userId))
-    .orderBy(tickets.createdAt)
-
-  const negocio = allTickets.filter((t) => t.context === 'NEGOCIO')
-  const personal = allTickets.filter((t) => t.context === 'PERSONAL')
+  const { negocio, personal } = await getKanbanTickets(userId)
 
   return (
     <div className="min-h-screen bg-slate-50">

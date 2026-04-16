@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { ApiError, ApiErrorCode, ApiResponse } from '@/types/api'
+import type { ApiError, ApiErrorCode, ApiResponse } from '@/lib/types'
 
 // Combina clases Tailwind sin conflictos
 export function cn(...inputs: ClassValue[]) {

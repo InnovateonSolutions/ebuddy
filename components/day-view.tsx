@@ -1,20 +1,22 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Briefcase, User, Calendar, RefreshCw } from 'lucide-react'
+import { Briefcase, User, Calendar, RefreshCw, Clock, MapPin } from 'lucide-react'
 import TicketCard from '@/components/ticket-card'
-import CalendarEventItem from '@/components/calendar-event-item'
 import CaptureForm from '@/components/capture-form'
-import { useRealtimeTickets } from '@/hooks/use-realtime-tickets'
-import type { Ticket } from '@/types/database'
-import type { TodayResponse, CalendarEventsResponse, ApiResponse } from '@/types/api'
+import type {
+  ApiResponse,
+  CalendarEvent,
+  CalendarEventsResponse,
+  Ticket,
+  TodayResponse,
+} from '@/lib/types'
 
 interface DayViewProps {
   initialData: TodayResponse
-  userId: string
 }
 
-export default function DayView({ initialData, userId }: DayViewProps) {
+export default function DayView({ initialData }: DayViewProps) {
   const [negocioTickets, setNegocioTickets] = useState<Ticket[]>(
     initialData.tickets.negocio
   )
@@ -67,11 +69,8 @@ export default function DayView({ initialData, userId }: DayViewProps) {
   function handleTicketCreated(ticket: Ticket) {
     const isToday = ticket.dueDate === initialData.date || !ticket.dueDate
     if (!isToday) return
-    // Realtime ya lo va a insertar, pero por si llega antes:
     handleInsert(ticket)
   }
-
-  useRealtimeTickets({ userId, onInsert: handleInsert, onUpdate: handleUpdate, onDelete: handleDelete })
 
   const totalToday = negocioTickets.length + personalTickets.length
 
@@ -135,7 +134,7 @@ export default function DayView({ initialData, userId }: DayViewProps) {
               </p>
             ) : (
               calendarEvents.map((event) => (
-                <CalendarEventItem key={event.id} event={event} />
+                <CalendarAgendaItem key={event.id} event={event} />
               ))
             )}
           </div>
@@ -152,6 +151,48 @@ export default function DayView({ initialData, userId }: DayViewProps) {
       </div>
     </div>
   )
+}
+
+function CalendarAgendaItem({ event }: { event: CalendarEvent }) {
+  const start = new Date(event.start)
+  const end = new Date(event.end)
+  const timeLabel = event.all_day
+    ? 'Todo el dia'
+    : `${formatTime(start)} - ${formatTime(end)}`
+
+  return (
+    <div className="flex gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors">
+      <div
+        className={`w-0.5 rounded-full flex-shrink-0 self-stretch ${
+          event.provider === 'GOOGLE' ? 'bg-blue-400' : 'bg-indigo-400'
+        }`}
+      />
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-800 truncate">{event.title}</p>
+        <div className="flex items-center gap-3 mt-0.5">
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            <Clock size={11} />
+            {timeLabel}
+          </span>
+          {event.location && (
+            <span className="flex items-center gap-1 text-xs text-slate-400 truncate max-w-[200px]">
+              <MapPin size={11} />
+              {event.location}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function formatTime(date: Date): string {
+  return new Intl.DateTimeFormat('es-MX', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
 }
 
 function TabButton({

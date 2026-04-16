@@ -6,8 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { useAudioRecorder } from '@/hooks/use-audio-recorder'
 import { cn } from '@/lib/utils'
-import type { Ticket } from '@/types/database'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, Ticket } from '@/lib/types'
 
 interface CaptureFormProps {
   onTicketCreated?: (ticket: Ticket) => void

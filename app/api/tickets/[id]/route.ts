@@ -1,15 +1,9 @@
-import { z } from 'zod'
 import { db } from '@/lib/db'
 import { tickets } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { apiSuccess, apiError, getUserIdFromRequest, logEvent } from '@/lib/utils'
-
-const UpdateSchema = z.object({
-  status: z.enum(['PENDING', 'IN_PROGRESS', 'QA', 'DONE']).optional(),
-  title: z.string().min(1).max(200).optional(),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-  priority: z.enum(['ALTA', 'MEDIA', 'BAJA']).optional(),
-})
+import { mapUpdateTicketInputToDb, updateTicketSchema } from '@/lib/ticket-contracts'
+import type { UpdateTicketInput } from '@/lib/types'
 
 export async function PATCH(
   request: Request,
@@ -25,13 +19,15 @@ export async function PATCH(
     return apiError('Body inválido', 'VALIDATION_ERROR')
   }
 
-  const parsed = UpdateSchema.safeParse(body)
+  const parsed = updateTicketSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 'VALIDATION_ERROR')
   if (Object.keys(parsed.data).length === 0) return apiError('No se enviaron campos para actualizar', 'VALIDATION_ERROR')
 
+  const updateInput: UpdateTicketInput = parsed.data
+
   const [ticket] = await db
     .update(tickets)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set(mapUpdateTicketInputToDb(updateInput))
     .where(and(eq(tickets.id, params.id), eq(tickets.userId, userId)))
     .returning()
 
@@ -40,7 +36,7 @@ export async function PATCH(
   logEvent('ticket.updated', {
     userId,
     ticketId: ticket.id,
-    fields: Object.keys(parsed.data).join(','),
+    fields: Object.keys(updateInput).join(','),
   })
 
   return apiSuccess(ticket)

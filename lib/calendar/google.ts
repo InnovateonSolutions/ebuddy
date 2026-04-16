@@ -1,7 +1,7 @@
 import { google } from 'googleapis'
 import { env } from '@/lib/env'
 import { isTokenExpired } from '@/lib/utils'
-import type { CalendarEvent } from '@/types/api'
+import type { CalendarEvent } from '@/lib/types'
 import type { CalendarToken } from '@/lib/db/schema'
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']

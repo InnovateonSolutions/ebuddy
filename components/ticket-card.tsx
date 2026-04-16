@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp, Trash2, Circle, Clock, CheckCircle2, FlaskConical } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { Ticket, TicketStatus } from '@/types/database'
-import type { ApiResponse } from '@/types/api'
+import type { Ticket, TicketStatus } from '@/lib/types'
+import { deleteTicket, updateTicket } from '@/lib/ticket-client'
+import { formatTicketDate, getNextTicketStatus } from '@/lib/ticket-ui'
 
 interface TicketCardProps {
   ticket: Ticket
@@ -13,7 +14,6 @@ interface TicketCardProps {
   onDelete: (id: string) => void
 }
 
-const STATUS_CYCLE: TicketStatus[] = ['PENDING', 'IN_PROGRESS', 'QA', 'DONE']
 const STATUS_LABELS: Record<TicketStatus, string> = {
   PENDING: 'Pendiente',
   IN_PROGRESS: 'En progreso',
@@ -28,25 +28,26 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
 
   async function cycleStatus() {
     if (updating) return
-    const currentIndex = STATUS_CYCLE.indexOf(ticket.status)
-    const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length]
+    const nextStatus = getNextTicketStatus(ticket.status)
 
     setUpdating(true)
-    const res = await fetch(`/api/tickets/${ticket.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: nextStatus }),
-    })
-    const json: ApiResponse<Ticket> = await res.json()
-    if (json.success) onUpdate(json.data)
-    setUpdating(false)
+    try {
+      const json = await updateTicket(ticket.id, { status: nextStatus })
+      if (json.success) onUpdate(json.data)
+    } finally {
+      setUpdating(false)
+    }
   }
 
   async function handleDelete() {
     if (deleting || !confirm('¿Eliminar este ticket?')) return
     setDeleting(true)
-    await fetch(`/api/tickets/${ticket.id}`, { method: 'DELETE' })
-    onDelete(ticket.id)
+    try {
+      const json = await deleteTicket(ticket.id)
+      if (json.success) onDelete(ticket.id)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const StatusIcon =
@@ -102,7 +103,7 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
             </Badge>
             {ticket.dueDate && (
               <span className="text-xs text-slate-400">
-                {formatDate(ticket.dueDate)}
+                {formatTicketDate(ticket.dueDate)}
               </span>
             )}
           </div>
@@ -159,12 +160,4 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
       )}
     </div>
   )
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return new Intl.DateTimeFormat('es-MX', {
-    month: 'short',
-    day: 'numeric',
-  }).format(date)
 }

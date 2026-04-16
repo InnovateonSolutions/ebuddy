@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { auth } from '@/lib/auth/config'
+import { auth, signOut } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
-import LogoutButton from '@/components/logout-button'
 
 export default async function DashboardLayout({
   children,
@@ -10,6 +9,12 @@ export default async function DashboardLayout({
 }) {
   const session = await auth()
   if (!session?.user) redirect('/login')
+
+  async function logoutAction() {
+    'use server'
+
+    await signOut?.({ redirectTo: '/login' })
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -58,7 +63,14 @@ export default async function DashboardLayout({
             <span className="text-sm text-slate-500 hidden sm:block">
               {session.user.name ?? session.user.email}
             </span>
-            <LogoutButton />
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="text-sm text-slate-500 hover:text-slate-700 transition-colors px-2 py-1 rounded-lg hover:bg-slate-100"
+              >
+                Salir
+              </button>
+            </form>
           </div>
         </div>
       </nav>

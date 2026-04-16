@@ -1,7 +1,7 @@
 import { ConfidentialClientApplication } from '@azure/msal-node'
 import { env } from '@/lib/env'
 import { isTokenExpired } from '@/lib/utils'
-import type { CalendarEvent } from '@/types/api'
+import type { CalendarEvent } from '@/lib/types'
 import type { CalendarToken } from '@/lib/db/schema'
 
 const SCOPES = [

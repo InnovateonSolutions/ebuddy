@@ -1,4 +1,4 @@
-import type { TicketContext, TicketPriority } from '@/types/database'
+import type { TicketContext, TicketPriority } from '@/lib/types'
 
 // ============================================================
 // Interfaces — permiten cambiar de proveedor sin tocar el resto

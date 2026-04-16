@@ -26,8 +26,12 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { Ticket, TicketStatus, TicketContext } from '@/types/database'
-import type { ApiResponse } from '@/types/api'
+import type { Ticket, TicketContext, TicketStatus } from '@/lib/types'
+import {
+  deleteTicket as deleteTicketRequest,
+  updateTicket as updateTicketRequest,
+} from '@/lib/ticket-client'
+import { formatTicketDate, getNextTicketStatus } from '@/lib/ticket-ui'
 
 // ─── Column config ────────────────────────────────────────────
 
@@ -85,8 +89,6 @@ const COLUMNS: Column[] = [
   },
 ]
 
-const STATUS_CYCLE: TicketStatus[] = ['PENDING', 'IN_PROGRESS', 'QA', 'DONE']
-
 // ─── Types ────────────────────────────────────────────────────
 
 interface KanbanBoardProps {
@@ -142,12 +144,7 @@ export default function KanbanBoard({
     updateTicket({ ...ticket, status: newStatus })
 
     try {
-      const res = await fetch(`/api/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      })
-      const json: ApiResponse<Ticket> = await res.json()
+      const json = await updateTicketRequest(ticketId, { status: newStatus })
       if (json.success) {
         updateTicket(json.data)
       } else {
@@ -371,25 +368,26 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
 
   async function cycleStatus() {
     if (updating || readonly) return
-    const idx = STATUS_CYCLE.indexOf(ticket.status)
-    const nextStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
+    const nextStatus = getNextTicketStatus(ticket.status)
 
     setUpdating(true)
-    const res = await fetch(`/api/tickets/${ticket.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: nextStatus }),
-    })
-    const json: ApiResponse<Ticket> = await res.json()
-    if (json.success) onUpdate(json.data)
-    setUpdating(false)
+    try {
+      const json = await updateTicketRequest(ticket.id, { status: nextStatus })
+      if (json.success) onUpdate(json.data)
+    } finally {
+      setUpdating(false)
+    }
   }
 
   async function handleDelete() {
     if (deleting || readonly || !confirm('¿Eliminar este ticket?')) return
     setDeleting(true)
-    await fetch(`/api/tickets/${ticket.id}`, { method: 'DELETE' })
-    onDelete(ticket.id, ticket.context)
+    try {
+      const json = await deleteTicketRequest(ticket.id)
+      if (json.success) onDelete(ticket.id, ticket.context)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const StatusIcon =
@@ -455,7 +453,7 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
               </Badge>
               {ticket.dueDate && (
                 <span className="text-[10px] text-slate-400">
-                  {formatDate(ticket.dueDate)}
+                  {formatTicketDate(ticket.dueDate)}
                 </span>
               )}
             </div>
@@ -511,13 +509,5 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
         </div>
       )}
     </div>
-  )
-}
-
-// ─── Helpers ─────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat('es-MX', { month: 'short', day: 'numeric' }).format(
-    new Date(dateStr + 'T00:00:00')
   )
 }

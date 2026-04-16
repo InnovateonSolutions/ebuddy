@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import TicketCard from '@/components/ticket-card'
-import type { Ticket } from '@/types/database'
-import type { FutureResponse, ApiResponse } from '@/types/api'
+import type { ApiResponse, FutureResponse, Ticket } from '@/lib/types'
 
 export default function FuturePage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
