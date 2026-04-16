@@ -62,8 +62,6 @@ jobs:
           done
           echo "Registry listo para push"
 
-      - run: doctl registry login --expiry-seconds 1200
-
       - id: meta
         uses: docker/metadata-action@v5
         with:
@@ -73,6 +71,14 @@ jobs:
             type=raw,value=latest
 
       - uses: docker/setup-buildx-action@v3
+
+      # Login DESPUÉS de setup-buildx para que el daemon de buildx
+      # tenga las credenciales disponibles desde el inicio
+      - uses: docker/login-action@v3
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DO_TOKEN }}
+          password: ${{ secrets.DO_TOKEN }}
 
       - uses: docker/build-push-action@v5
         with:
