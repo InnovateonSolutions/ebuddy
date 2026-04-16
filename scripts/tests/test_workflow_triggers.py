@@ -128,19 +128,33 @@ class TestDeployWorkflowBuildStep:
 
     # ── Método de autenticación DOCR ─────────────────────────────────────────
 
-    def test_docr_uses_doctl_docker_config_not_login_action(self):
-        """DOCR usa doctl registry docker-config para escribir credenciales estáticas.
+    def test_docr_auth_uses_do_token_directly_not_doctl_docker_config(self):
+        """DOCR usa DO_TOKEN directamente como password en Basic Auth — no doctl docker-config.
 
-        docker/login-action en Ubuntu almacena las credenciales en el credential
-        store del sistema (secretservice/pass). Buildkitd corriendo dentro del
-        container del buildx driver no puede acceder a ese store → 401 al pushear.
+        doctl registry docker-config genera tokens derivados (registry-specific)
+        que son rechazados intermitentemente por el token endpoint de DOCR al
+        hacer push desde buildkitd. El endpoint devuelve 401 aunque el token
+        tenga scope correcto.
 
-        doctl registry docker-config escribe un JSON estático a stdout con el
-        auth en base64 inline, sin credential helpers. Escribirlo directamente
-        a ~/.docker/config.json garantiza que buildkitd lo lea correctamente.
+        DigitalOcean documenta explícitamente que cualquier string no vacío como
+        username y el DO_TOKEN como password es la alternativa soportada para
+        autenticación con DOCR. Este token no expira y no requiere API call
+        intermedio, eliminando la causa raíz.
+
+        Root cause del bug: `doctl registry docker-config` → token derivado de
+        corta duración → 401 en token endpoint durante push.
+        Fix: DO_TOKEN como password en base64 inline → sin intermediarios.
         """
-        assert "doctl registry docker-config" in self.workflow
+        assert "doctl registry docker-config" not in self.workflow
         assert "docker/login-action" not in self.workflow
+
+    def test_docr_credential_step_exposes_do_token_as_env(self):
+        """El step de credenciales DOCR debe exponer DO_TOKEN como env var explícita.
+
+        Para construir las credenciales inline con el DO_TOKEN sin usar doctl,
+        el step necesita acceder al secreto como variable de entorno.
+        """
+        assert "DO_TOKEN: ${{ secrets.DO_TOKEN }}" in self.workflow
 
     def test_docr_does_not_use_doctl_registry_login(self):
         """doctl registry login NO se usa como step de autenticación de DOCR.
@@ -155,31 +169,18 @@ class TestDeployWorkflowBuildStep:
 
     # ── Orden: credenciales ANTES que buildx ─────────────────────────────────
 
-    def test_docr_credential_config_has_read_write_flag(self):
-        """doctl registry docker-config debe usar --read-write para permitir push.
-
-        Sin --read-write, las credenciales son de solo lectura. El push falla
-        con 'insufficient_scope: authorization failed' aunque la autenticación
-        sea correcta.
-        """
-        import re
-        lines_with_cmd = [l for l in self.workflow.splitlines() if "doctl registry docker-config" in l]
-        assert lines_with_cmd, "doctl registry docker-config no encontrado"
-        assert any("--read-write" in l for l in lines_with_cmd), (
-            f"--read-write falta en: {lines_with_cmd}"
-        )
-
     def test_docr_credential_config_before_setup_buildx(self):
-        """Las credenciales de DOCR deben escribirse ANTES de crear el buildx builder.
+        """Las credenciales de DOCR (en ~/.docker/config.json) deben escribirse
+        ANTES de crear el buildx builder.
 
         El container de buildx hereda ~/.docker/config.json al momento de su
         creación. Si las credenciales se escriben después, el builder ya está
         corriendo y no las ve → 401.
         """
-        creds_pos = self.workflow.index("doctl registry docker-config")
+        creds_pos = self.workflow.index("~/.docker/config.json")
         buildx_pos = self.workflow.index("setup-buildx-action")
         assert creds_pos < buildx_pos, (
-            f"doctl registry docker-config (pos {creds_pos}) debe preceder a "
+            f"~/.docker/config.json (pos {creds_pos}) debe preceder a "
             f"setup-buildx-action (pos {buildx_pos})"
         )
 

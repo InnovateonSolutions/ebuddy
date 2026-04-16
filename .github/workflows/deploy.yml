@@ -78,12 +78,21 @@ jobs:
       # Escribe credenciales DOCR directamente en ~/.docker/config.json (inline
       # base64, sin credential helpers del sistema). El credential store de Ubuntu
       # (secretservice/pass) no es accesible desde el container del buildx driver
-      # → 401 al pushear. doctl registry docker-config produce el JSON estático.
+      # → 401 al pushear.
+      #
+      # Root cause: tokens derivados de corta duración (generados por doctl)
+      # son rechazados intermitentemente por el token endpoint de DOCR al hacer
+      # push (401 en fetch oauth token). Fix: DO_TOKEN directamente como password
+      # en Basic Auth — DigitalOcean lo documenta como alternativa soportada.
+      # No expira, sin intermediarios, sin llamada API extra.
       - name: Configure DOCR credentials
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
         run: |
-          source infra/config/main.env
-          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
-          doctl registry docker-config "$REGISTRY" --read-write > ~/.docker/config.json
+          mkdir -p ~/.docker
+          AUTH="$(printf 'docr:%s' "${DO_TOKEN}" | base64 -w 0)"
+          printf '{"auths":{"registry.digitalocean.com":{"auth":"%s"}}}\n' "${AUTH}" \
+            > ~/.docker/config.json
           echo "✓ DOCR credentials written to ~/.docker/config.json"
 
       - uses: docker/setup-buildx-action@v3
