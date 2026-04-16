@@ -159,13 +159,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Garbage collection DESPUÉS del push — el registry no puede recibir pushes mientras GC corre
-      - name: Garbage collect old untagged manifests
-        run: |
-          source infra/config/main.env
-          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
-          doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests 2>&1 \
-            | grep -v "only one active garbage collection" || true
 
   # ── 2. Deploy al Droplet ──────────────────────────────────────
   # Migraciones corren desde el Droplet (red confiable DO → DB).
