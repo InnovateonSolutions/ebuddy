@@ -177,8 +177,14 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
             /usr/local/bin/ebuddy-deploy
-            # Recargar Caddy para aplicar cambios del Caddyfile sin downtime
-            docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>&1 || true
+            # Dar tiempo a que los contenedores estén completamente listos
+            sleep 15
+            # Recargar Caddy para aplicar cambios del Caddyfile (sin downtime).
+            # Si reload falla (caddy aún arrancando tras recreación del app container),
+            # forzar recreación del contenedor caddy.
+            docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile \
+              || docker compose -f /opt/ebuddy/docker-compose.prod.yml up -d --force-recreate caddy
+            echo "Caddy actualizado con nuevo Caddyfile"
 
   # ── 4. Smoke tests E2E ──────────────────────────────────────
   e2e:
