@@ -188,6 +188,18 @@ class TestDeployWorkflowBuildStep:
             f"garbage-collection start (pos {gc_start_pos})"
         )
 
+    # ── Permisos ─────────────────────────────────────────────────────────────
+
+    def test_deploy_workflow_declares_actions_write_permission(self):
+        """deploy.yml debe declarar actions: write explícitamente.
+
+        Cuando el workflow es llamado via workflow_call desde ci.yml, hereda
+        los permisos del caller (contents: read, id-token: write). Sin
+        actions: write el cache-to: type=gha falla, lo que interrumpe el
+        build-push-action antes de completar el push a DOCR.
+        """
+        assert "actions: write" in self.workflow
+
     # ── Configuración del build ───────────────────────────────────────────────
 
     def test_build_includes_next_public_app_url_build_arg(self):

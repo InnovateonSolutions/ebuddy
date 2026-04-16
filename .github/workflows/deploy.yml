@@ -4,6 +4,11 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+  actions: write  # necesario para cache-to: type=gha en workflow_call
+
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
@@ -78,8 +83,7 @@ jobs:
         run: |
           source infra/config/main.env
           REGISTRY="${APP_NAME}-${ENVIRONMENT}"
-          doctl registry docker-config "$REGISTRY" --expiry-seconds 3600 \
-            > ~/.docker/config.json
+          doctl registry docker-config "$REGISTRY" > ~/.docker/config.json
           echo "✓ DOCR credentials written to ~/.docker/config.json"
 
       - uses: docker/setup-buildx-action@v3
