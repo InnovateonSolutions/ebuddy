@@ -155,6 +155,20 @@ class TestDeployWorkflowBuildStep:
 
     # ── Orden: credenciales ANTES que buildx ─────────────────────────────────
 
+    def test_docr_credential_config_has_read_write_flag(self):
+        """doctl registry docker-config debe usar --read-write para permitir push.
+
+        Sin --read-write, las credenciales son de solo lectura. El push falla
+        con 'insufficient_scope: authorization failed' aunque la autenticación
+        sea correcta.
+        """
+        import re
+        lines_with_cmd = [l for l in self.workflow.splitlines() if "doctl registry docker-config" in l]
+        assert lines_with_cmd, "doctl registry docker-config no encontrado"
+        assert any("--read-write" in l for l in lines_with_cmd), (
+            f"--read-write falta en: {lines_with_cmd}"
+        )
+
     def test_docr_credential_config_before_setup_buildx(self):
         """Las credenciales de DOCR deben escribirse ANTES de crear el buildx builder.
 

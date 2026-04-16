@@ -83,7 +83,7 @@ jobs:
         run: |
           source infra/config/main.env
           REGISTRY="${APP_NAME}-${ENVIRONMENT}"
-          doctl registry docker-config "$REGISTRY" > ~/.docker/config.json
+          doctl registry docker-config "$REGISTRY" --read-write > ~/.docker/config.json
           echo "✓ DOCR credentials written to ~/.docker/config.json"
 
       - uses: docker/setup-buildx-action@v3
