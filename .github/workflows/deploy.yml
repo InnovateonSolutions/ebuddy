@@ -134,12 +134,27 @@ jobs:
           echo "ip=$IP" >> $GITHUB_OUTPUT
           echo "✓ Droplet IP: $IP"
 
+      # Actualiza Caddyfile antes del deploy para que los headers de seguridad
+      # estén presentes desde el primer request (edge case: cloud-init solo corre una vez).
+      - name: Update Caddyfile on Droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: infra/caddy/Caddyfile
+          target: /opt/ebuddy/
+          strip_components: 2
+
       - uses: appleboy/ssh-action@v1
         with:
           host: ${{ steps.droplet.outputs.ip }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-          script: /usr/local/bin/ebuddy-deploy
+          script: |
+            /usr/local/bin/ebuddy-deploy
+            # Recargar Caddy para aplicar cambios del Caddyfile sin downtime
+            docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>&1 || true
 
   # ── 4. Smoke tests E2E ──────────────────────────────────────
   e2e:
