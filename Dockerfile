@@ -23,7 +23,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 
-# ─── Stage 3: runner ──────────────────────────────────────────
+# ─── Stage 3: migrator ───────────────────────────────────────
+# Imagen mínima para correr drizzle-kit migrate desde el Droplet.
+# El Droplet está en red confiable de DO → puede conectarse a DO Managed DB.
+# Los runners de GitHub Actions NO están en trusted sources → no pueden.
+FROM node:20-alpine AS migrator
+WORKDIR /app
+RUN apk add --no-cache libc6-compat
+COPY --from=deps /app/node_modules ./node_modules
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
+COPY lib/db ./lib/db
+ENV NO_COLOR=1
+CMD ["npx", "drizzle-kit", "migrate"]
+
+# ─── Stage 4: runner ──────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 

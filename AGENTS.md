@@ -170,7 +170,7 @@ y delegar a estos módulos. **No recrear archivos en `types/` ni `hooks/`.**
 
 ## Autenticación DOCR en GitHub Actions
 
-**Método correcto** (usar DO_TOKEN directamente):
+**Método correcto** — escribir inline base64 a `~/.docker/config.json`:
 
 ```yaml
 - name: Configure DOCR credentials
@@ -187,8 +187,51 @@ y delegar a estos módulos. **No recrear archivos en `types/` ni `hooks/`.**
 - `docker/login-action` — usa credential store inaccesible desde buildkitd
 - `doctl registry login` — configura credential helper que buildkitd no puede ejecutar
 - `doctl registry docker-config` — genera tokens derivados rechazados intermitentemente
+- `DOCKER_CONFIG=/tmp/docker-config` — buildkitd (docker-container driver) monta `~/.docker` del host, NO respeta `$DOCKER_CONFIG`
 
 Este step debe ejecutarse **antes** de `docker/setup-buildx-action`.
+
+---
+
+## Migraciones de DB en CI/CD
+
+**DO Managed DB solo acepta conexiones del Droplet** (firewall: `type=droplet`). Los runners de GitHub Actions tienen IPs dinámicas → timeout de 30s → exit 1.
+
+**Solución**: correr migraciones desde el Droplet vía SSH en el job `deploy`.
+
+Arquitectura:
+1. `Dockerfile` tiene stage `migrator` con drizzle-kit + archivos de migración
+2. Build job empuja `registry.digitalocean.com/ebuddy-dev/ebuddy:migrator`
+3. Deploy job SSH escribe `/opt/ebuddy/.env` y corre el contenedor migrador:
+
+```bash
+docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+docker run --rm --env-file /opt/ebuddy/.env \
+  registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+```
+
+**No hay job `migrate` separado** — fue eliminado porque los runners de CI no tienen acceso a la DB.
+
+---
+
+## Escritura de `/opt/ebuddy/.env` en el Droplet
+
+El cloud-init crea un `.env` placeholder. GitHub Actions lo sobreescribe en cada deploy:
+
+```yaml
+- uses: appleboy/ssh-action@v1
+  env:
+    DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    # ... otros secrets
+  with:
+    envs: DATABASE_URL,AUTH_SECRET,...
+    script: |
+      env | grep -E '^(DATABASE_URL|AUTH_SECRET|...)=' > /opt/ebuddy/.env
+      echo "NODE_ENV=production" >> /opt/ebuddy/.env
+      chmod 600 /opt/ebuddy/.env
+```
+
+`env | grep` preserva formato `KEY=VALUE` sin riesgo de shell injection en valores.
 
 ---
 

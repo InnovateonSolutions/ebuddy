@@ -18,7 +18,7 @@ env:
   NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true"
 
 jobs:
-  # ── 1. Build + Migrations en paralelo ──────────────────────
+  # ── 1. Build (app + migrator) ─────────────────────────────
   build:
     name: Build & Push
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
 
           doctl registry repository list-tags "$REGISTRY/$REPO" \
             --no-header --format Tag 2>/dev/null \
-          | grep -v -E "^latest$" \
+          | grep -v -E "^(latest|migrator)$" \
           | while read tag; do
               doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
             done
@@ -81,25 +81,26 @@ jobs:
       # (secretservice/pass) no es accesible desde el container del buildx driver
       # → 401 al pushear.
       #
-      # Root cause: tokens derivados de corta duración (generados por doctl)
-      # son rechazados intermitentemente por el token endpoint de DOCR al hacer
-      # push (401 en fetch oauth token). Fix: DO_TOKEN directamente como password
-      # en Basic Auth — DigitalOcean lo documenta como alternativa soportada.
-      # No expira, sin intermediarios, sin llamada API extra.
+      # IMPORTANTE: debe ejecutarse ANTES de setup-buildx-action para que el
+      # container buildkitd monte ~/.docker/config.json con las credenciales ya escritas.
+      # Usar DOCKER_CONFIG=/tmp/... no funciona — buildkitd usa ~/.docker del host.
+      #
+      # Root cause 401: DO_TOKEN directamente como password en Basic Auth evita
+      # tokens derivados de corta duración que el endpoint oauth rechaza intermitentemente.
       - name: Configure DOCR credentials
         env:
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
         run: |
-          mkdir -p /tmp/docker-config
+          mkdir -p ~/.docker
           AUTH="$(printf 'docr:%s' "${DO_TOKEN}" | base64 -w 0)"
           printf '{"auths":{"registry.digitalocean.com":{"auth":"%s"}}}\n' "${AUTH}" \
-            > /tmp/docker-config/config.json
-          echo "DOCKER_CONFIG=/tmp/docker-config" >> $GITHUB_ENV
-          echo "✓ DOCR credentials written to /tmp/docker-config/config.json"
+            > ~/.docker/config.json
+          echo "✓ DOCR credentials written to ~/.docker/config.json"
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: docker/build-push-action@v5
+      - name: Build & Push app image
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -111,6 +112,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Migrator: imagen mínima con drizzle-kit. Las migraciones corren desde
+      # el Droplet (red confiable de DO) — los runners de CI no tienen acceso a la DB.
+      - name: Build & Push migrator image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: migrator
+          push: true
+          tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # Garbage collection DESPUÉS del push — el registry no puede recibir pushes mientras GC corre
       - name: Garbage collect old untagged manifests
         run: |
@@ -119,41 +132,13 @@ jobs:
           doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests 2>&1 \
             | grep -v "only one active garbage collection" || true
 
-  # ── 2. Migraciones de DB con Drizzle (paralelo con build) ───
-  migrate:
-    name: DB Migrations
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - run: npm ci
-
-      - name: Apply pending migrations
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "DATABASE_URL no configurada; se omiten migraciones en este deploy bootstrap."
-            exit 0
-          fi
-
-          echo "Running drizzle-kit migrate..."
-          npx drizzle-kit migrate 2>&1 | cat
-          exit ${PIPESTATUS[0]}
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PGSSLMODE: require
-
-  # ── 3. Deploy al Droplet (espera build + migrate) ──────────
+  # ── 2. Deploy al Droplet ──────────────────────────────────────
+  # Migraciones corren desde el Droplet (red confiable DO → DB).
+  # GitHub Actions runners no tienen acceso al DO Managed DB (firewall: solo Droplet).
   deploy:
     name: Deploy to Droplet
     runs-on: ubuntu-latest
-    needs: [build, migrate]
+    needs: [build]
     timeout-minutes: 15
 
     steps:
@@ -194,6 +179,37 @@ jobs:
           target: /opt/ebuddy/
           strip_components: 2
 
+      # Escribe /opt/ebuddy/.env con los valores actuales de GitHub Secrets
+      # y corre migraciones desde el Droplet (red confiable → puede conectar a DO Managed DB).
+      - name: Write .env and run migrations on Droplet
+        uses: appleboy/ssh-action@v1
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          envs: DATABASE_URL,AUTH_SECRET,OPENAI_API_KEY,ANTHROPIC_API_KEY,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,GOOGLE_REDIRECT_URI
+          script: |
+            # Sobreescribir .env con valores actuales (grep preserva formato KEY=VALUE)
+            env | grep -E '^(DATABASE_URL|AUTH_SECRET|OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GOOGLE_REDIRECT_URI)=' \
+              > /opt/ebuddy/.env
+            echo "NODE_ENV=production" >> /opt/ebuddy/.env
+            chmod 600 /opt/ebuddy/.env
+
+            # Correr migraciones — el Droplet está en red confiable de DO (DB firewall: solo Droplet)
+            docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+            docker run --rm \
+              --env-file /opt/ebuddy/.env \
+              registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+            echo "Migraciones completadas"
+
       - uses: appleboy/ssh-action@v1
         with:
           host: ${{ steps.droplet.outputs.ip }}
@@ -210,7 +226,7 @@ jobs:
               || docker compose -f /opt/ebuddy/docker-compose.prod.yml up -d --force-recreate caddy
             echo "Caddy actualizado con nuevo Caddyfile"
 
-  # ── 4. Smoke tests E2E ──────────────────────────────────────
+  # ── 3. Smoke tests E2E ──────────────────────────────────────
   e2e:
     name: E2E Smoke Tests
     runs-on: ubuntu-latest

@@ -259,9 +259,10 @@ class TestDeployWorkflowBuildStep:
         assert "concurrency:" in self.workflow
         assert "cancel-in-progress: true" in self.workflow
 
-    def test_deploy_job_needs_both_build_and_migrate(self):
-        """El job deploy espera a que build y migrate terminen antes de arrancar."""
-        assert "needs: [build, migrate]" in self.workflow
+    def test_deploy_job_needs_build(self):
+        """El job deploy espera a que build termine antes de arrancar.
+        Las migraciones corren en el Droplet (red confiable DO → DB), no desde CI."""
+        assert "needs: [build]" in self.workflow
 
     def test_e2e_job_runs_after_deploy(self):
         """Los smoke tests E2E corren DESPUÉS del deploy, no en paralelo."""
