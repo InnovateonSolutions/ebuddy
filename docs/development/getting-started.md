@@ -8,20 +8,48 @@
 node --version   # >= 20.x
 npm --version    # >= 10.x
 docker --version # >= 24.x
-supabase --version  # >= 1.x  (npm install -g supabase)
 ```
 
 ---
 
-## 1. Clonar y configurar variables de entorno
+## 1. Configurar variables de entorno
 
 ```bash
-git clone <repo-url> ebuddy
-cd ebuddy
 cp .env.example .env.local
 ```
 
-Editar `.env.local` con los valores reales. Ver [referencia completa](environment-variables.md).
+Completa `.env.local` con valores reales. La referencia vigente está en
+[environment-variables.md](environment-variables.md).
+
+Variables mínimas para arrancar:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
+
+Si también quieres que los agentes automaticen Jira siguiendo `AGENTS.md`, define
+además estas variables de entorno en tu shell local:
+
+- `JIRA_BASE_URL`
+- `JIRA_PROJECT_KEY`
+- `JIRA_EMAIL`
+- `JIRA_TOKEN`
+
+La forma más cómoda por proyecto es `direnv` con un `.envrc` local no versionado:
+
+```bash
+cp .envrc.example .envrc
+direnv allow
+```
+
+Los scripts disponibles quedan en `scripts/jira/`:
+
+```bash
+./scripts/jira/create-issue.sh --help
+./scripts/jira/transitions.sh KAN-123
+./scripts/jira/close-issue.sh KAN-123
+```
 
 ---
 
@@ -33,52 +61,52 @@ npm install
 
 ---
 
-## 3. Levantar Supabase local
+## 3. Levantar PostgreSQL local
+
+La forma más simple es levantar solo la base de datos con Docker Compose:
 
 ```bash
-# Inicia PostgreSQL + Auth + Studio en Docker
-supabase start
-
-# La salida muestra:
-#   API URL: http://localhost:54321
-#   DB URL:  postgresql://postgres:postgres@localhost:54322/postgres
-#   Studio:  http://localhost:54323
-#   anon key: eyJ...
-#   service_role key: eyJ...
+docker compose up -d db
 ```
 
-Copiar los valores `API URL`, `anon key` y `service_role key` en `.env.local`.
+Esto expone PostgreSQL en `localhost:5432`.
 
-### Aplicar migraciones
+Ejemplo de `DATABASE_URL` para local:
 
 ```bash
-supabase db reset
-# Aplica todas las migraciones en supabase/migrations/ en orden
-# Incluye el schema inicial y las políticas RLS
+DATABASE_URL=postgresql://ebuddy:ebuddy_local@localhost:5432/ebuddy
+```
+
+Si prefieres ejecutar toda la app con Docker:
+
+```bash
+docker compose up -d
 ```
 
 ---
 
 ## 4. Levantar la aplicación
 
+Desarrollo interactivo:
+
 ```bash
 npm run dev
-# → http://localhost:3000
 ```
 
-El hot reload de Next.js actualiza el browser sin reiniciar el server.
+La app queda disponible en `http://localhost:3000`.
 
 ---
 
 ## 5. Verificar que todo funciona
 
 ```bash
-# Health check
 curl http://localhost:3000/api/health
-# → {"status":"ok","timestamp":"..."}
+```
 
-# Ver logs de Supabase
-supabase logs
+Respuesta esperada:
+
+```json
+{"status":"ok","ts":"..."}
 ```
 
 ---
@@ -86,82 +114,54 @@ supabase logs
 ## Comandos frecuentes
 
 ```bash
-# Desarrollo
-npm run dev          # Next.js con hot reload
-npm run build        # Build de producción (verifica TypeScript)
-npm run lint         # ESLint + TypeScript check
-
-# Supabase
-supabase start       # Iniciar servicios locales
-supabase stop        # Detener servicios
-supabase db reset    # Resetear DB y aplicar migraciones
-supabase status      # Ver URLs y keys del entorno local
-
-# Nueva migración
-supabase migration new nombre_de_la_migracion
-# → crea supabase/migrations/YYYYMMDDHHMMSS_nombre_de_la_migracion.sql
-
-# Tests
-npm run test         # vitest (unit + integration)
-npm run test:watch   # modo watch
+npm run dev
+npm run build
+npx tsc --noEmit
+npm run test:run
+python3 -m pytest scripts/tests/ -v
+docker compose up -d db
+docker compose down
 ```
 
 ---
 
-## Docker local (opcional)
-
-Para probar el build de producción exactamente como se despliega en ECS:
-
-```bash
-# Build de la imagen
-docker build -t ebuddy:local .
-
-# Correr con las env vars locales
-docker run --env-file .env.local -p 3000:3000 ebuddy:local
-```
-
----
-
-## Estructura de carpetas relevante
+## Estructura relevante
 
 ```
 ebuddy/
-├── app/
-│   ├── (auth)/login/          # Página de login
-│   ├── (dashboard)/
-│   │   ├── today/             # Vista del día
-│   │   ├── future/            # Horizonte futuro
-│   │   └── settings/          # Configuración + calendarios
-│   └── api/
-│       ├── tickets/           # CRUD de tickets + capture
-│       ├── calendar/          # Lectura de calendarios
-│       ├── auth/calendar/     # OAuth Google + Microsoft
-│       └── health/            # Health check para ECS
-├── components/                # Componentes React
-├── hooks/                     # useAudioRecorder, useRealtimeTickets
+├── app/                        Páginas y Route Handlers
+├── components/                 UI reutilizable
+├── hooks/                      Hooks React activos
 ├── lib/
-│   ├── ai/                    # Whisper + Claude services
-│   ├── calendar/              # Google + Microsoft OAuth
-│   └── supabase/              # Browser + Server clients
-├── supabase/migrations/       # SQL versionado
-└── infra/terraform/           # IaC AWS
+│   ├── ai/                     Whisper + Claude
+│   ├── auth/                   next-auth
+│   ├── calendar/               Integraciones Google/Microsoft
+│   ├── db/                     Schema y conexión Drizzle
+│   ├── calendar.ts             Agregación de calendario
+│   ├── tickets.ts              Queries compartidas
+│   └── types.ts                Tipos compartidos
+├── drizzle/                    SQL versionado
+├── infra/terraform/            Infraestructura DO
+└── scripts/tests/              Tests estructurales
 ```
 
 ---
 
-## Troubleshooting común
+## Troubleshooting
 
-### `Missing env var: ANTHROPIC_API_KEY`
-El servidor valida todas las variables al arrancar. Revisar que `.env.local` tiene todos los valores requeridos.
+### `Variable de entorno requerida no encontrada`
 
-### Supabase no arranca
+`lib/env.ts` valida `DATABASE_URL`, `AUTH_SECRET`, `OPENAI_API_KEY` y
+`ANTHROPIC_API_KEY` al arrancar. Revisa `.env.local`.
+
+### La DB local no responde
+
 ```bash
-supabase stop --no-backup
-supabase start
+docker compose ps
+docker compose logs db
 ```
 
-### Error de RLS en queries locales
-Las políticas RLS requieren un JWT válido. Asegurarse de estar autenticado en la app antes de hacer llamadas a la DB.
+### El micrófono no funciona en local
 
-### Audio no graba en localhost
-Chrome requiere HTTPS para el micrófono. Excepción: `localhost` está permitido sin HTTPS. Si usas una IP local (ej: 192.168.x.x), necesitas configurar HTTPS con `mkcert`.
+`localhost` está permitido por el navegador. Si usas una IP de red local,
+necesitas HTTPS.

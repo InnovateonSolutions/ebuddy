@@ -1,148 +1,51 @@
-# Inventario de Infraestructura — DigitalOcean
+# Inventario de Infraestructura — Actual
 
-> Entorno: **prod/MVP**
+> Entorno principal: prod/MVP
 > Región: `nyc3`
-> Última actualización: Marzo 2026
-> IaC: `infra/terraform/` — provider `digitalocean/digitalocean ~> 2.40`
 
 ---
 
-## Resumen de Costos
+## Resumen
 
-| Recurso | Tipo | Costo/mes |
-|---|---|---|
-| Droplet `ebuddy-prod-droplet` | `s-1vcpu-2gb` | $12 |
-| IP Reservada | Reserved IP | $4 |
-| Container Registry `ebuddy-prod` | Starter (gratis hasta 500 MB) | $0 |
-| DO Spaces `ebuddy-tfstate` | Terraform state (~1 KB) | ~$0.25 |
-| Monitoreo | DO Monitoring (incluido en Droplet) | $0 |
-| **Total** | | **~$16/mes** |
-
-> Supabase Cloud free tier cubre el MVP (base de datos, auth, realtime). Si supera los límites del free tier, el plan Pro de Supabase cuesta $25/mes.
-
----
-
-## Compute
-
-### Droplet `ebuddy-prod-droplet`
-
-| Atributo | Valor |
+| Recurso | Uso |
 |---|---|
-| Región | `nyc3` |
-| Tamaño | `s-1vcpu-2gb` (1 vCPU, 2 GB RAM, 50 GB SSD) |
-| Imagen | Ubuntu 24.04 LTS (`ubuntu-24-04-x64`) |
-| IP fija | Asignada via Reserved IP |
-| VPC | `ebuddy-prod-vpc` (10.10.0.0/24) |
-| Monitoreo | Activado (CPU, memoria, disco, ancho de banda) |
-
-### Software en el Droplet (instalado via cloud-init)
-
-| Software | Versión | Propósito |
-|---|---|---|
-| Docker Engine | latest | Runtime de containers |
-| Docker Compose Plugin | latest | Orquestación app + Caddy |
-| Caddy | 2-alpine | Reverse proxy + HTTPS automático (Let's Encrypt) |
-
-### Containers en producción
-
-| Container | Imagen | Rol |
-|---|---|---|
-| `app` | `registry.digitalocean.com/ebuddy-prod/ebuddy:latest` | Next.js app |
-| `caddy` | `caddy:2-alpine` | Reverse proxy + TLS |
-
-La app escucha en `127.0.0.1:3000` (solo localhost). Caddy la expone en `443` con HTTPS automático.
+| Droplet | Ejecuta la app Next.js |
+| DOCR | Almacena imágenes Docker |
+| Reserved IP | Estabilidad del DNS |
+| DO Spaces | Estado remoto de Terraform |
+| PostgreSQL | Base de datos principal |
 
 ---
 
-## Container Registry
+## Componentes activos
 
-### DOCR `ebuddy-prod`
+### Compute
 
-| Atributo | Valor |
+| Recurso | Estado |
 |---|---|
-| Endpoint | `registry.digitalocean.com/ebuddy-prod` |
-| Plan | Starter (gratis — 1 repositorio, 500 MB) |
-| Región | `nyc3` |
-| Tags activos | `latest`, `sha-<commit>` |
-| Credentials pull | Docker config JSON en `/root/.docker/config.json` del Droplet |
-| Credentials push | Docker config JSON en GitHub Actions secret `DO_REGISTRY_PUSH_CREDENTIALS` |
+| `ebuddy-prod-droplet` | App en producción |
+| Docker + Compose | Runtime |
+| Caddy | TLS y reverse proxy |
 
----
+### Datos
 
-## Networking
-
-### VPC `ebuddy-prod-vpc`
-
-| Atributo | Valor |
+| Recurso | Estado |
 |---|---|
-| CIDR | `10.10.0.0/24` |
-| Región | `nyc3` |
+| PostgreSQL | Fuente de verdad de la app |
+| `drizzle/` | SQL versionado del repo |
 
-> No hay subnets públicas/privadas separadas ni NAT Gateway. El Droplet tiene IP pública directa con Firewall restrictivo.
+### Infra de soporte
 
-### Firewall `ebuddy-prod-firewall`
-
-| Dirección | Puerto | Protocolo | Origen | Propósito |
-|---|---|---|---|---|
-| Inbound | 22 | TCP | 0.0.0.0/0, ::/0 | SSH (GitHub Actions + admin) |
-| Inbound | 80 | TCP | 0.0.0.0/0, ::/0 | HTTP (Caddy redirect a HTTPS) |
-| Inbound | 443 | TCP | 0.0.0.0/0, ::/0 | HTTPS |
-| Inbound | 443 | UDP | 0.0.0.0/0, ::/0 | HTTP/3 (QUIC) |
-| Outbound | 1-65535 | TCP + UDP | 0.0.0.0/0, ::/0 | APIs externas (Supabase, OpenAI, etc.) |
-
-El puerto `3000` de la app NO está expuesto — solo accesible desde `localhost` dentro del Droplet.
-
-### IP Reservada
-
-| Atributo | Valor |
+| Recurso | Estado |
 |---|---|
-| Costo | $4/mes (fija aunque se recree el Droplet) |
-| Uso | Permite recrear el Droplet sin cambiar la IP del DNS |
-
-### DNS (dominio gestionado por DO)
-
-| Registro | Tipo | Valor |
-|---|---|---|
-| `@` (apex) | A | IP reservada del Droplet |
-| `www` | CNAME | `@` |
+| DOCR | Build/push desde CI |
+| DO Spaces | Terraform state |
+| Firewall + DNS | Gestionados por Terraform |
 
 ---
 
-## Secrets
+## Notas de mantenimiento
 
-Los secrets **no se almacenan** en ningún servicio de cloud. El flujo es:
-
-```
-GitHub Actions secrets
-        │
-        ▼ SSH en cada deploy
-/opt/ebuddy/.env (chmod 600, solo readable por root)
-        │
-        ▼ docker compose env_file
-Container process.env.*
-```
-
-Ver [gestión de secrets](secrets.md) para el procedimiento completo.
-
----
-
-## Terraform State
-
-| Atributo | Valor |
-|---|---|
-| Backend | DO Spaces (S3-compatible) |
-| Bucket | `ebuddy-tfstate` |
-| Key | `ebuddy/terraform.tfstate` |
-| Región DO Spaces | `nyc3` |
-| Credenciales | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` = Spaces keys (env vars locales) |
-| Locking | No disponible en DO Spaces — no usar `terraform apply` concurrente |
-
----
-
-## Monitoreo
-
-| Alerta | Condición | Acción |
-|---|---|---|
-| `ebuddy-prod-cpu-high` | CPU > 85% durante 5 min | Email a `alert_email` |
-| `ebuddy-prod-memory-high` | Memoria > 85% durante 5 min | Email a `alert_email` |
-| `ebuddy-prod-disk-high` | Disco > 80% durante 5 min | Email a `alert_email` |
+- La URL pública vigente debe tomarse de `infra/config/main.env`.
+- Si cambian tamaño de Droplet, dominio o región, actualizar este documento y `docs/README.md`.
+- Las referencias viejas a Supabase en esta carpeta deben considerarse históricas.

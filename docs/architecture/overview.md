@@ -1,198 +1,83 @@
-# Arquitectura — Visión General
+# Arquitectura — Visión General Actual
 
-## Problema que resuelve
+## Resumen
 
-Los profesionales modernos gestionan múltiples contextos de vida simultáneamente con herramientas desconectadas. ebuddy centraliza captura, clasificación automática y visibilidad del día en una sola plataforma con IA.
+ebuddy es una app Next.js fullstack para capturar, clasificar y ejecutar tickets
+personales y de negocio. La app corre en un Droplet de DigitalOcean y usa
+PostgreSQL con Drizzle ORM.
 
 ---
 
-## Arquitectura completa (actual + roadmap)
+## Stack arquitectónico actual
 
-```
-╔══════════════════════════════════════════════════════════════════╗
-║  FASE 1 — MVP (activo)                                           ║
-╠══════════════════════════════════════════════════════════════════╣
-║                                                                  ║
-║  Browser (desktop)                                               ║
-║      │ HTTPS                                                     ║
-║      ▼                                                           ║
-║  Caddy (TLS automático, Let's Encrypt)                           ║
-║      │                                                           ║
-║      ▼                                                           ║
-║  ┌──────────────────────────────────────────┐                   ║
-║  │  DigitalOcean Droplet (nyc3, $12/mes)    │                   ║
-║  │  Next.js 14 — App + API Routes           │                   ║
-║  │  ├── Web App (React + Tailwind)          │                   ║
-║  │  ├── POST /api/tickets/capture           │ ──▶ OpenAI Whisper ║
-║  │  ├── GET  /api/tickets/today             │ ──▶ Anthropic Claude║
-║  │  ├── GET  /api/tickets/future            │ ──▶ Supabase Cloud ║
-║  │  ├── GET  /api/calendar/events           │ ──▶ Google Calendar ║
-║  │  └── Auth Middleware (JWT + RLS)         │ ──▶ Microsoft Graph ║
-║  └──────────────────────────────────────────┘                   ║
-║                                                                  ║
-╠══════════════════════════════════════════════════════════════════╣
-║  FASE 2 — OpenClaw + Mini PC (pendiente, llega 19 abril 2026)   ║
-╠══════════════════════════════════════════════════════════════════╣
-║                                                                  ║
-║  MINISFORUM UM890 Pro (Ryzen 9 8945HS, homelab)                 ║
-║  └── OpenClaw (asistente IA local)                              ║
-║      ├── WhatsApp ──┐                                           ║
-║      ├── Telegram ──┤──▶ skill ebuddy ──▶ POST /api/tickets/   ║
-║      ├── iMessage ──┘          capture  (Droplet, HTTPS)        ║
-║      └── 50+ apps más                                           ║
-║                                                                  ║
-╚══════════════════════════════════════════════════════════════════╝
+| Capa | Implementación actual |
+|---|---|
+| UI y server | Next.js 14 App Router |
+| Auth | `next-auth` v5 |
+| DB | PostgreSQL |
+| ORM | Drizzle |
+| IA | Whisper + Claude |
+| Calendario | Google Calendar API + Microsoft Graph |
+| Infra | Docker + Caddy + DigitalOcean |
+
+---
+
+## Componentes principales
+
+```text
+Browser
+  -> Next.js app
+     -> Route Handlers
+        -> lib/tickets.ts
+        -> lib/calendar.ts
+        -> lib/ai/*
+        -> lib/db/schema.ts + Drizzle
+           -> PostgreSQL
+
+Route Handlers
+  -> OpenAI Whisper
+  -> Anthropic Claude
+  -> Google Calendar API
+  -> Microsoft Graph
 ```
 
 ---
 
-## C4 Level 1 — Contexto del Sistema
+## Organización por dominio
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│   [Martín]                                                  │
-│   Usuario principal                                         │
-│       │                                                     │
-│       ├── Browser (web app)                                 │
-│       └── WhatsApp / Telegram / iMessage (via OpenClaw)     │
-│                    │                                        │
-│                    ▼                                        │
-│   ┌─────────────────────────────────────────────────┐       │
-│   │          Plataforma de Gestión con IA            │       │
-│   │                  [ebuddy]                        │       │
-│   └─────────────────────────────────────────────────┘       │
-│       │              │              │              │         │
-│  Whisper API    Claude API    Google Cal.    Supabase        │
-│  (voz→texto)   (clasificar)   (OAuth2)    (DB + Auth)       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+- `lib/tickets.ts`
+  Centraliza queries y composición de respuestas de tickets.
+- `lib/calendar.ts`
+  Centraliza carga agregada de eventos y refresh de tokens.
+- `lib/types.ts`
+  Define tipos compartidos y contratos API.
+- `lib/db/`
+  Contiene schema y conexión Drizzle.
+
+La intención es que páginas y routes sean delgadas y deleguen al dominio.
 
 ---
 
-## C4 Level 2 — Contenedores
+## Flujos clave
 
-```
-Browser / OpenClaw (Mini PC)
-  │
-  │ HTTPS
-  ▼
-Caddy (reverse proxy, Let's Encrypt automático)
-  │
-  │ HTTP localhost:3000
-  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  DigitalOcean Droplet — Docker Compose                           │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Next.js 14 App (Docker)                                  │   │
-│  │                                                           │   │
-│  │  ┌──────────────┐  ┌─────────────────────────────────┐   │   │
-│  │  │  Web App     │  │  API Routes                     │   │   │
-│  │  │  React       │  │                                 │   │   │
-│  │  │  Tailwind    │  │  POST /api/tickets/capture      │   │   │
-│  │  │  Supabase    │  │  GET  /api/tickets/today        │   │   │
-│  │  │  Realtime    │  │  GET  /api/tickets/future       │   │   │
-│  │  └──────────────┘  │  PATCH /api/tickets/:id         │   │   │
-│  │                    │  GET  /api/calendar/events      │   │   │
-│  │                    │  GET  /api/tickets/summary  [2] │   │   │
-│  │                    │  POST /api/auth/api-key     [2] │   │   │
-│  │                    │  GET  /api/health               │   │   │
-│  │                    └─────────────────────────────────┘   │   │
-│  │                              │                            │   │
-│  │              ┌───────────────┼───────────────┐            │   │
-│  │              ▼               ▼               ▼            │   │
-│  │  ┌─────────────────┐ ┌────────────┐ ┌──────────────┐     │   │
-│  │  │  IA Worker      │ │  Calendar  │ │  Auth        │     │   │
-│  │  │  (lib/ai/)      │ │  Service   │ │  Middleware  │     │   │
-│  │  │  Whisper        │ │ (lib/cal/) │ │  JWT + [2]   │     │   │
-│  │  │  Claude API     │ │ Google     │ │  API Key     │     │   │
-│  │  └────────┬────────┘ │ Microsoft  │ └──────────────┘     │   │
-│  │           │          └─────┬──────┘                      │   │
-│  └───────────┼────────────────┼───────────────────────────────┘  │
-└──────────────┼────────────────┼───────────────────────────────────┘
-               │                │
-    ┌──────────┴───┐     ┌──────┴──────────────┐
-    │ External APIs│     │ Supabase Cloud       │
-    │              │     │ PostgreSQL + Auth    │
-    │ OpenAI       │     │ Realtime             │
-    │ Anthropic    │     │ RLS en todas tablas  │
-    │ Google Cal.  │     └─────────────────────┘
-    │ MS Graph     │
-    └──────────────┘
+### Captura de ticket
 
-[2] = pendiente de implementación (Fase 2 — OpenClaw)
-```
+1. El usuario envía texto o audio a `POST /api/tickets/capture`.
+2. Si hay audio, se transcribe con Whisper.
+3. El texto se estructura con Claude.
+4. El ticket se persiste en PostgreSQL vía Drizzle.
+
+### Vista del día
+
+1. La página o route obtiene tickets desde `lib/tickets.ts`.
+2. Los eventos se cargan con `lib/calendar.ts`.
+3. La UI combina ambos conjuntos para mostrar el día actual.
 
 ---
 
-## Flujos principales
+## Decisiones relacionadas
 
-### Flujo A — Captura de ticket por voz / texto (web, activo)
-
-```
-Usuario graba audio o escribe texto
-      │
-      ▼
-POST /api/tickets/capture (FormData multipart o JSON)
-      │
-      ├─ Auth Middleware valida JWT (Supabase)
-      ├─ Si audio: WhisperTranscriptionService → texto en español
-      ├─ ClaudeAIService → JSON validado con Zod
-      │    { context, title, overview, what_to_do, next_steps, priority }
-      ├─ Supabase INSERT tickets (audio descartado inmediatamente)
-      └─ Supabase Realtime → ticket aparece en UI (< 5s end-to-end)
-```
-
-### Flujo B — Plan del día (activo)
-
-```
-GET /api/tickets/today
-      │
-      ├─ Auth Middleware valida JWT
-      ├─ Promise.all([
-      │     getTicketsForToday(userId),     ← Supabase
-      │     fetchCalendarEvents(userId)     ← Google/Microsoft OAuth
-      │  ])
-      └─ Response: { tickets: {negocio, personal}, calendar_events, date }
-```
-
-### Flujo C — Captura desde mensajería (Fase 2, pendiente)
-
-```
-"Necesito revisar propuesta para cliente X"
-      │ WhatsApp / Telegram / iMessage
-      ▼
-OpenClaw (Mini PC — Ryzen 9, local)
-      │ POST /api/tickets/capture
-      │ Authorization: Bearer ebdy_live_...
-      ▼
-Auth Middleware valida API Key (hash en DB)
-      │
-      └─ mismo flujo que Flujo A → ticket creado
-```
-
----
-
-## Decisiones de arquitectura
-
-| # | Decisión | Estado |
-|---|---|---|
-| [001](adr/001-nextjs-monorepo.md) | Next.js monorepo fullstack | Aceptado |
-| [002](adr/002-supabase-baas.md) | Supabase como BaaS (DB + Auth + Realtime) | Aceptado |
-| [003](adr/003-ai-providers.md) | OpenAI Whisper + Anthropic Claude | Aceptado |
-| [004](adr/004-ecs-fargate.md) | DigitalOcean Droplet sobre AWS ECS | Aceptado |
-| [005](adr/005-openclaw-homelab.md) | OpenClaw en Mini PC como cliente de ebuddy | Aceptado — pendiente implementación |
-
----
-
-## Atributos de calidad
-
-| Atributo | Meta | Cómo se mide |
-|---|---|---|
-| Rendimiento | P95 < 5s end-to-end | Logs estructurados `durationMs` |
-| Disponibilidad | 99% en horario 6am–10pm | DO Monitoring alerta + docker healthcheck |
-| Seguridad | JWT + API Key + RLS + TLS 1.3 | Audit logs Supabase + Caddy logs |
-| Privacidad | Audio nunca persiste | Code review del endpoint capture |
-| Costo | < $20 USD/mes (MVP) | DO Billing + OpenAI/Anthropic dashboards |
+| Documento | Estado |
+|---|---|
+| [ADR 001](adr/001-nextjs-monorepo.md) | Vigente |
+| [ADR 003](adr/003-ai-providers.md) | Vigente |

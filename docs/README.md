@@ -1,106 +1,128 @@
 # ebuddy — Documentación del Proyecto
 
-> Plataforma de Gestión Personal + Profesional con IA
-> Versión: MVP v1.0 · Costo objetivo: < $20/mes · Última actualización: Marzo 2026
+> Índice de documentación viva del repo.
+> Última actualización: Abril 2026.
+
+---
+
+## Fuentes de verdad
+
+| Tema | Fuente |
+|---|---|
+| Proceso de trabajo para agentes | [`AGENTS.md`](../AGENTS.md) |
+| Stack, organización y enlaces principales | `docs/README.md` |
+| Configuración pública vigente del deploy | `infra/config/main.env` |
+| Comportamiento real del sistema | Código del repositorio |
+
+Si un documento contradice al código, el código manda y el documento debe actualizarse.
+
+---
+
+## Estado actual
+
+| Área | Estado actual |
+|---|---|
+| App | Next.js 14 con App Router |
+| DB | PostgreSQL + Drizzle ORM |
+| Auth | `next-auth` v5 + middleware |
+| IA | OpenAI Whisper + Anthropic Claude |
+| Calendarios | Google Calendar API + Microsoft Graph |
+| Infra | DigitalOcean Droplet + DOCR + Terraform |
+| CI/CD | GitHub Actions |
+
+---
+
+## Costo de la solución integral
+
+### Nosotros / proveedor
+
+| Componente | Costo estimado |
+|---|---|
+| Droplet `s-1vcpu-2gb` | $12/mes |
+| PostgreSQL administrado `db-s-1vcpu-1gb` | $15/mes |
+| Reserved IP | $4/mes |
+| DO Spaces (state Terraform) | ~$0.25/mes |
+| DOCR | $0/mes en el uso actual documentado |
+| IA (Whisper + Claude) | variable, base esperada `< $1/mes` en uso MVP ligero |
+| **Total base proveedor** | **~$31.25/mes + uso variable de IA** |
+
+### Cliente
+
+| Componente | Costo estimado |
+|---|---|
+| Uso web en navegador | $0 incremental |
+| Cuenta Google / Microsoft para calendario | depende de licencias del cliente; normalmente ya existentes |
+| Dispositivo e internet | fuera del alcance de la solución |
+| Dominio propio | $0 si usa nuestro dominio actual; variable si exige dominio suyo |
+| **Total cliente** | **$0 incremental en el escenario hospedado actual, excluyendo licencias/servicios propios** |
+
+### Notas
+
+- Esta separación asume un modelo hospedado por nosotros, con una sola infraestructura compartida.
+- Si el cliente exige infraestructura dedicada, el costo proveedor deja de ser compartido y pasa a imputarse a ese cliente.
+- Los costos de Google Workspace, Microsoft 365, correo, telefonía o hardware del cliente no están incluidos porque no dependen del repo.
+
+---
+
+## Stack actual
+
+```
+Frontend / Backend   Next.js 14 · React 18 · TypeScript estricto
+UI                   Tailwind CSS · shadcn/ui
+DB                   PostgreSQL · Drizzle ORM
+Auth                 next-auth v5
+IA                   OpenAI Whisper · Anthropic Claude
+Calendarios          Google Calendar API · Microsoft Graph
+Deploy               DigitalOcean Droplet · Docker · Caddy
+Infra                Terraform · DO Spaces remote state
+Tests                pytest estructural · Vitest
+```
+
+---
+
+## Organización actual del repo
+
+```
+ebuddy/
+├── app/                        Páginas y Route Handlers
+├── components/                 UI reutilizable
+├── hooks/                      Hooks React activos
+├── lib/
+│   ├── ai/                     Integraciones de IA
+│   ├── auth/                   Configuración de next-auth
+│   ├── calendar/               Clientes Google/Microsoft
+│   ├── db/                     Conexión y schema Drizzle
+│   ├── calendar.ts             Agregación de calendario por dominio
+│   ├── tickets.ts              Queries y helpers de tickets
+│   └── types.ts                Tipos compartidos del dominio
+├── drizzle/                    SQL versionado y metadatos
+├── infra/terraform/            Infraestructura DigitalOcean
+├── scripts/                    Utilidades operativas y tests estructurales
+└── docs/                       Documentación
+```
 
 ---
 
 ## Índice
 
-| Sección | Descripción |
+| Documento | Propósito |
 |---|---|
-| [Arquitectura](architecture/overview.md) | Visión general del sistema, decisiones de diseño |
-| [ADRs](architecture/adr/) | Architecture Decision Records |
-| [Inventario de Infraestructura](infrastructure/inventory.md) | Recursos DigitalOcean activos |
-| [Redes](infrastructure/networking.md) | VPC, firewall, DNS, HTTPS |
-| [Secrets](infrastructure/secrets.md) | Gestión de credenciales y rotación |
-| [Homelab](infrastructure/homelab.md) | Mini PC (llega 19 abril 2026) — OpenClaw + modelos locales |
-| [Inicio Local](development/getting-started.md) | Setup del entorno de desarrollo |
-| [Variables de Entorno](development/environment-variables.md) | Referencia completa de env vars |
-| [Runbook](operations/runbook.md) | Procedimientos operativos |
-| [Monitoreo](operations/monitoring.md) | Alertas DO, logs Docker |
-| [Seguridad](security/overview.md) | Postura de seguridad y compliance |
-| [OpenClaw](integrations/openclaw.md) | Integración con mensajería (WhatsApp, Telegram, iMessage) |
+| [Arquitectura](architecture/overview.md) | Vista general actual del sistema |
+| [C4 Nivel 1](architecture/c4-nivel-1-contexto.md) | Contexto del sistema actual |
+| [C4 Nivel 2](architecture/c4-nivel-2-contenedores.md) | Contenedores del sistema actual |
+| [ADRs](architecture/adr/) | Decisiones arquitectónicas y cambios históricos |
+| [Inventario de Infraestructura](infrastructure/inventory.md) | Recursos activos y costos base |
+| [Redes](infrastructure/networking.md) | Topología y exposición de red |
+| [Secrets](infrastructure/secrets.md) | Gestión y rotación de credenciales |
+| [Inicio Local](development/getting-started.md) | Levantar el entorno actual |
+| [Variables de Entorno](development/environment-variables.md) | Referencia alineada con `.env.example` |
+| [Seguridad](security/overview.md) | Controles actuales y supuestos de seguridad |
+| [Runbook](operations/runbook.md) | Operación manual en producción |
+| [Monitoreo](operations/monitoring.md) | Observabilidad y alertas |
 
 ---
 
-## Estado actual del proyecto
+## Notas
 
-| Componente | Estado |
-|---|---|
-| App Next.js (web + API) | Implementado |
-| Deploy en DigitalOcean | Implementado (Terraform + GitHub Actions) |
-| Supabase Cloud (DB + Auth + Realtime) | Implementado |
-| CI/CD (DOCR + SSH deploy) | Implementado |
-| OpenClaw skill (mensajería) | Pendiente — requiere mini PC (19 abril) |
-| API Key endpoint | Pendiente — Fase 2 |
-| Modelos IA locales (Ollama) | Pendiente — Fase 2 |
-
----
-
-## Costo mensual
-
-| Recurso | Costo |
-|---|---|
-| Droplet `s-1vcpu-2gb` | $12/mes |
-| IP Reservada | $4/mes |
-| Container Registry (starter) | $0 |
-| Supabase Cloud (free tier) | $0 |
-| DO Spaces (state Terraform) | ~$0.25/mes |
-| OpenAI Whisper + Anthropic Claude | < $1/mes (1 usuario) |
-| **Total** | **~$16/mes** |
-
----
-
-## Stack de un vistazo
-
-```
-Frontend + Backend   Next.js 14 (App Router) · TypeScript estricto
-Containerización     Docker multi-stage · node:20-alpine
-Proxy / TLS          Caddy 2 — HTTPS automático (Let's Encrypt)
-Registry             DigitalOcean Container Registry (DOCR)
-Compute              DigitalOcean Droplet s-1vcpu-2gb (nyc3)
-Base de datos        Supabase Cloud (PostgreSQL 15 + RLS + Realtime)
-Autenticación        Supabase Auth · JWT · OAuth Google
-Transcripción        OpenAI Whisper API
-Motor de IA          Claude API — Anthropic (claude-sonnet-4-6)
-Calendarios          Google Calendar API v3 · Microsoft Graph API
-Mensajería [Fase 2]  OpenClaw en MINISFORUM UM890 Pro (Ryzen 9 8945HS)
-CI/CD                GitHub Actions → DOCR → SSH deploy al Droplet
-IaC                  Terraform >= 1.7 · DO Spaces remote state
-```
-
----
-
-## Estructura del repositorio
-
-```
-ebuddy/
-├── app/                        Next.js App Router (páginas + API routes)
-│   ├── (auth)/                 Login
-│   ├── (dashboard)/            Today, Future, Settings
-│   └── api/                    Endpoints REST
-├── components/                 Componentes React
-├── hooks/                      useAudioRecorder, useRealtimeTickets
-├── lib/                        Módulos de negocio
-│   ├── ai/                     Whisper + Claude services
-│   ├── calendar/               OAuth Google + Microsoft
-│   └── supabase/               Clientes browser/server
-├── types/                      Tipos TypeScript compartidos
-├── supabase/migrations/        Migraciones SQL versionadas
-├── infra/terraform/            IaC DigitalOcean
-├── .github/workflows/          Pipeline CI/CD
-├── Dockerfile                  Build multi-stage (standalone)
-├── docker-compose.yml          Entorno local de desarrollo
-├── docker-compose.prod.yml     Compose en producción (referencia)
-├── CLAUDE.md                   Contexto para Claude Code
-└── docs/                       ← estás aquí
-```
-
----
-
-## Contacto y ownership
-
-| Rol | Persona |
-|---|---|
-| Product Owner / Arquitecto / Dev / DevOps | Martín Cuevas Tavizón |
+- Módulos actuales clave: `lib/types.ts`, `lib/tickets.ts`, `lib/calendar.ts`.
+- Si un documento deja de ser útil o solo preserva contexto viejo, se elimina; el historial vive en git.

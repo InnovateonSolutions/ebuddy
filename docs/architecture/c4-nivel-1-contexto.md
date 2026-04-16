@@ -1,124 +1,59 @@
 # C4 Nivel 1 — Contexto del Sistema
-> Asistente Personal con IA · Martín Cuevas Tavizón · Abril 2026
+
+> Representación del sistema actual del repositorio.
 
 ---
 
-## Descripción del sistema
+## Descripción
 
-Sistema de gestión personal + profesional que usa **OpenClaw** (IA local en EliteMini) como cerebro central. El usuario interactúa con el sistema principalmente via **WhatsApp**: manda una instrucción en lenguaje natural, OpenClaw la entiende, clasifica si es de Trabajo o Personal, y crea un ticket estructurado en la **Plataforma Web**. El usuario gestiona y consulta sus tickets desde esa plataforma.
+ebuddy es una aplicación web fullstack para capturar, organizar y ejecutar
+tickets personales y de negocio. El usuario interactúa por navegador y la app
+se integra con proveedores externos de IA y calendario. La persistencia usa
+PostgreSQL con Drizzle ORM y la identidad de usuario se gestiona con `next-auth`.
 
 ---
 
-## Diagrama de Contexto (C4 Level 1)
+## Diagrama
 
 ```mermaid
 C4Context
-  title Contexto del Sistema — Asistente Personal con IA
+  title C4 Nivel 1 — Contexto del Sistema
 
-  Person(martin, "Martín", "Founder. Envía instrucciones por WhatsApp y gestiona tickets desde la web.")
+  Person(user, "Usuario", "Captura tickets, consulta el día y gestiona estados desde la web.")
 
-  System_Boundary(sistema, "Sistema de Asistencia Personal") {
-    System(openclaw, "OpenClaw", "IA local en EliteMini. Recibe mensajes, clasifica contexto (Trabajo / Personal) y crea tickets via API.")
-    System(webplatform, "Plataforma Web", "Interfaz de gestión. Muestra tickets organizados en dos secciones: Trabajo y Personal.")
-  }
+  System(ebuddy, "ebuddy", "Next.js fullstack", "App web con UI, autenticación, API y dominio de tickets.")
 
-  System_Ext(whatsapp, "WhatsApp", "Canal principal de entrada. Martín manda instrucciones en lenguaje natural.")
-  System_Ext(gmail, "Gmail", "Correo personal. OpenClaw podrá leer y actuar sobre emails.")
-  System_Ext(linkedin, "LinkedIn", "Red profesional. OpenClaw podrá monitorear notificaciones.")
-  System_Ext(calendar, "Google Calendar", "Agenda personal y profesional. OpenClaw consulta disponibilidad.")
+  System_Ext(openai, "OpenAI Whisper API", "Transcribe audio a texto")
+  System_Ext(anthropic, "Anthropic Claude API", "Clasifica y estructura tickets")
+  System_Ext(google, "Google Calendar API", "Lee eventos del calendario")
+  System_Ext(microsoft, "Microsoft Graph", "Lee eventos de Outlook")
+  System_Ext(db, "PostgreSQL", "Base de datos principal")
 
-  Rel(martin, whatsapp, "Envía instrucciones en lenguaje natural")
-  Rel(whatsapp, openclaw, "Reenvía mensajes vía webhook / API")
-  Rel(openclaw, webplatform, "Crea ticket en canal Trabajo o Personal vía API REST")
-  Rel(martin, webplatform, "Consulta, gestiona y actualiza tickets")
-
-  Rel(openclaw, gmail, "Lee correos y notificaciones (Fase 2)")
-  Rel(openclaw, linkedin, "Monitorea actividad profesional (Fase 2)")
-  Rel(openclaw, calendar, "Consulta agenda y disponibilidad (Fase 2)")
-
-  UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+  Rel(user, ebuddy, "Usa la app web", "HTTPS")
+  Rel(ebuddy, openai, "Transcribe audio", "HTTPS")
+  Rel(ebuddy, anthropic, "Estructura tickets", "HTTPS")
+  Rel(ebuddy, google, "Consulta eventos", "HTTPS")
+  Rel(ebuddy, microsoft, "Consulta eventos", "HTTPS")
+  Rel(ebuddy, db, "Lee y escribe datos", "SQL")
 ```
 
 ---
 
-## Elementos del sistema
+## Elementos
 
-### Personas
-
-| Persona | Rol | Canales de interacción |
-|---|---|---|
-| **Martín** | Usuario único. Founder. | WhatsApp (entrada) · Plataforma Web (gestión) |
-
-### Sistemas internos
-
-| Sistema | Ubicación | Responsabilidad |
-|---|---|---|
-| **OpenClaw** | EliteMini (MINISFORUM UM890 Pro) — homelab | Recibe mensajes → entiende la intención → clasifica contexto → llama a la API de la Plataforma Web para crear el ticket |
-| **Plataforma Web** | DigitalOcean Droplet (nyc3) | Almacena tickets · Muestra vista Trabajo / Personal · Permite actualizar estado · Expone API REST que OpenClaw consume |
-
-### Sistemas externos
-
-| Sistema | Tipo | Estado en MVP |
-|---|---|---|
-| **WhatsApp** | Canal de entrada | **Activo — MVP** |
-| **Google Calendar** | Contexto de agenda | Fase 2 |
-| **Gmail** | Canal de correo | Fase 2 |
-| **LinkedIn** | Canal profesional | Fase 2 |
-
----
-
-## Flujo principal — MVP
-
-```
-Martín
-  │
-  │  "Necesito preparar propuesta para el cliente X para el jueves"
-  │  (mensaje de WhatsApp)
-  ▼
-WhatsApp
-  │
-  │  webhook / polling
-  ▼
-OpenClaw (EliteMini — local)
-  │
-  │  1. Entiende la instrucción en lenguaje natural
-  │  2. Clasifica contexto: TRABAJO
-  │  3. Extrae: título, acción concreta, fecha, prioridad
-  │
-  │  POST /api/tickets  { context: "TRABAJO", title: "...", ... }
-  ▼
-Plataforma Web (DigitalOcean)
-  │
-  │  Guarda ticket en DB
-  │  Ticket aparece en sección TRABAJO
-  ▼
-Martín (abre la plataforma web)
-  └── Ve el ticket estructurado listo para ejecutar
-```
-
----
-
-## Límites del sistema — MVP vs Fases
-
-| Capacidad | MVP | Fase 2 |
-|---|---|---|
-| Recibir instrucciones por WhatsApp | ✅ | ✅ |
-| Clasificar Trabajo / Personal | ✅ | ✅ |
-| Crear ticket estructurado en la web | ✅ | ✅ |
-| Vista web Trabajo / Personal | ✅ | ✅ |
-| Leer Gmail y actuar sobre correos | ❌ | ✅ |
-| Consultar Google Calendar | ❌ | ✅ |
-| Monitorear LinkedIn | ❌ | ✅ |
-| Responder por WhatsApp al usuario | ❌ | ✅ |
-
----
-
-## Decisiones de arquitectura — nivel contexto
-
-| Decisión | Razón |
+| Elemento | Rol |
 |---|---|
-| OpenClaw en EliteMini (local, no nube) | Privacidad de datos · Sin costo de inferencia por llamada · Latencia baja en red local |
-| WhatsApp como canal principal | Es donde Martín ya vive — cero fricción de adopción |
-| Plataforma Web en DigitalOcean | Accesible desde cualquier lugar · Deploy simple · Costo < $15/mes |
-| DB en DigitalOcean Managed Database | Sin dependencia de Supabase · Un proveedor para todo · Backup automático incluido |
-| Dos contextos fijos: Trabajo / Personal | Clasificación binaria → decisiones más rápidas, sin ambigüedad |
+| Usuario | Usa la app desde navegador |
+| ebuddy | Sistema central |
+| PostgreSQL + Drizzle | Persistencia y acceso a datos |
+| OpenAI Whisper | Transcripción de audio |
+| Anthropic Claude | Estructuración y clasificación |
+| Google Calendar / Microsoft Graph | Lectura de agenda |
+
+---
+
+## Notas
+
+- La autenticación de usuario ocurre dentro de ebuddy usando `next-auth`.
+- El frontend no llama proveedores externos directamente.
+- Toda integración externa pasa por la app.
