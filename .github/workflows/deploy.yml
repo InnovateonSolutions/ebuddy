@@ -90,11 +90,12 @@ jobs:
         env:
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
         run: |
-          mkdir -p ~/.docker
+          mkdir -p /tmp/docker-config
           AUTH="$(printf 'docr:%s' "${DO_TOKEN}" | base64 -w 0)"
           printf '{"auths":{"registry.digitalocean.com":{"auth":"%s"}}}\n' "${AUTH}" \
-            > ~/.docker/config.json
-          echo "✓ DOCR credentials written to ~/.docker/config.json"
+            > /tmp/docker-config/config.json
+          echo "DOCKER_CONFIG=/tmp/docker-config" >> $GITHUB_ENV
+          echo "✓ DOCR credentials written to /tmp/docker-config/config.json"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -141,9 +142,12 @@ jobs:
             exit 0
           fi
 
-          npx drizzle-kit migrate
+          echo "Running drizzle-kit migrate..."
+          npx drizzle-kit migrate 2>&1
+          echo "Migration exit code: $?"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGSSLMODE: require
 
   # ── 3. Deploy al Droplet (espera build + migrate) ──────────
   deploy:
