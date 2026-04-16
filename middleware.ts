@@ -8,7 +8,6 @@ const PUBLIC_PATHS = [
   '/api/health',
   '/api/status',
   '/api/visits',
-  '/kanban',
   '/status',
 ]
 

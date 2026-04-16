@@ -39,6 +39,12 @@ export default async function DashboardLayout({
                 Horizonte
               </Link>
               <Link
+                href="/kanban"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              >
+                Tablero
+              </Link>
+              <Link
                 href="/settings"
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
               >

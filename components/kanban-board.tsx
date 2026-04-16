@@ -2,6 +2,17 @@
 
 import { useState } from 'react'
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import {
   Circle,
   Clock,
   FlaskConical,
@@ -11,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  GripVertical,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -22,9 +34,10 @@ import type { ApiResponse } from '@/types/api'
 interface Column {
   id: TicketStatus
   label: string
-  color: string          // ring / border accent
-  headerBg: string       // subtle column header bg
-  countBg: string        // pill badge
+  color: string
+  headerBg: string
+  countBg: string
+  dropBg: string          // highlight when card is hovering over column
   Icon: React.ElementType
   iconColor: string
 }
@@ -36,6 +49,7 @@ const COLUMNS: Column[] = [
     color: 'border-slate-200',
     headerBg: 'bg-slate-50',
     countBg: 'bg-slate-200 text-slate-600',
+    dropBg: 'bg-slate-100',
     Icon: Circle,
     iconColor: 'text-slate-400',
   },
@@ -45,6 +59,7 @@ const COLUMNS: Column[] = [
     color: 'border-blue-200',
     headerBg: 'bg-blue-50',
     countBg: 'bg-blue-100 text-blue-700',
+    dropBg: 'bg-blue-50',
     Icon: Clock,
     iconColor: 'text-blue-500',
   },
@@ -54,6 +69,7 @@ const COLUMNS: Column[] = [
     color: 'border-violet-200',
     headerBg: 'bg-violet-50',
     countBg: 'bg-violet-100 text-violet-700',
+    dropBg: 'bg-violet-50',
     Icon: FlaskConical,
     iconColor: 'text-violet-500',
   },
@@ -63,6 +79,7 @@ const COLUMNS: Column[] = [
     color: 'border-emerald-200',
     headerBg: 'bg-emerald-50',
     countBg: 'bg-emerald-100 text-emerald-700',
+    dropBg: 'bg-emerald-50',
     Icon: CheckCircle2,
     iconColor: 'text-emerald-500',
   },
@@ -75,7 +92,7 @@ const STATUS_CYCLE: TicketStatus[] = ['PENDING', 'IN_PROGRESS', 'QA', 'DONE']
 interface KanbanBoardProps {
   initialNegocio: Ticket[]
   initialPersonal: Ticket[]
-  readonly?: boolean          // true → sin interacciones (demo / no auth)
+  readonly?: boolean
 }
 
 // ─── Board ────────────────────────────────────────────────────
@@ -87,38 +104,95 @@ export default function KanbanBoard({
 }: KanbanBoardProps) {
   const [negocio, setNegocio] = useState<Ticket[]>(initialNegocio)
   const [personal, setPersonal] = useState<Ticket[]>(initialPersonal)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
-  function setTickets(context: TicketContext, fn: (prev: Ticket[]) => Ticket[]) {
-    if (context === 'NEGOCIO') setNegocio(fn)
-    else setPersonal(fn)
-  }
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  )
 
-  function handleUpdate(ticket: Ticket) {
+  function updateTicket(ticket: Ticket) {
     setNegocio((prev) => prev.map((t) => (t.id === ticket.id ? ticket : t)))
     setPersonal((prev) => prev.map((t) => (t.id === ticket.id ? ticket : t)))
   }
 
-  function handleDelete(id: string, context: TicketContext) {
-    setTickets(context, (prev) => prev.filter((t) => t.id !== id))
+  function deleteTicket(id: string, context: TicketContext) {
+    if (context === 'NEGOCIO') setNegocio((prev) => prev.filter((t) => t.id !== id))
+    else setPersonal((prev) => prev.filter((t) => t.id !== id))
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string)
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveId(null)
+    if (!over) return
+
+    const ticketId = active.id as string
+    const newStatus = over.id as TicketStatus
+    const all = [...negocio, ...personal]
+    const ticket = all.find((t) => t.id === ticketId)
+    if (!ticket || ticket.status === newStatus) return
+
+    // Optimistic update
+    const previous = { ...ticket }
+    updateTicket({ ...ticket, status: newStatus })
+
+    try {
+      const res = await fetch(`/api/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const json: ApiResponse<Ticket> = await res.json()
+      if (json.success) {
+        updateTicket(json.data)
+      } else {
+        updateTicket(previous) // rollback
+      }
+    } catch {
+      updateTicket(previous) // rollback
+    }
+  }
+
+  const allTickets = [...negocio, ...personal]
+  const activeTicket = activeId ? allTickets.find((t) => t.id === activeId) : null
+
   return (
-    <div className="space-y-10">
-      <BoardSection
-        context="NEGOCIO"
-        tickets={negocio}
-        readonly={readonly}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
-      />
-      <BoardSection
-        context="PERSONAL"
-        tickets={personal}
-        readonly={readonly}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
-      />
-    </div>
+    <DndContext
+      sensors={readonly ? [] : sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="space-y-10">
+        <BoardSection
+          context="NEGOCIO"
+          tickets={negocio}
+          readonly={readonly}
+          onUpdate={updateTicket}
+          onDelete={deleteTicket}
+        />
+        <BoardSection
+          context="PERSONAL"
+          tickets={personal}
+          readonly={readonly}
+          onUpdate={updateTicket}
+          onDelete={deleteTicket}
+        />
+      </div>
+
+      {/* Ghost card while dragging */}
+      <DragOverlay>
+        {activeTicket ? (
+          <div className="rotate-2 opacity-90 pointer-events-none">
+            <KanbanCard ticket={activeTicket} readonly={true} onUpdate={() => {}} onDelete={() => {}} />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   )
 }
 
@@ -139,7 +213,6 @@ function BoardSection({ context, tickets, readonly, onUpdate, onDelete }: BoardS
 
   return (
     <section>
-      {/* Section header */}
       <div className="flex items-center gap-3 mb-4">
         <div
           className={cn(
@@ -159,7 +232,6 @@ function BoardSection({ context, tickets, readonly, onUpdate, onDelete }: BoardS
         </div>
       </div>
 
-      {/* Kanban columns */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {COLUMNS.map((col) => {
           const colTickets = tickets.filter((t) => t.status === col.id)
@@ -192,6 +264,8 @@ interface KanbanColumnProps {
 }
 
 function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: col.id })
+
   return (
     <div className="flex flex-col gap-2">
       {/* Column header */}
@@ -211,24 +285,70 @@ function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete }: K
         </span>
       </div>
 
-      {/* Cards */}
-      <div className="flex flex-col gap-2 min-h-[120px]">
+      {/* Drop zone */}
+      <div
+        ref={setNodeRef}
+        className={cn(
+          'flex flex-col gap-2 min-h-[120px] rounded-lg transition-colors p-1',
+          isOver && col.dropBg
+        )}
+      >
         {tickets.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center rounded-lg border border-dashed border-slate-200 min-h-[80px]">
+          <div
+            className={cn(
+              'flex-1 flex items-center justify-center rounded-lg border border-dashed min-h-[80px] transition-colors',
+              isOver ? 'border-slate-400 bg-white/60' : 'border-slate-200'
+            )}
+          >
             <p className="text-xs text-slate-300">Vacío</p>
           </div>
         ) : (
-          tickets.map((ticket) => (
-            <KanbanCard
-              key={ticket.id}
-              ticket={ticket}
-              readonly={readonly}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-            />
-          ))
+          tickets.map((ticket) =>
+            readonly ? (
+              <KanbanCard
+                key={ticket.id}
+                ticket={ticket}
+                readonly={true}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+              />
+            ) : (
+              <DraggableCard key={ticket.id} id={ticket.id}>
+                <KanbanCard
+                  ticket={ticket}
+                  readonly={false}
+                  onUpdate={onUpdate}
+                  onDelete={onDelete}
+                />
+              </DraggableCard>
+            )
+          )
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── Draggable wrapper ────────────────────────────────────────
+
+function DraggableCard({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ opacity: isDragging ? 0.35 : 1 }}
+      className="relative group/drag"
+    >
+      {/* Drag handle — only shown on hover */}
+      <div
+        {...listeners}
+        {...attributes}
+        className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 text-slate-200 hover:text-slate-400 cursor-grab active:cursor-grabbing opacity-0 group-hover/drag:opacity-100 transition-opacity"
+      >
+        <GripVertical size={12} />
+      </div>
+      {children}
     </div>
   )
 }
@@ -293,7 +413,7 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
   return (
     <div
       className={cn(
-        'bg-white rounded-lg border transition-all',
+        'bg-white rounded-lg border transition-all pl-4',
         isDone ? 'border-slate-100 opacity-55' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
         deleting && 'opacity-30 pointer-events-none'
       )}
