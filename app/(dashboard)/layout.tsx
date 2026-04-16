@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/logout-button'
+import VisitCounter from '@/components/visit-counter'
 
 export default async function DashboardLayout({
   children,
@@ -59,6 +60,8 @@ export default async function DashboardLayout({
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-6">{children}</main>
+
+      <VisitCounter />
     </div>
   )
 }
