@@ -1,16 +1,13 @@
 """
-Tests unitarios para scripts/db-init.py
+Tests unitarios para scripts/db-init.py.
 
 Cubre:
-- Entorno 'dev' → SQL incluye seed data (INSERT INTO users, tickets)
-- Entorno 'prod' → SQL NO incluye seed data
-- Ambos entornos → SQL incluye el schema completo (CREATE TABLE, enums, índices)
-- Template no encontrado → SystemExit(1)
-- --environment inválido → error de argparse
-- SQL generado tiene los tipos correctos (TRABAJO/PERSONAL, no NEGOCIO)
+- db-init renderiza el schema actual desde las migraciones de Drizzle
+- el SQL incluye tablas y cambios vigentes del runtime real
+- el SQL no conserva enums, columnas ni auth legacy
+- el CLI escribe el output con permisos 600
 """
 
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,127 +16,108 @@ import pytest
 from .conftest import load_script
 
 db_init_mod = load_script("db-init.py")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
-
-# ─── Tests del renderizado Jinja2 ────────────────────────────────────────────
 
 class TestDBInitRender:
 
-    def test_dev_environment_includes_seed_data(self):
-        """env=dev → SQL incluye INSERT de usuario y ticket de prueba."""
-        sql = db_init_mod.render_sql("dev")
-        assert "INSERT INTO users" in sql
-        assert "INSERT INTO tickets" in sql
-        assert "seed" in sql.lower()
+    def test_legacy_template_is_removed(self):
+        assert not (REPO_ROOT / "db" / "init.sql.j2").exists()
 
-    def test_prod_environment_excludes_seed_data(self):
-        """env=prod → SQL NO incluye seed data."""
-        sql = db_init_mod.render_sql("prod")
-        assert "INSERT INTO users" not in sql
-        assert "INSERT INTO tickets" not in sql
+    def test_rendered_sql_includes_current_auth_and_app_tables(self):
+        sql = db_init_mod.render_sql()
 
-    def test_both_envs_include_create_table_users(self):
-        """Schema completo en todos los entornos."""
-        for env in ("dev", "prod", "staging"):
-            sql = db_init_mod.render_sql(env)
-            assert "CREATE TABLE IF NOT EXISTS users" in sql, f"Missing users table in env={env}"
-            assert "CREATE TABLE IF NOT EXISTS tickets" in sql, f"Missing tickets table in env={env}"
+        for expected in [
+            'CREATE TABLE "users"',
+            'CREATE TABLE "accounts"',
+            'CREATE TABLE "sessions"',
+            'CREATE TABLE "verification_tokens"',
+            'CREATE TABLE "tickets"',
+            'CREATE TABLE "user_preferences"',
+            'CREATE TABLE "calendar_tokens"',
+            'CREATE TABLE "visit_counter"',
+        ]:
+            assert expected in sql
 
-    def test_enums_use_trabajo_not_negocio(self):
-        """Los tipos usan TRABAJO/PERSONAL (no NEGOCIO — eso es código legacy)."""
-        sql = db_init_mod.render_sql("prod")
-        assert "'TRABAJO'" in sql
+    def test_rendered_sql_includes_current_enums_and_migration_changes(self):
+        sql = db_init_mod.render_sql()
+
+        assert "'NEGOCIO'" in sql
         assert "'PERSONAL'" in sql
-        assert "'NEGOCIO'" not in sql
+        assert "'PENDING'" in sql
+        assert "'IN_PROGRESS'" in sql
+        assert "'QA'" in sql
+        assert "'DONE'" in sql
+        assert 'ADD COLUMN "api_key"' in sql
 
-    def test_ticket_priority_enum_correct(self):
-        """Enum de prioridad tiene los 3 valores correctos."""
-        sql = db_init_mod.render_sql("prod")
-        assert "'ALTA'" in sql
-        assert "'MEDIA'" in sql
-        assert "'BAJA'" in sql
+    def test_rendered_sql_includes_visit_counter_seed_row(self):
+        sql = db_init_mod.render_sql()
+        assert 'INSERT INTO "visit_counter" ("id", "count") VALUES (1, 0);' in sql
 
-    def test_ticket_status_enum_correct(self):
-        """Enum de estado tiene los 3 valores correctos."""
-        sql = db_init_mod.render_sql("prod")
-        assert "'PENDIENTE'" in sql
-        assert "'EN_PROGRESO'" in sql
-        assert "'HECHO'" in sql
+    def test_rendered_sql_omits_legacy_schema_terms(self):
+        sql = db_init_mod.render_sql()
 
-    def test_required_indexes_are_present(self):
-        """Los 3 índices obligatorios de KAN-15 están en el schema."""
-        sql = db_init_mod.render_sql("prod")
-        assert "idx_tickets_user_context" in sql
-        assert "idx_tickets_user_status" in sql
-        assert "idx_tickets_user_date" in sql
+        for legacy in [
+            "'TRABAJO'",
+            "'PENDIENTE'",
+            "'EN_PROGRESO'",
+            "'HECHO'",
+            "password_hash",
+            "api_key_hash",
+        ]:
+            assert legacy not in sql
 
-    def test_updated_at_trigger_present(self):
-        """El trigger de auto-update de updated_at está en el schema."""
-        sql = db_init_mod.render_sql("prod")
-        assert "update_updated_at" in sql
-        assert "BEFORE UPDATE ON tickets" in sql
+    def test_rendered_sql_matches_all_versioned_sql_migrations(self):
+        sql = db_init_mod.render_sql()
 
-    def test_uuid_extension_enabled(self):
-        """La extensión uuid-ossp se habilita en el schema."""
-        sql = db_init_mod.render_sql("prod")
-        assert 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"' in sql
+        for rel_path in [
+            "drizzle/0000_tiresome_maginty.sql",
+            "drizzle/0001_add_qa_status.sql",
+            "drizzle/0002_add_api_key.sql",
+            "drizzle/0003_add_visit_counter.sql",
+        ]:
+            content = (REPO_ROOT / rel_path).read_text().strip()
+            assert content in sql
 
-    def test_template_not_found_raises_system_exit(self, tmp_path, monkeypatch):
-        """Si el template no existe, el script sale con error."""
-        # Reemplazar TEMPLATE_DIR para apuntar a directorio vacío
-        monkeypatch.setattr(db_init_mod, "TEMPLATE_DIR", tmp_path)
-        with pytest.raises((SystemExit, Exception)):
-            db_init_mod.render_sql("prod")
+    def test_missing_drizzle_directory_raises_system_exit(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(db_init_mod, "MIGRATIONS_DIR", tmp_path)
+        with pytest.raises(SystemExit):
+            db_init_mod.render_sql()
 
-    def test_dev_seed_uses_idempotent_insert(self):
-        """El seed de desarrollo usa ON CONFLICT DO NOTHING para ser idempotente."""
-        sql = db_init_mod.render_sql("dev")
-        assert "ON CONFLICT" in sql
-
-    def test_api_key_hash_column_exists(self):
-        """La tabla users tiene la columna api_key_hash para OpenClaw."""
-        sql = db_init_mod.render_sql("prod")
-        assert "api_key_hash" in sql
-
-    def test_password_hash_column_exists(self):
-        """La tabla users tiene la columna password_hash (auth sin Supabase)."""
-        sql = db_init_mod.render_sql("prod")
-        assert "password_hash" in sql
-
-
-# ─── Tests del CLI ────────────────────────────────────────────────────────────
 
 class TestDBInitCLI:
 
-    def test_stdout_output_is_valid_sql(self, capsys):
-        """Sin --output, el SQL se escribe a stdout y es parseable."""
-        test_args = ["db-init.py", "--environment", "prod"]
+    def test_stdout_output_contains_current_schema(self, capsys):
+        test_args = ["db-init.py"]
         with patch("sys.argv", test_args):
             db_init_mod.main()
 
         captured = capsys.readouterr()
-        assert "CREATE TABLE" in captured.out
-        assert "INSERT" not in captured.out  # prod sin seed
+        assert 'CREATE TABLE "tickets"' in captured.out
+        assert "'QA'" in captured.out
+        assert "TRABAJO" not in captured.out
 
     def test_output_file_is_written(self, tmp_path):
-        """Con --output, el archivo se crea correctamente."""
         output_file = tmp_path / "init.sql"
-        test_args = ["db-init.py", "--output", str(output_file), "--environment", "prod"]
+        test_args = ["db-init.py", "--output", str(output_file)]
         with patch("sys.argv", test_args):
             db_init_mod.main()
 
         assert output_file.exists()
         content = output_file.read_text()
-        assert "CREATE TABLE" in content
+        assert 'CREATE TABLE "calendar_tokens"' in content
 
     def test_output_file_has_secure_permissions(self, tmp_path):
-        """El archivo de salida tiene permisos 600."""
-        import stat
         output_file = tmp_path / "init.sql"
-        test_args = ["db-init.py", "--output", str(output_file), "--environment", "prod"]
+        test_args = ["db-init.py", "--output", str(output_file)]
         with patch("sys.argv", test_args):
             db_init_mod.main()
 
-        file_stat = output_file.stat()
-        permissions = stat.S_IMODE(file_stat.st_mode)
+        permissions = output_file.stat().st_mode & 0o777
         assert permissions == 0o600, f"Expected 600, got {oct(permissions)}"
+
+    def test_operations_workflow_no_longer_installs_jinja_for_db_init(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "operations.yml").read_text()
+
+        assert "pip install jinja2" not in workflow
+        assert "python3 scripts/db-init.py --output /tmp/init.sql" in workflow

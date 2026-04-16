@@ -271,7 +271,6 @@ cmd_full_restore() {
 
   log_step "Paso 3/4: Inicializar DB"
   log_info "Renderizando schema SQL..."
-  pip install jinja2 --quiet --break-system-packages 2>/dev/null || true
   python3 "${SCRIPTS_DIR}/db-init.py" --output /tmp/init.sql --environment "${ENVIRONMENT}"
 
   log_warn "Para aplicar el schema necesitas DATABASE_URL."

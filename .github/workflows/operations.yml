@@ -168,9 +168,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: pip install jinja2
-
       - name: Render init SQL
         run: python3 scripts/db-init.py --output /tmp/init.sql
         env:
