@@ -53,15 +53,20 @@ jobs:
             done
 
       # Si un GC anterior sigue activo, DOCR rechaza pushes con 401.
-      # Espera hasta 5 minutos a que termine antes de hacer login.
+      # El estado activo tiene múltiples valores ("waiting for write JWTs to expire",
+      # "scanning manifests", etc.) — más seguro esperar hasta que el estado sea terminal.
       - name: Wait for active garbage collection to finish
         run: |
           source infra/config/main.env
           REGISTRY="${APP_NAME}-${ENVIRONMENT}"
           MAX_WAIT=300
           WAITED=0
-          while doctl registry garbage-collection list "$REGISTRY" --no-header 2>/dev/null | grep -q "in_progress"; do
-            echo "GC activa — esperando 15s... (${WAITED}s total)"
+          while true; do
+            GC_STATUS="$(doctl registry garbage-collection list "$REGISTRY" --no-header 2>/dev/null | head -1)"
+            # Si no hay GC o el último terminó (succeeded/failed/cancelled), proceder
+            [ -z "$GC_STATUS" ] && break
+            echo "$GC_STATUS" | grep -qE "(succeeded|failed|cancelled)" && break
+            echo "GC activa — esperando 15s... (${WAITED}s total): $(echo "$GC_STATUS" | awk '{print $3,$4,$5}')"
             sleep 15
             WAITED=$((WAITED + 15))
             [ "$WAITED" -ge "$MAX_WAIT" ] && { echo "Timeout esperando GC"; break; }
@@ -100,6 +105,23 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Build & Push app image
+        id: build_app
+        uses: docker/build-push-action@v5
+        continue-on-error: true
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=${{ env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # DOCR token endpoint devuelve 401 intermitentemente — retry con 30s delay
+      - name: Retry Build & Push app image
+        if: steps.build_app.outcome == 'failure'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -115,6 +137,19 @@ jobs:
       # Migrator: imagen mínima con drizzle-kit. Las migraciones corren desde
       # el Droplet (red confiable de DO) — los runners de CI no tienen acceso a la DB.
       - name: Build & Push migrator image
+        id: build_migrator
+        uses: docker/build-push-action@v5
+        continue-on-error: true
+        with:
+          context: .
+          target: migrator
+          push: true
+          tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Retry Build & Push migrator image
+        if: steps.build_migrator.outcome == 'failure'
         uses: docker/build-push-action@v5
         with:
           context: .

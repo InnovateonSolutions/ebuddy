@@ -191,6 +191,14 @@ y delegar a estos módulos. **No recrear archivos en `types/` ni `hooks/`.**
 
 Este step debe ejecutarse **antes** de `docker/setup-buildx-action`.
 
+**Wait for GC — patrón correcto:**
+DOCR GC tiene múltiples estados activos (`"waiting for write JWTs to expire"`, `"scanning manifests"`, etc.).
+Nunca grep por estado activo — grep por estados TERMINALES e invertir:
+```bash
+GC_STATUS="$(doctl registry garbage-collection list "$REGISTRY" --no-header | head -1)"
+[ -z "$GC_STATUS" ] || echo "$GC_STATUS" | grep -qE "(succeeded|failed|cancelled)"
+```
+
 ---
 
 ## Migraciones de DB en CI/CD
