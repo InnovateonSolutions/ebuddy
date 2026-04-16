@@ -41,11 +41,11 @@ def test_bootstrap_assets_match_current_stack():
     assert "NEXT_PUBLIC_APP_URL" in bootstrap_env_example
 
 
-def test_setup_secrets_and_local_dev_env_match_current_stack():
+def test_setup_secrets_and_env_example_match_current_stack():
     setup_secrets = read("scripts/setup-secrets.sh")
-    dev_env = read("infra/config/dev.env")
+    env_example = read(".env.example")
 
-    for content in [setup_secrets, dev_env]:
+    for content in [setup_secrets, env_example]:
         assert "DATABASE_URL" in content
         assert "AUTH_SECRET" in content
         assert "NEXT_PUBLIC_APP_URL" in content
