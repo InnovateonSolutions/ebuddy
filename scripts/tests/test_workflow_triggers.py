@@ -22,6 +22,32 @@ def test_deploy_workflow_is_not_directly_triggered_by_push():
     assert "\n  pull_request:\n" not in workflow
 
 
+def test_ci_components_path_triggers_app_changed():
+    """Cambios en components/ deben ser detectados como app_changed=true.
+
+    Caso borde explícitamente solicitado: el path estaba en el patrón pero
+    sin cobertura de test. components/* debe estar en el mismo case arm
+    que establece app_changed, no en infra ni scripts.
+    """
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+    # El glob components/* debe aparecer junto a app/* en el mismo case arm
+    assert "app/*|components/*" in ci
+
+    # Verificar que no está mezclado con los arms de infra o scripts
+    infra_arm_pos = ci.index("infra_changed=true")
+    scripts_arm_pos = ci.index("scripts_changed=true")
+    app_arm_pos = ci.index("app_changed=true")
+    components_pos = ci.index("components/*")
+
+    assert abs(components_pos - app_arm_pos) < abs(components_pos - infra_arm_pos), (
+        "components/* está más cerca de infra_changed=true que de app_changed=true"
+    )
+    assert abs(components_pos - app_arm_pos) < abs(components_pos - scripts_arm_pos), (
+        "components/* está más cerca de scripts_changed=true que de app_changed=true"
+    )
+
+
 def test_ci_workflow_detects_application_and_infrastructure_changes():
     workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
 
@@ -133,10 +159,16 @@ class TestDeployWorkflowBuildStep:
         """NEXT_PUBLIC_APP_URL debe pasarse como build-arg para que Next.js lo embeba."""
         assert "NEXT_PUBLIC_APP_URL" in self.workflow
 
-    def test_build_uses_registry_cache(self):
-        """El build usa caché de registry para acelerar builds incrementales."""
-        assert "cache-from: type=registry" in self.workflow
-        assert "cache-to: type=registry" in self.workflow
+    def test_build_uses_gha_cache(self):
+        """El build usa GitHub Actions cache en lugar de registry cache.
+
+        type=gha evita el token refresh de OAuth que causaba 401 intermitentes
+        con DOCR al hacer pull del buildcache durante la fase de build.
+        type=registry queda prohibido para prevenir regresión.
+        """
+        assert "cache-from: type=gha" in self.workflow
+        assert "cache-to: type=gha" in self.workflow
+        assert "cache-from: type=registry" not in self.workflow
 
     def test_image_tags_include_sha_and_latest(self):
         """La imagen se tagea con el SHA del commit y con 'latest'."""
