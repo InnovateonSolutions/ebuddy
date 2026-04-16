@@ -51,6 +51,7 @@ jobs:
     steps:
       - name: Determine Terraform mode
         id: config
+        working-directory: ${{ github.workspace }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "manage_dns=${{ github.event.inputs.manage_dns }}" >> "$GITHUB_OUTPUT"
