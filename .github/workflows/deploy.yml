@@ -143,8 +143,8 @@ jobs:
           fi
 
           echo "Running drizzle-kit migrate..."
-          npx drizzle-kit migrate 2>&1
-          echo "Migration exit code: $?"
+          npx drizzle-kit migrate 2>&1 | cat
+          exit ${PIPESTATUS[0]}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PGSSLMODE: require
