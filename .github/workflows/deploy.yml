@@ -46,6 +46,22 @@ jobs:
               doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
             done
 
+      # Si un GC anterior sigue activo, DOCR rechaza pushes con 401.
+      # Espera hasta 5 minutos a que termine antes de hacer login.
+      - name: Wait for active garbage collection to finish
+        run: |
+          source infra/config/main.env
+          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
+          MAX_WAIT=300
+          WAITED=0
+          while doctl registry garbage-collection list "$REGISTRY" --no-header 2>/dev/null | grep -q "in_progress"; do
+            echo "GC activa — esperando 15s... (${WAITED}s total)"
+            sleep 15
+            WAITED=$((WAITED + 15))
+            [ "$WAITED" -ge "$MAX_WAIT" ] && { echo "Timeout esperando GC"; break; }
+          done
+          echo "Registry listo para push"
+
       - run: doctl registry login --expiry-seconds 1200
 
       - id: meta
