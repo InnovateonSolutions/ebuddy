@@ -13,13 +13,24 @@ ejecutar estos pasos en orden sin saltarse ninguno:
 
 ### 1. Crear ticket en Jira
 
+Usar el script canónico (requiere variables `JIRA_*` en entorno — ver sección
+[Entorno local para Jira](#entorno-local-para-jira)):
+
+```bash
+./scripts/jira/create-issue.sh \
+  --title "Implementar X para Y" \
+  --problem "Qué problema se resuelve" \
+  --acceptance "Qué debe quedar funcionando" \
+  --notes "Notas técnicas" \
+  --type Task \
+  --priority "Must Have" \
+  --labels backend,infra
+```
+
 - **Proyecto:** KAN (`https://innovateonsolutions.atlassian.net`)
-- **Formato obligatorio:**
-  - Título accionable y conciso (ej: "Implementar X para Y")
-  - Descripción con: **Problema**, **Criterios de aceptación**, **Notas técnicas**
-  - Tipo: Story / Task / Bug
-  - Prioridad MoSCoW: Must Have / Should Have / Could Have / Won't Have
-  - Labels relevantes (frontend, backend, infra, ux, etc.)
+- `--type`: `Story` / `Task` / `Bug`
+- `--priority`: `Must Have` / `Should Have` / `Could Have` / `Won't Have`
+- `--labels`: uno o más de `frontend`, `backend`, `infra`, `ux`, `test`, `docs`
 
 ### 2. Leer documentación antes de asumir
 
@@ -98,16 +109,11 @@ gh run view <run_id>
 Solo cuando el CI/CD esté en verde:
 
 ```bash
-# Obtener ID de transición "Done"
-curl -u "$JIRA_EMAIL:$JIRA_TOKEN" \
-  "https://innovateonsolutions.atlassian.net/rest/api/3/issue/KAN-XX/transitions"
-
-# Aplicar transición
-curl -u "$JIRA_EMAIL:$JIRA_TOKEN" -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"transition": {"id": "<id>"}}' \
-  "https://innovateonsolutions.atlassian.net/rest/api/3/issue/KAN-XX/transitions"
+./scripts/jira/close-issue.sh KAN-XX
 ```
+
+El script resuelve automáticamente el ID de la transición "Done" y la aplica.
+Para usar otro estado de cierre: `./scripts/jira/close-issue.sh KAN-XX "In Review"`
 
 ---
 
@@ -131,12 +137,33 @@ curl -u "$JIRA_EMAIL:$JIRA_TOKEN" -X POST \
 
 ---
 
+## Organización de módulos compartidos (`lib/`)
+
+Toda la lógica reutilizable vive en `lib/`. Las rutas y páginas deben ser delgadas
+y delegar a estos módulos. **No recrear archivos en `types/` ni `hooks/`.**
+
+| Módulo | Responsabilidad |
+|---|---|
+| `lib/types.ts` | Tipos y contratos públicos compartidos (re-exporta desde schema + tipos propios) |
+| `lib/tickets.ts` | Queries y helpers de tickets: `getTodayTickets`, `getFutureTickets`, `getUserTimezone` |
+| `lib/calendar.ts` | Carga unificada de eventos de calendario (Google + Microsoft) |
+| `lib/capture.ts` | Lógica de captura: transcripción Whisper, parsing Claude, persistencia — usado por el route handler |
+| `lib/ticket-client.ts` | Mutaciones cliente (`updateTicket`, `deleteTicket`) — llamadas fetch desde componentes |
+| `lib/ticket-ui.ts` | Constantes y helpers visuales: `STATUS_CYCLE`, `getNextTicketStatus`, `formatTicketDate` |
+| `lib/utils.ts` | Utilidades genéricas: `todayInTimezone`, `cn`, `logEvent` |
+| `lib/ai/` | Servicios de IA: `WhisperTranscriptionService`, `ClaudeAIService` |
+| `lib/calendar/google.ts` | Integración Google Calendar API v3 (no importar directamente desde rutas) |
+| `lib/calendar/microsoft.ts` | Integración Microsoft Graph API (no importar directamente desde rutas) |
+| `lib/db/` | Drizzle ORM: `db`, schema, migraciones |
+
+---
+
 ## Reglas críticas de arquitectura
 
 1. **El frontend nunca llama a APIs externas directamente** — todo vía API Routes
 2. **`userId` nunca viene del cliente** — siempre del JWT validado por middleware
 3. **El audio nunca se persiste** — procesar y descartar inmediatamente
-4. **RLS activo en todas las tablas** — segunda línea de defensa en DB
+4. **Aislamiento por `userId` en cada query** — el middleware de next-auth valida la sesión; el `userId` se extrae del JWT y se aplica como filtro explícito en cada query de Drizzle. No se usa RLS nativo de PostgreSQL (no está disponible en DO Managed DB sin Supabase)
 5. **Sin `any` explícito en TypeScript** — `strict: true` en tsconfig
 
 ---
@@ -167,7 +194,8 @@ Este step debe ejecutarse **antes** de `docker/setup-buildx-action`.
 
 ## Estructura de tests estructurales
 
-Los tests en `scripts/tests/` protegen invariantes del proyecto:
+Los tests en `scripts/tests/` protegen invariantes del proyecto.
+`conftest.py` provee fixtures compartidos (p. ej. `load_script` para importar scripts Python como módulos).
 
 | Archivo | Qué protege |
 |---|---|
@@ -177,6 +205,11 @@ Los tests en `scripts/tests/` protegen invariantes del proyecto:
 | `test_api_key.py` | Generación y validación de API keys |
 | `test_db_init.py` | Schema SQL inicial |
 | `test_render_env.py` | Script de generación de .env en el Droplet |
+| `test_get_droplet_ip.py` | Script `get-droplet-ip.py`: obtención de IP pública vía DO API |
+| `test_docs_sources_of_truth.py` | Documentación: fuente de verdad única, sin referencias a stacks removidos |
+| `test_code_organization.py` | Módulos `lib/`: existencia, importaciones correctas, wrappers muertos eliminados |
+| `test_jira_scripts.py` | Scripts `scripts/jira/`: existencia, vars de entorno, campos del pipeline |
+| `test_operational_pruning.py` | Scripts operativos (Dockerfile, deploy.sh, bootstrap.sh): sin referencias a Supabase |
 
 ---
 
@@ -192,6 +225,53 @@ Los tests en `scripts/tests/` protegen invariantes del proyecto:
 7. Suite completa pasa
 8. Commit
 ```
+
+---
+
+## Entorno local para Jira
+
+Las variables de integración con Jira se gestionan vía `direnv` y `.envrc` (nunca
+se versionan — `.envrc` está en `.gitignore`).
+
+```bash
+# Copiar plantilla y completar con valores reales
+cp .envrc.example .envrc
+# editar .envrc con los valores de tu cuenta Jira
+
+# Habilitar direnv (carga automáticamente al entrar al directorio)
+direnv allow
+```
+
+Variables requeridas (definidas en `.envrc.example`):
+
+| Variable | Valor |
+|---|---|
+| `JIRA_BASE_URL` | `https://innovateonsolutions.atlassian.net` |
+| `JIRA_PROJECT_KEY` | `KAN` |
+| `JIRA_EMAIL` | Tu cuenta técnica de Jira |
+| `JIRA_TOKEN` | API token de Atlassian (`id.atlassian.com → Security → API tokens`) |
+
+---
+
+## Archivos eliminados intencionalmente
+
+Estos archivos **no deben recrearse**. Fueron eliminados como parte de la
+consolidación del stack y la organización por dominio:
+
+| Archivo eliminado | Razón | Reemplazado por |
+|---|---|---|
+| `types/api.ts` | Tipos dispersos sin dueño claro | `lib/types.ts` |
+| `types/database.ts` | Duplicación del schema de Drizzle | `lib/types.ts` + `lib/db/schema` |
+| `hooks/use-realtime-tickets.ts` | Abstracción vacía (sin realtime real) | fetch directo en componentes |
+| `components/calendar-event-item.tsx` | Solo se usaba en `day-view.tsx` | Renderer inline en `day-view.tsx` |
+| `components/logout-button.tsx` | Solo se usaba en el layout | Botón inline en `app/(dashboard)/layout.tsx` |
+| `CLAUDE.md` | Segunda fuente de verdad | `AGENTS.md` (este archivo) |
+| `docs/architecture/adr/002-supabase-baas.md` | Stack removido | — |
+| `docs/architecture/adr/004-ecs-fargate.md` | Infraestructura no utilizada | — |
+| `docs/architecture/adr/005-openclaw-homelab.md` | Proyecto futuro, no en producción | — |
+| `docs/integrations/openclaw.md` | Ideas futuras, no documentación viva | — |
+| `docs/infrastructure/homelab.md` | Hardware aún no recibido | — |
+| `docs/plan-trabajo-mvp.md` | Plan ejecutado; estado real en Jira | — |
 
 ---
 
