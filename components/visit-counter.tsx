@@ -2,16 +2,14 @@
 
 import { useEffect, useState } from 'react'
 
-const STORAGE_KEY = 'ebuddy_visit_count'
-
 export default function VisitCounter() {
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
-    const prev = parseInt(localStorage.getItem(STORAGE_KEY) ?? '0', 10)
-    const next = prev + 1
-    localStorage.setItem(STORAGE_KEY, String(next))
-    setCount(next)
+    fetch('/api/visits', { method: 'POST' })
+      .then((r) => r.json())
+      .then((data) => setCount(data.count))
+      .catch(() => setCount(null))
   }, [])
 
   if (count === null) return null

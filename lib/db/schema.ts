@@ -136,6 +136,14 @@ export const calendarTokens = pgTable(
   })
 )
 
+// ─── Visit counter (singleton row id=1) ──────────────────────
+
+export const visitCounter = pgTable('visit_counter', {
+  id: integer('id').primaryKey().default(1),
+  count: integer('count').notNull().default(0),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
 // ─── Inferred types ───────────────────────────────────────────
 
 export type User = typeof users.$inferSelect
