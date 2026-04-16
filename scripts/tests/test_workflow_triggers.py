@@ -198,21 +198,24 @@ class TestDeployWorkflowBuildStep:
             f"build-push-action (pos {push_pos})"
         )
 
-    # ── Orden: GC start después del push ─────────────────────────────────────
+    # ── GC en cron, no en build job ───────────────────────────────────────────
 
-    def test_gc_start_after_build_push(self):
-        """'garbage-collection start' debe aparecer DESPUÉS de build-push-action.
+    def test_gc_not_in_deploy_workflow(self):
+        """'garbage-collection start' NO debe estar en deploy.yml.
 
-        Iniciar GC antes del push bloquea el registry. El GC limpia manifests
-        sin tags que quedaron de builds anteriores, no el contenido que se acaba
-        de pushear.
+        GC en el build job causaba 401 en el siguiente deploy
+        ("waiting for write JWTs to expire" bloqueaba pushes).
+        GC se movió a operations.yml con cron diario.
         """
-        push_pos = self.workflow.index("build-push-action")
-        gc_start_pos = self.workflow.index("garbage-collection start")
-        assert push_pos < gc_start_pos, (
-            f"build-push-action (pos {push_pos}) debe preceder a "
-            f"garbage-collection start (pos {gc_start_pos})"
+        assert "garbage-collection start" not in self.workflow, (
+            "GC debe estar en operations.yml (cron), no en deploy.yml"
         )
+
+    def test_gc_in_operations_workflow(self):
+        """'garbage-collection start' debe estar en operations.yml con cron."""
+        ops = (REPO_ROOT / ".github" / "workflows" / "operations.yml").read_text()
+        assert "garbage-collection start" in ops
+        assert "schedule" in ops
 
     # ── Permisos ─────────────────────────────────────────────────────────────
 
