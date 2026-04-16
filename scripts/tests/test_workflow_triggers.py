@@ -117,41 +117,44 @@ class TestDeployWorkflowBuildStep:
 
     # ── Método de autenticación DOCR ─────────────────────────────────────────
 
-    def test_docr_uses_docker_login_action(self):
-        """El login a DOCR usa docker/login-action con el DO_TOKEN como credencial.
+    def test_docr_uses_doctl_docker_config_not_login_action(self):
+        """DOCR usa doctl registry docker-config para escribir credenciales estáticas.
 
-        docker/login-action escribe el token permanente en el credential store
-        del daemon de Docker. Es el método canónico que el driver docker-container
-        de buildx puede acceder correctamente.
+        docker/login-action en Ubuntu almacena las credenciales en el credential
+        store del sistema (secretservice/pass). Buildkitd corriendo dentro del
+        container del buildx driver no puede acceder a ese store → 401 al pushear.
+
+        doctl registry docker-config escribe un JSON estático a stdout con el
+        auth en base64 inline, sin credential helpers. Escribirlo directamente
+        a ~/.docker/config.json garantiza que buildkitd lo lea correctamente.
         """
-        assert "docker/login-action" in self.workflow
+        assert "doctl registry docker-config" in self.workflow
+        assert "docker/login-action" not in self.workflow
 
     def test_docr_does_not_use_doctl_registry_login(self):
         """doctl registry login NO se usa como step de autenticación de DOCR.
 
-        doctl registry login obtiene un token temporal vía DO API (expira en
-        segundos configurables). Con buildx, este token causaba 401 intermitentes
-        durante el pull del buildcache porque el token no era accesible desde el
-        contexto del container del builder en el momento de la revalidación.
+        doctl registry login configura el credential helper 'docker-credential-doctl'
+        en ~/.docker/config.json (en lugar de credenciales inline). Buildkitd dentro
+        del container de buildx no puede ejecutar ese binario del host → 401.
         """
-        # Verificar que no sea un step ejecutable (run:), solo puede estar en comentarios
         import re
         run_steps = re.findall(r'^\s+run:.*doctl registry login', self.workflow, re.MULTILINE)
         assert len(run_steps) == 0, f"doctl registry login no debe ser un run: step, encontrado: {run_steps}"
 
-    # ── Orden: login ANTES que buildx ────────────────────────────────────────
+    # ── Orden: credenciales ANTES que buildx ─────────────────────────────────
 
-    def test_docker_login_before_setup_buildx(self):
-        """docker/login-action debe aparecer ANTES de setup-buildx-action.
+    def test_docr_credential_config_before_setup_buildx(self):
+        """Las credenciales de DOCR deben escribirse ANTES de crear el buildx builder.
 
-        El builder de buildx (docker-container driver) hereda las credenciales
-        del daemon de Docker al CREAR el container. Si el login ocurre después,
-        el builder ya está corriendo y no ve las credenciales nuevas → 401.
+        El container de buildx hereda ~/.docker/config.json al momento de su
+        creación. Si las credenciales se escriben después, el builder ya está
+        corriendo y no las ve → 401.
         """
-        login_pos = self.workflow.index("docker/login-action")
+        creds_pos = self.workflow.index("doctl registry docker-config")
         buildx_pos = self.workflow.index("setup-buildx-action")
-        assert login_pos < buildx_pos, (
-            f"docker/login-action (pos {login_pos}) debe preceder a "
+        assert creds_pos < buildx_pos, (
+            f"doctl registry docker-config (pos {creds_pos}) debe preceder a "
             f"setup-buildx-action (pos {buildx_pos})"
         )
 
