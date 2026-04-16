@@ -5,6 +5,7 @@
 
 # testing
 /coverage
+.pytest_cache/
 
 # next.js
 /.next/
@@ -16,6 +17,8 @@
 # misc
 .DS_Store
 *.pem
+*.swp
+*.swo
 
 # debug
 npm-debug.log*
@@ -50,6 +53,10 @@ infra/terraform/*.tfstate.backup
 coverage.out
 cover.out
 
+# python
+__pycache__/
+*.py[cod]
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -59,3 +66,5 @@ supabase/.temp/
 
 # local tooling
 .codex
+.claude
+.envrc

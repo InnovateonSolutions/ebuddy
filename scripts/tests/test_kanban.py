@@ -21,13 +21,16 @@ def test_patch_endpoint_accepts_qa_status():
     """PATCH /api/tickets/:id debe aceptar status=QA.
 
     El tablero Kanban tiene 4 columnas: PENDING, IN_PROGRESS, QA, DONE.
-    Sin 'QA' en el z.enum del schema de validación, mover un ticket a la
+    Sin 'QA' en el contrato compartido de validación, mover un ticket a la
     columna QA falla con error de validación.
     """
     route = (REPO_ROOT / "app" / "api" / "tickets" / "[id]" / "route.ts").read_text()
-    # 'QA' debe aparecer en el enum del UpdateSchema
-    assert "'QA'" in route or '"QA"' in route, (
-        "UpdateSchema en PATCH /api/tickets/:id debe incluir 'QA' en el enum de status"
+    contracts = (REPO_ROOT / "lib" / "ticket-contracts.ts").read_text()
+    assert "@/lib/ticket-contracts" in route, (
+        "PATCH /api/tickets/:id debe usar el contrato compartido de tickets"
+    )
+    assert "'QA'" in contracts or '"QA"' in contracts, (
+        "El contrato compartido de update de tickets debe incluir 'QA' en el enum de status"
     )
 
 
@@ -62,14 +65,15 @@ def test_kanban_page_loads_real_data():
     """La página Kanban debe cargar tickets reales de la DB, no mock data.
 
     La versión anterior usaba MOCK_NEGOCIO y MOCK_PERSONAL hardcodeados.
-    Con datos reales, la página hace una query a Drizzle ORM.
+    Con datos reales, la página consulta la DB directamente o delega en
+    un módulo compartido de tickets que use Drizzle ORM.
     """
     page = (REPO_ROOT / "app" / "kanban" / "page.tsx").read_text()
     assert "MOCK_NEGOCIO" not in page and "MOCK_PERSONAL" not in page, (
         "kanban/page.tsx no debe usar datos mock — debe cargar desde la DB"
     )
-    assert "db" in page or "drizzle" in page.lower(), (
-        "kanban/page.tsx debe usar Drizzle para cargar tickets reales"
+    assert "db" in page or "drizzle" in page.lower() or "@/lib/tickets" in page, (
+        "kanban/page.tsx debe cargar datos reales, ya sea directo con Drizzle o via lib/tickets.ts"
     )
 
 

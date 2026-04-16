@@ -1,0 +1,4 @@
+export JIRA_BASE_URL="https://innovateonsolutions.atlassian.net"
+export JIRA_PROJECT_KEY="KAN"
+export JIRA_EMAIL="tu-cuenta-tecnica@ejemplo.com"
+export JIRA_TOKEN="reemplaza-este-token"
