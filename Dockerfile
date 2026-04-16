@@ -13,10 +13,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Variable pública necesaria en build time
+# Variables públicas necesarias en build time
 ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
 
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=$NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
