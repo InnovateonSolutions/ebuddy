@@ -51,7 +51,7 @@ jobs:
             [ -n "$file" ] || continue
 
             case "$file" in
-              app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*|middleware.ts|package.json|package-lock.json|tsconfig.json|next.config.*|tailwind.config.ts|postcss.config.js|drizzle.config.ts|Dockerfile|docker-compose.yml|docker-compose.prod.yml|infra/caddy/*)
+              app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*|middleware.ts|package.json|package-lock.json|tsconfig.json|next.config.*|tailwind.config.ts|postcss.config.js|drizzle.config.ts|Dockerfile|docker-compose.yml|docker-compose.prod.yml|infra/caddy/*|.github/workflows/deploy.yml)
                 app_changed=true
                 ;;
             esac
@@ -63,7 +63,7 @@ jobs:
             esac
 
             case "$file" in
-              scripts/*|docs/iam/*)
+              scripts/*|docs/iam/*|.github/workflows/ci.yml)
                 scripts_changed=true
                 ;;
             esac

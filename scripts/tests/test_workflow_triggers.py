@@ -48,6 +48,38 @@ def test_ci_components_path_triggers_app_changed():
     )
 
 
+def test_ci_deploy_workflow_changes_trigger_app_changed():
+    """Cambios en deploy.yml deben disparar app_changed=true y un deploy real.
+
+    Gap descubierto: al cambiar deploy.yml sin tocar código de app, el deploy
+    era skipped y había que hacer workflow_dispatch manual para validarlo.
+    """
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+    app_arm_pos = ci.index("app_changed=true")
+    deploy_yml_pos = ci.index(".github/workflows/deploy.yml")
+
+    assert deploy_yml_pos < app_arm_pos, (
+        ".github/workflows/deploy.yml debe estar en el case arm de app_changed"
+    )
+
+
+def test_ci_ci_workflow_changes_trigger_scripts_changed():
+    """Cambios en ci.yml deben disparar scripts_changed=true y correr pytest.
+
+    Garantiza que modificar el propio CI siempre ejercita los tests
+    estructurales que lo protegen.
+    """
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+    scripts_arm_pos = ci.index("scripts_changed=true")
+    ci_yml_pos = ci.index(".github/workflows/ci.yml")
+
+    assert ci_yml_pos < scripts_arm_pos, (
+        ".github/workflows/ci.yml debe estar en el case arm de scripts_changed"
+    )
+
+
 def test_ci_workflow_detects_application_and_infrastructure_changes():
     workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
 
