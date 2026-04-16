@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  actions: write  # necesario para que deploy.yml pueda usar cache-to: type=gha
 
 jobs:
   detect-changes:

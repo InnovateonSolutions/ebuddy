@@ -48,6 +48,17 @@ def test_ci_components_path_triggers_app_changed():
     )
 
 
+def test_ci_workflow_grants_actions_write_for_reusable_deploy():
+    """ci.yml debe incluir actions: write para poder llamar deploy.yml.
+
+    Los permisos del workflow llamado (deploy.yml) no pueden exceder los del
+    caller (ci.yml). Si ci.yml no declara actions: write, GitHub rechaza el
+    run de deploy.yml con startup_failure cuando solicita ese permiso.
+    """
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    assert "actions: write" in ci
+
+
 def test_ci_deploy_workflow_changes_trigger_app_changed():
     """Cambios en deploy.yml deben disparar app_changed=true y un deploy real.
 
