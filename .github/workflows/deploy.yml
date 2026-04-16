@@ -31,14 +31,14 @@ jobs:
         with:
           token: ${{ secrets.DO_TOKEN }}
 
-      # Elimina tags viejos y libera espacio — antes del login para no invalidar credenciales
-      - name: Cleanup old images
+      # Elimina tags viejos (sin garbage collection — el GC se hace DESPUÉS del push
+      # para no bloquear el registry durante el build)
+      - name: Delete old image tags
         run: |
           source infra/config/main.env
           REGISTRY="${APP_NAME}-${ENVIRONMENT}"
           REPO="${APP_NAME}"
 
-          # Borra todos los tags excepto latest y buildcache
           doctl registry repository list-tags "$REGISTRY/$REPO" \
             --no-header --format Tag 2>/dev/null \
           | grep -v -E "^latest$|^buildcache$" \
@@ -46,11 +46,6 @@ jobs:
               doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
             done
 
-          # Garbage collection — si ya hay una activa la ignora
-          doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests 2>&1 \
-            | grep -v "only one active garbage collection" || true
-
-      # Login DESPUÉS del cleanup para que las credenciales sean válidas al hacer push
       - run: doctl registry login --expiry-seconds 1200
 
       - id: meta
@@ -73,6 +68,14 @@ jobs:
             NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+      # Garbage collection DESPUÉS del push — el registry no puede recibir pushes mientras GC corre
+      - name: Garbage collect old untagged manifests
+        run: |
+          source infra/config/main.env
+          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
+          doctl registry garbage-collection start "$REGISTRY" --force --include-untagged-manifests 2>&1 \
+            | grep -v "only one active garbage collection" || true
 
   # ── 2. Migraciones de DB con Drizzle (paralelo con build) ───
   migrate:
