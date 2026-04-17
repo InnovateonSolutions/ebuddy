@@ -73,6 +73,30 @@ describe('ClaudeAIService', () => {
     ).rejects.toThrow('JSON inválido')
   })
 
+  it('acepta JSON válido envuelto en bloque markdown', async () => {
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage("```json\n" + JSON.stringify(VALID_RESPONSE, null, 2) + "\n```")
+    )
+
+    const result = await service.classifyAndStructure('texto de prueba')
+
+    expect(result.title).toBe(VALID_RESPONSE.title)
+    expect(result.context).toBe(VALID_RESPONSE.context)
+  })
+
+  it('acepta texto introductorio si contiene un único objeto JSON válido', async () => {
+    mocks.messagesCreate.mockResolvedValueOnce(
+      makeMessage(
+        "Aquí tienes el ticket:\n" + JSON.stringify(VALID_RESPONSE) + "\nListo."
+      )
+    )
+
+    const result = await service.classifyAndStructure('texto de prueba')
+
+    expect(result.priority).toBe(VALID_RESPONSE.priority)
+    expect(result.next_steps).toEqual(VALID_RESPONSE.next_steps)
+  })
+
   it('lanza error cuando el JSON no cumple el schema Zod', async () => {
     mocks.messagesCreate.mockResolvedValueOnce(
       makeMessage(JSON.stringify({ context: 'INVALIDO', title: 'algo' }))

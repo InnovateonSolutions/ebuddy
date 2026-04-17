@@ -138,15 +138,16 @@ export class ClaudeAIService implements IAIService {
       clearTimeout(timer)
     }
 
-    const rawContent = message.content[0]
-    if (rawContent.type !== 'text') {
+    const textBlocks = message.content.filter((block) => block.type === 'text')
+    const rawContent = textBlocks[0]
+    if (!rawContent) {
       throw new Error('Claude devolvió un tipo de contenido inesperado')
     }
 
     // Parsear y validar el JSON de la respuesta
     let parsed: unknown
     try {
-      parsed = JSON.parse(rawContent.text.trim())
+      parsed = parseStructuredJson(textBlocks.map((block) => block.text).join('\n').trim())
     } catch {
       throw new Error(
         `Claude devolvió JSON inválido: ${rawContent.text.slice(0, 200)}`
@@ -162,4 +163,26 @@ export class ClaudeAIService implements IAIService {
 
     return result.data
   }
+}
+
+function parseStructuredJson(rawText: string): unknown {
+  const candidates = [
+    rawText,
+    rawText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim(),
+  ]
+
+  const jsonObjectMatch = rawText.match(/\{[\s\S]*\}/)
+  if (jsonObjectMatch) {
+    candidates.push(jsonObjectMatch[0].trim())
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate)
+    } catch {
+      continue
+    }
+  }
+
+  throw new Error('JSON inválido')
 }

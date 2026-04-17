@@ -24,7 +24,18 @@ export async function POST(request: Request) {
       )
     } catch (err) {
       logEvent('ai.error', { userId, error: String(err) })
-      return apiError('Error al procesar con IA', 'AI_INVALID_RESPONSE', 502)
+      if (err instanceof Error && err.message.startsWith('AI_TIMEOUT:')) {
+        return apiError(
+          'La IA tardó demasiado en responder. Intenta de nuevo.',
+          'AI_TIMEOUT',
+          504
+        )
+      }
+      return apiError(
+        'La IA devolvió un formato inesperado. Intenta de nuevo.',
+        'AI_INVALID_RESPONSE',
+        502
+      )
     }
 
     return apiSuccess(ticket)
