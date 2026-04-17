@@ -7,7 +7,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  actions: write  # necesario para cache-to: type=gha en workflow_call
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -116,8 +115,8 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=${{ env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       # DOCR token endpoint devuelve 401 intermitentemente — retry con 30s delay
       - name: Retry Build & Push app image
@@ -131,8 +130,8 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=${{ env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       # Migrator: imagen mínima con drizzle-kit. Las migraciones corren desde
       # el Droplet (red confiable de DO) — los runners de CI no tienen acceso a la DB.
@@ -145,8 +144,8 @@ jobs:
           target: migrator
           push: true
           tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Retry Build & Push migrator image
         if: steps.build_migrator.outcome == 'failure'
@@ -156,8 +155,8 @@ jobs:
           target: migrator
           push: true
           tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
 
   # ── 2. Deploy al Droplet ──────────────────────────────────────
