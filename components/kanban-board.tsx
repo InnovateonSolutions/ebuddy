@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -23,6 +24,7 @@ import {
   ChevronUp,
   Trash2,
   GripVertical,
+  X,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -108,10 +110,11 @@ export default function KanbanBoard({
   const [personal, setPersonal] = useState<Ticket[]>(initialPersonal)
   const [activeId, setActiveId] = useState<string | null>(null)
 
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null)
+
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   )
 
   function updateTicket(ticket: Ticket) {
@@ -157,6 +160,7 @@ export default function KanbanBoard({
 
   const allTickets = [...negocio, ...personal]
   const activeTicket = activeId ? allTickets.find((t) => t.id === activeId) : null
+  const openTicket = openTicketId ? allTickets.find((t) => t.id === openTicketId) : null
 
   return (
     <DndContext
@@ -171,6 +175,7 @@ export default function KanbanBoard({
           readonly={readonly}
           onUpdate={updateTicket}
           onDelete={deleteTicket}
+          onOpen={setOpenTicketId}
         />
         <BoardSection
           context="PERSONAL"
@@ -178,6 +183,7 @@ export default function KanbanBoard({
           readonly={readonly}
           onUpdate={updateTicket}
           onDelete={deleteTicket}
+          onOpen={setOpenTicketId}
         />
       </div>
 
@@ -185,10 +191,14 @@ export default function KanbanBoard({
       <DragOverlay>
         {activeTicket ? (
           <div className="rotate-2 opacity-90 pointer-events-none">
-            <KanbanCard ticket={activeTicket} readonly={true} onUpdate={() => {}} onDelete={() => {}} />
+            <KanbanCard ticket={activeTicket} readonly={true} onUpdate={() => {}} onDelete={() => {}} onOpen={() => {}} />
           </div>
         ) : null}
       </DragOverlay>
+
+      {openTicket && (
+        <TicketDetailModal ticket={openTicket} onClose={() => setOpenTicketId(null)} />
+      )}
     </DndContext>
   )
 }
@@ -201,9 +211,10 @@ interface BoardSectionProps {
   readonly: boolean
   onUpdate: (t: Ticket) => void
   onDelete: (id: string, ctx: TicketContext) => void
+  onOpen: (id: string) => void
 }
 
-function BoardSection({ context, tickets, readonly, onUpdate, onDelete }: BoardSectionProps) {
+function BoardSection({ context, tickets, readonly, onUpdate, onDelete, onOpen }: BoardSectionProps) {
   const isNegocio = context === 'NEGOCIO'
   const total = tickets.length
   const done = tickets.filter((t) => t.status === 'DONE').length
@@ -241,6 +252,7 @@ function BoardSection({ context, tickets, readonly, onUpdate, onDelete }: BoardS
               readonly={readonly}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              onOpen={onOpen}
             />
           )
         })}
@@ -258,9 +270,10 @@ interface KanbanColumnProps {
   readonly: boolean
   onUpdate: (t: Ticket) => void
   onDelete: (id: string, ctx: TicketContext) => void
+  onOpen: (id: string) => void
 }
 
-function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete }: KanbanColumnProps) {
+function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete, onOpen }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: col.id })
 
   return (
@@ -308,6 +321,7 @@ function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete }: K
                 readonly={true}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
+                onOpen={onOpen}
               />
             ) : (
               <DraggableCard key={ticket.id} id={ticket.id}>
@@ -316,6 +330,7 @@ function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete }: K
                   readonly={false}
                   onUpdate={onUpdate}
                   onDelete={onDelete}
+                  onOpen={onOpen}
                 />
               </DraggableCard>
             )
@@ -334,15 +349,13 @@ function DraggableCard({ id, children }: { id: string; children: React.ReactNode
   return (
     <div
       ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       style={{ opacity: isDragging ? 0.35 : 1 }}
-      className="relative group/drag"
+      className="relative group/drag touch-none"
     >
-      {/* Drag handle — only shown on hover */}
-      <div
-        {...listeners}
-        {...attributes}
-        className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 text-slate-200 hover:text-slate-400 cursor-grab active:cursor-grabbing opacity-0 group-hover/drag:opacity-100 transition-opacity"
-      >
+      {/* Visual grip hint (pointer-events-none — drag handled by wrapper) */}
+      <div className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 text-slate-200 hover:text-slate-400 opacity-0 group-hover/drag:opacity-100 transition-opacity pointer-events-none">
         <GripVertical size={12} />
       </div>
       {children}
@@ -357,14 +370,26 @@ interface KanbanCardProps {
   readonly: boolean
   onUpdate: (t: Ticket) => void
   onDelete: (id: string, ctx: TicketContext) => void
+  onOpen: (id: string) => void
 }
 
-function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
+function KanbanCard({ ticket, readonly, onUpdate, onDelete, onOpen }: KanbanCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const lastTapRef = useRef(0)
 
   const isDone = ticket.status === 'DONE'
+
+  function handleDoubleTap() {
+    const now = Date.now()
+    if (now - lastTapRef.current < 350) {
+      onOpen(ticket.id)
+      lastTapRef.current = 0
+    } else {
+      lastTapRef.current = now
+    }
+  }
 
   async function cycleStatus() {
     if (updating || readonly) return
@@ -410,6 +435,8 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
 
   return (
     <div
+      onClick={handleDoubleTap}
+      onDoubleClick={() => onOpen(ticket.id)}
       className={cn(
         'bg-white rounded-lg border transition-all pl-4',
         isDone ? 'border-slate-100 opacity-55' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
@@ -420,7 +447,7 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
       <div className="p-3">
         <div className="flex items-start gap-2">
           <button
-            onClick={cycleStatus}
+            onClick={(e) => { e.stopPropagation(); cycleStatus() }}
             disabled={updating || readonly}
             title={readonly ? '' : 'Avanzar estado'}
             className={cn(
@@ -462,14 +489,14 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
           <div className="flex items-center gap-0.5 flex-shrink-0">
             {!readonly && (
               <button
-                onClick={handleDelete}
+                onClick={(e) => { e.stopPropagation(); handleDelete() }}
                 className="p-1 text-slate-200 hover:text-red-400 transition-colors rounded"
               >
                 <Trash2 size={12} />
               </button>
             )}
             <button
-              onClick={() => setExpanded((e) => !e)}
+              onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
               className="p-1 text-slate-300 hover:text-slate-500 transition-colors rounded"
             >
               {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -508,6 +535,90 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete }: KanbanCardProps) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Ticket Detail Modal ──────────────────────────────────────
+
+const STATUS_META: Record<TicketStatus, { label: string; color: string }> = {
+  PENDING:     { label: 'To Do',       color: 'text-slate-500 bg-slate-100' },
+  IN_PROGRESS: { label: 'En progreso', color: 'text-blue-700 bg-blue-100' },
+  QA:          { label: 'En revisión', color: 'text-violet-700 bg-violet-100' },
+  DONE:        { label: 'Listo',       color: 'text-emerald-700 bg-emerald-100' },
+}
+
+function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () => void }) {
+  const status = STATUS_META[ticket.status]
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-slate-100">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-900 leading-snug">{ticket.title}</p>
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', status.color)}>
+                {status.label}
+              </span>
+              <Badge variant={ticket.context === 'NEGOCIO' ? 'negocio' : 'personal'}>
+                {ticket.context === 'NEGOCIO' ? 'Negocio' : 'Personal'}
+              </Badge>
+              <Badge variant={ticket.priority.toLowerCase() as 'alta' | 'media' | 'baja'}>
+                {ticket.priority}
+              </Badge>
+              {ticket.dueDate && (
+                <span className="text-xs text-slate-400">{formatTicketDate(ticket.dueDate)}</span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-slate-100 flex-shrink-0"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          {ticket.overview && (
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Contexto</p>
+              <p className="text-sm text-slate-600 leading-relaxed">{ticket.overview}</p>
+            </div>
+          )}
+          {ticket.whatToDo && (
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Qué hacer</p>
+              <p className="text-sm text-slate-700 font-medium">{ticket.whatToDo}</p>
+            </div>
+          )}
+          {ticket.nextSteps.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Siguientes pasos</p>
+              <ol className="space-y-1.5">
+                {ticket.nextSteps.map((step, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-slate-600">
+                    <span className="text-slate-300 flex-shrink-0 font-medium">{i + 1}.</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {!ticket.overview && !ticket.whatToDo && ticket.nextSteps.length === 0 && (
+            <p className="text-sm text-slate-400 text-center py-4">Sin detalle adicional.</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
