@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
+import { CalendarDays, Kanban, Sparkles } from 'lucide-react'
 
 export default async function RootPage() {
   const session = await auth()
@@ -51,19 +52,25 @@ export default async function RootPage() {
 
       {/* Features */}
       <section className="max-w-5xl mx-auto px-6 pb-24">
-        <div className="grid sm:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-3 gap-4">
           <FeatureCard
-            icon="🎯"
+            Icon={CalendarDays}
+            iconColor="text-blue-600"
+            iconBg="bg-blue-50"
             title="Vista de Hoy"
             description="Cada mañana ves solo lo que importa: tus tareas pendientes y tus eventos del día en un solo lugar."
           />
           <FeatureCard
-            icon="📋"
+            Icon={Kanban}
+            iconColor="text-violet-600"
+            iconBg="bg-violet-50"
             title="Tablero Kanban"
             description="Mueve tareas entre To Do, En progreso, QA y Listo. Arrastra con el dedo o desde el escritorio."
           />
           <FeatureCard
-            icon="🤖"
+            Icon={Sparkles}
+            iconColor="text-amber-600"
+            iconBg="bg-amber-50"
             title="Captura con IA"
             description="Describe lo que necesitas hacer en lenguaje natural y la IA lo convierte en un ticket estructurado."
           />
@@ -81,10 +88,24 @@ export default async function RootPage() {
   )
 }
 
-function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+function FeatureCard({
+  Icon,
+  iconColor,
+  iconBg,
+  title,
+  description,
+}: {
+  Icon: React.ElementType
+  iconColor: string
+  iconBg: string
+  title: string
+  description: string
+}) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6">
-      <div className="text-3xl mb-3">{icon}</div>
+      <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center mb-4`}>
+        <Icon size={20} className={iconColor} />
+      </div>
       <h3 className="font-semibold text-slate-900 mb-1.5">{title}</h3>
       <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
     </div>

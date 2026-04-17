@@ -190,7 +190,7 @@ export default function KanbanBoard({
       {/* Ghost card while dragging */}
       <DragOverlay>
         {activeTicket ? (
-          <div className="rotate-2 opacity-90 pointer-events-none">
+          <div className="rotate-1 opacity-95 pointer-events-none shadow-xl scale-105">
             <KanbanCard ticket={activeTicket} readonly={true} onUpdate={() => {}} onDelete={() => {}} onOpen={() => {}} />
           </div>
         ) : null}
@@ -306,11 +306,11 @@ function KanbanColumn({ col, tickets, readonly, onUpdate, onDelete, onOpen }: Ka
         {tickets.length === 0 ? (
           <div
             className={cn(
-              'flex-1 flex items-center justify-center rounded-lg border border-dashed min-h-[80px] transition-colors',
-              isOver ? 'border-slate-400 bg-white/60' : 'border-slate-200'
+              'flex-1 flex flex-col items-center justify-center rounded-lg border border-dashed min-h-[80px] transition-all gap-1',
+              isOver ? 'border-blue-300 bg-blue-50/60' : 'border-slate-200'
             )}
           >
-            <p className="text-xs text-slate-300">Vacío</p>
+            <p className="text-[10px] text-slate-300 select-none">Arrastra aquí</p>
           </div>
         ) : (
           tickets.map((ticket) =>
@@ -541,11 +541,11 @@ function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () =>
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm pb-safe"
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden"
+        className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden pb-safe sm:pb-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

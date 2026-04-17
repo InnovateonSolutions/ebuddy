@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Loader2, CalendarClock } from 'lucide-react'
 import TicketCard from '@/components/ticket-card'
 import type { ApiResponse, FutureResponse, Ticket } from '@/lib/types'
 
@@ -65,8 +66,10 @@ export default function FuturePage() {
 
       {tickets.length === 0 ? (
         <div className="text-center py-16 text-slate-400">
-          <p className="text-4xl mb-3">🎉</p>
-          <p className="font-medium">No tienes tareas futuras pendientes</p>
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <CalendarClock size={22} className="text-slate-400" />
+          </div>
+          <p className="font-medium text-slate-600">Sin tareas futuras pendientes</p>
           <p className="text-sm mt-1">Captura algo nuevo desde la vista de Hoy</p>
         </div>
       ) : (
@@ -93,9 +96,11 @@ export default function FuturePage() {
             <button
               onClick={loadMore}
               disabled={loadingMore}
-              className="w-full py-3 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+              className="w-full py-3 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loadingMore ? 'Cargando...' : 'Cargar más'}
+              {loadingMore ? (
+                <><Loader2 size={14} className="animate-spin" />Cargando...</>
+              ) : 'Cargar más'}
             </button>
           )}
         </div>

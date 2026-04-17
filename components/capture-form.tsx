@@ -123,7 +123,7 @@ export default function CaptureForm({ onTicketCreated }: CaptureFormProps) {
               </span>
             )}
             {!isRecording && !isProcessing && text.length > 0 && (
-              <span>⌘+Enter para enviar</span>
+              <span>Ctrl+Enter para enviar</span>
             )}
           </div>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Briefcase, User, Calendar, RefreshCw, Clock, MapPin } from 'lucide-react'
+import { Briefcase, User, Calendar, RefreshCw, Clock, MapPin, CheckSquare } from 'lucide-react'
 import TicketCard from '@/components/ticket-card'
 import CaptureForm from '@/components/capture-form'
 import ManualTicketForm from '@/components/manual-ticket-form'
@@ -74,6 +74,10 @@ export default function DayView({ initialData }: DayViewProps) {
   }
 
   const totalToday = negocioTickets.length + personalTickets.length
+  const doneToday = [...negocioTickets, ...personalTickets].filter(
+    (t) => t.status === 'DONE'
+  ).length
+  const progressPct = totalToday > 0 ? Math.round((doneToday / totalToday) * 100) : 0
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -145,11 +149,22 @@ export default function DayView({ initialData }: DayViewProps) {
         </div>
 
         {/* Resumen rápido */}
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-500 mb-2 font-medium">Resumen de hoy</p>
-          <p className="text-2xl font-bold text-slate-900">{totalToday}</p>
-          <p className="text-xs text-slate-500">
-            {totalToday === 1 ? 'tarea pendiente' : 'tareas pendientes'}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <p className="text-xs text-slate-500 mb-3 font-medium">Progreso de hoy</p>
+          <div className="flex items-end justify-between mb-2">
+            <p className="text-2xl font-bold text-slate-900">{doneToday}<span className="text-base font-normal text-slate-400">/{totalToday}</span></p>
+            <p className="text-xs font-semibold text-slate-500">{progressPct}%</p>
+          </div>
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
+            {doneToday === totalToday && totalToday > 0
+              ? '¡Todo listo por hoy!'
+              : `${totalToday - doneToday} ${totalToday - doneToday === 1 ? 'tarea pendiente' : 'tareas pendientes'}`}
           </p>
         </div>
       </div>
@@ -248,9 +263,11 @@ function TicketList({
   if (tickets.length === 0) {
     return (
       <div className="text-center py-12 text-slate-400">
-        <p className="text-3xl mb-2">✓</p>
-        <p className="text-sm font-medium">{emptyLabel}</p>
-        <p className="text-xs mt-1">Usa el formulario de arriba para capturar o crear algo nuevo</p>
+        <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+          <CheckSquare size={18} className="text-slate-300" />
+        </div>
+        <p className="text-sm font-medium text-slate-500">{emptyLabel}</p>
+        <p className="text-xs mt-1 text-slate-400">Usa el formulario de arriba para capturar o crear algo nuevo</p>
       </div>
     )
   }
