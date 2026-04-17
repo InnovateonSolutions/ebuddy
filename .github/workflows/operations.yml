@@ -32,6 +32,19 @@ jobs:
         with:
           token: ${{ secrets.DO_TOKEN }}
 
+      - name: Delete old image tags
+        run: |
+          source infra/config/main.env
+          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
+          REPO="${APP_NAME}"
+
+          doctl registry repository list-tags "$REGISTRY/$REPO" \
+            --no-header --format Tag 2>/dev/null \
+          | grep -v -E "^(latest|migrator)$" \
+          | while read tag; do
+              doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
+            done
+
       - name: Run garbage collection
         run: |
           source infra/config/main.env

@@ -189,21 +189,3 @@ jobs:
       action: plan
       manage_dns: true
     secrets: inherit
-
-  deploy:
-    name: Deploy
-    needs: [detect-changes, node-tests, browser-e2e, python-tests, terratest, terraform-plan]
-    # always() fuerza la evaluación del if aunque haya dependencias skipped.
-    # Sin él, GitHub pre-saltea el job cuando any needed job fue skipped.
-    if: |
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs['detect-changes'].outputs.app_changed == 'true' &&
-      (needs['node-tests'].result == 'success' || needs['node-tests'].result == 'skipped') &&
-      (needs['browser-e2e'].result == 'success' || needs['browser-e2e'].result == 'skipped') &&
-      (needs['python-tests'].result == 'success' || needs['python-tests'].result == 'skipped') &&
-      (needs['terratest'].result == 'success' || needs['terratest'].result == 'skipped') &&
-      (needs['terraform-plan'].result == 'success' || needs['terraform-plan'].result == 'skipped')
-    uses: ./.github/workflows/deploy.yml
-    secrets: inherit

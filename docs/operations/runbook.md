@@ -6,7 +6,8 @@
 
 ## Despliegue
 
-El despliegue normal ocurre por GitHub Actions.
+La validación rápida ocurre en el workflow `CI`.
+El despliegue normal ocurre en el workflow `Deploy`, disparado después de un `CI` verde sobre `main`.
 
 Validación mínima después de deploy:
 

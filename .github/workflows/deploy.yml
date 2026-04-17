@@ -1,6 +1,9 @@
 name: Deploy
 
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_call:
   workflow_dispatch:
 
@@ -9,7 +12,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -22,6 +25,13 @@ jobs:
     name: Build & Push
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    if: |
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.event == 'push'
+      )
 
     steps:
       - uses: actions/checkout@v4
@@ -35,42 +45,6 @@ jobs:
       - uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_TOKEN }}
-
-      # Elimina tags viejos (sin garbage collection — el GC se hace DESPUÉS del push
-      # para no bloquear el registry durante el build)
-      - name: Delete old image tags
-        run: |
-          source infra/config/main.env
-          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
-          REPO="${APP_NAME}"
-
-          doctl registry repository list-tags "$REGISTRY/$REPO" \
-            --no-header --format Tag 2>/dev/null \
-          | grep -v -E "^(latest|migrator)$" \
-          | while read tag; do
-              doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
-            done
-
-      # Si un GC anterior sigue activo, DOCR rechaza pushes con 401.
-      # El estado activo tiene múltiples valores ("waiting for write JWTs to expire",
-      # "scanning manifests", etc.) — más seguro esperar hasta que el estado sea terminal.
-      - name: Wait for active garbage collection to finish
-        run: |
-          source infra/config/main.env
-          REGISTRY="${APP_NAME}-${ENVIRONMENT}"
-          MAX_WAIT=300
-          WAITED=0
-          while true; do
-            GC_STATUS="$(doctl registry garbage-collection list "$REGISTRY" --no-header 2>/dev/null | head -1)"
-            # Si no hay GC o el último terminó (succeeded/failed/cancelled), proceder
-            [ -z "$GC_STATUS" ] && break
-            echo "$GC_STATUS" | grep -qE "(succeeded|failed|cancelled)" && break
-            echo "GC activa — esperando 15s... (${WAITED}s total): $(echo "$GC_STATUS" | awk '{print $3,$4,$5}')"
-            sleep 15
-            WAITED=$((WAITED + 15))
-            [ "$WAITED" -ge "$MAX_WAIT" ] && { echo "Timeout esperando GC"; break; }
-          done
-          echo "Registry listo para push"
 
       - id: meta
         uses: docker/metadata-action@v5
@@ -167,6 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     timeout-minutes: 15
+    if: needs.build.result == 'success'
 
     steps:
       - uses: actions/checkout@v4
@@ -260,6 +235,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     timeout-minutes: 15
+    if: needs.deploy.result == 'success'
 
     steps:
       - uses: actions/checkout@v4

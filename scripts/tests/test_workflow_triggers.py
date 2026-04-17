@@ -11,6 +11,7 @@ def test_deploy_workflow_uses_positive_paths_filter():
 
     assert "workflow_call:" in workflow
     assert "workflow_dispatch:" in workflow
+    assert "workflow_run:" in workflow
     assert "paths:" not in workflow
     assert "paths-ignore:" not in workflow
 
@@ -102,11 +103,35 @@ def test_ci_workflow_detects_application_and_infrastructure_changes():
         "terraform-plan:",
         "needs['detect-changes'].outputs.infra_changed",
         "needs['detect-changes'].outputs.app_changed",
-        "needs['terraform-plan'].result",
-        "uses: ./.github/workflows/deploy.yml",
         "uses: ./.github/workflows/terraform.yml",
     ):
         assert expected_path in workflow
+
+
+def test_ci_workflow_stops_after_validation_and_does_not_embed_deploy():
+    workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+    assert "\n  deploy:\n" not in workflow, (
+        "ci.yml debe terminar en validación; el deploy a producción debe vivir en un workflow separado"
+    )
+    assert "uses: ./.github/workflows/deploy.yml" not in workflow, (
+        "ci.yml no debe arrastrar deploy.yml en el camino crítico del feedback loop"
+    )
+
+
+def test_deploy_workflow_can_start_after_successful_ci_on_main():
+    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    assert "workflows: [CI]" in workflow or "workflows:\n      - CI" in workflow, (
+        "deploy.yml debe reaccionar a CI verde para mantener CD separado de la validación"
+    )
+    assert "types: [completed]" in workflow or "types:\n      - completed" in workflow
+    assert "github.event.workflow_run.conclusion == 'success'" in workflow, (
+        "deploy.yml solo debe arrancar automáticamente cuando CI terminó en verde"
+    )
+    assert "github.event.workflow_run.head_branch == 'main'" in workflow, (
+        "deploy.yml solo debe auto-desplegar desde main"
+    )
 
 
 def test_bootstrap_deploy_workflow_is_removed():
@@ -193,15 +218,13 @@ class TestDeployWorkflowBuildStep:
     # ── Orden: GC wait antes del push ────────────────────────────────────────
 
     def test_gc_wait_loop_before_build_push(self):
-        """El loop de espera de GC activa debe aparecer ANTES de build-push-action.
+        """El build no debe esperar GC activa en el camino crítico del deploy.
 
-        DOCR rechaza pushes con 401 mientras hay un garbage-collection en curso.
+        El GC corre en operations.yml. El deploy debe intentar construir/pushear
+        sin introducir una espera preventiva de varios minutos.
         """
-        gc_wait_pos = self.workflow.index("garbage-collection list")
-        push_pos = self.workflow.index("build-push-action")
-        assert gc_wait_pos < push_pos, (
-            f"gc-wait (pos {gc_wait_pos}) debe preceder a "
-            f"build-push-action (pos {push_pos})"
+        assert "garbage-collection list" not in self.workflow, (
+            "deploy.yml no debe bloquear el build esperando garbage collection activa"
         )
 
     # ── GC en cron, no en build job ───────────────────────────────────────────
@@ -216,6 +239,15 @@ class TestDeployWorkflowBuildStep:
         assert "garbage-collection start" not in self.workflow, (
             "GC debe estar en operations.yml (cron), no en deploy.yml"
         )
+
+    def test_old_tag_cleanup_not_in_deploy_workflow(self):
+        """La limpieza de tags viejos no debe vivir en deploy.yml.
+
+        Borrar tags en cada deploy añade latencia y mete trabajo operativo en el
+        camino crítico. La higiene del registry pertenece al workflow operacional.
+        """
+        assert "Delete old image tags" not in self.workflow
+        assert "repository delete-tag" not in self.workflow
 
     def test_gc_in_operations_workflow(self):
         """'garbage-collection start' debe estar en operations.yml con cron."""
