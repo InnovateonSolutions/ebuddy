@@ -18,6 +18,7 @@ on:
           - db-connectivity
           - db-init
           - whatsapp-config
+          - due-notifications
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, isNull, lt, ne, or } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, ilike, isNull, lt, ne, or } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { tickets, userPreferences } from '@/lib/db/schema'
 import type { FutureResponse, Ticket, TodayResponse } from '@/lib/types'
@@ -6,6 +6,9 @@ import { todayInTimezone } from '@/lib/utils'
 
 const DEFAULT_TIMEZONE = 'America/Tijuana'
 const FUTURE_PAGE_SIZE = 20
+const SEARCH_LIMIT = 20
+
+const notArchived = eq(tickets.archived, false)
 
 function splitTicketsByContext(ticketList: Ticket[]): TodayResponse['tickets'] {
   return {
@@ -38,7 +41,8 @@ export async function getTodayViewData(userId: string): Promise<{
       and(
         eq(tickets.userId, userId),
         eq(tickets.dueDate, today),
-        ne(tickets.status, 'DONE')
+        ne(tickets.status, 'DONE'),
+        notArchived
       )
     )
     .orderBy(tickets.priority, tickets.createdAt)
@@ -68,6 +72,7 @@ export async function getFutureTicketsPage(
         eq(tickets.userId, userId),
         ne(tickets.status, 'DONE'),
         or(gt(tickets.dueDate, today), isNull(tickets.dueDate)),
+        notArchived,
         cursor ? lt(tickets.createdAt, new Date(cursor)) : undefined
       )
     )
@@ -83,11 +88,27 @@ export async function getFutureTicketsPage(
   return { tickets: results, cursor: nextCursor }
 }
 
+export async function searchTickets(userId: string, query: string): Promise<Ticket[]> {
+  const q = `%${query.trim()}%`
+  return db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.userId, userId),
+        notArchived,
+        or(ilike(tickets.title, q), ilike(tickets.overview, q), ilike(tickets.whatToDo, q))
+      )
+    )
+    .orderBy(desc(tickets.updatedAt))
+    .limit(SEARCH_LIMIT)
+}
+
 export async function getKanbanTickets(userId: string): Promise<TodayResponse['tickets']> {
   const allTickets = await db
     .select()
     .from(tickets)
-    .where(eq(tickets.userId, userId))
+    .where(and(eq(tickets.userId, userId), notArchived))
     .orderBy(tickets.createdAt)
 
   return splitTicketsByContext(allTickets)

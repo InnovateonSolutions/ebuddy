@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { auth, signOut } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/nav-link'
+import { SearchCommand } from '@/components/search-command'
 
 export default async function DashboardLayout({
   children,
@@ -42,9 +43,13 @@ export default async function DashboardLayout({
               <NavLink href="/today">Hoy</NavLink>
               <NavLink href="/future">Horizonte</NavLink>
               <NavLink href="/kanban">Tablero</NavLink>
+              <NavLink href="/stats">Stats</NavLink>
               <NavLink href="/settings">Ajustes</NavLink>
             </div>
           </div>
+
+          {/* Search */}
+          <SearchCommand />
 
           {/* User */}
           <form action={logoutAction} className="flex items-center gap-2 flex-shrink-0">

@@ -26,6 +26,7 @@ import {
   GripVertical,
   X,
   Pencil,
+  Archive,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -113,6 +114,7 @@ export default function KanbanBoard({
   const [openTicketId, setOpenTicketId] = useState<string | null>(null)
   const [filterPriority, setFilterPriority] = useState<TicketPriority | null>(null)
   const [filterContext, setFilterContext] = useState<'ALL' | 'NEGOCIO' | 'PERSONAL'>('ALL')
+  const [archiving, setArchiving] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -169,6 +171,24 @@ export default function KanbanBoard({
 
   const hasActiveFilters = filterPriority !== null || filterContext !== 'ALL'
 
+  async function handleArchiveDone() {
+    if (archiving) return
+    const doneCount = [...negocio, ...personal].filter((t) => t.status === 'DONE').length
+    if (!doneCount) return
+    if (!confirm(`¿Archivar ${doneCount} ticket${doneCount !== 1 ? 's' : ''} completados con más de 30 días?`)) return
+    setArchiving(true)
+    try {
+      const res = await fetch('/api/tickets/archive-done', { method: 'POST' })
+      const json = await res.json()
+      if (json.success) {
+        setNegocio((prev) => prev.filter((t) => t.status !== 'DONE'))
+        setPersonal((prev) => prev.filter((t) => t.status !== 'DONE'))
+      }
+    } finally {
+      setArchiving(false)
+    }
+  }
+
   return (
     <DndContext
       sensors={readonly ? [] : sensors}
@@ -220,6 +240,16 @@ export default function KanbanBoard({
             <X size={10} /> Limpiar
           </button>
         )}
+        <div className="ml-auto">
+          <button
+            onClick={handleArchiveDone}
+            disabled={archiving}
+            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-600 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-40"
+          >
+            <Archive size={12} />
+            Archivar completados
+          </button>
+        </div>
       </div>
 
       <div className="space-y-10">
