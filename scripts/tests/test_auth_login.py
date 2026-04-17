@@ -36,8 +36,8 @@ def test_google_login_handles_non_redirect_failures_without_leaving_button_block
     assert "redirect: false" in page, (
         "Login con Google debe usar redirect:false para poder manejar errores y desbloquear el botón"
     )
-    assert "window.location.href = result.url" in page, (
-        "Si signIn devuelve URL válida, la página debe navegar explícitamente"
+    assert "window.location.replace(result.url)" in page, (
+        "Si signIn devuelve URL válida, la página debe reemplazar la entrada de /login para que Atrás no la recupere"
     )
     assert "setLoading(false)" in page, (
         "El botón de Google debe reactivarse cuando signIn no logra navegar"

@@ -46,7 +46,7 @@ export default function LoginPage() {
       }
 
       if (result?.url) {
-        window.location.href = result.url
+        window.location.replace(result.url)
         return
       }
 
