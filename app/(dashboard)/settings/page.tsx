@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { auth } from '@/lib/auth/config'
 import { db } from '@/lib/db'
 import { calendarTokens, userPreferences } from '@/lib/db/schema'
