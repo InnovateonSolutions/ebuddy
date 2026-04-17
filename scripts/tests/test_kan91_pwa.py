@@ -37,4 +37,5 @@ def test_pwa_icons_exist():
 
 def test_root_layout_has_apple_meta():
     layout = read("app/layout.tsx")
-    assert "apple-mobile-web-app" in layout or "apple-touch-icon" in layout
+    # Acepta tanto meta tags inline como el API de metadata de Next.js (appleWebApp)
+    assert "apple-mobile-web-app" in layout or "apple-touch-icon" in layout or "appleWebApp" in layout
