@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/nav-link'
 import { SearchCommand } from '@/components/search-command'
 import { BottomNav } from '@/components/bottom-nav'
+import { UserMenu } from '@/components/user-menu'
 
 export default async function DashboardLayout({
   children,
@@ -53,17 +54,7 @@ export default async function DashboardLayout({
           <SearchCommand />
 
           {/* User */}
-          <form action={logoutAction} className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center select-none hidden sm:flex">
-              {initials}
-            </div>
-            <button
-              type="submit"
-              className="text-xs text-slate-500 hover:text-slate-800 transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-100"
-            >
-              Salir
-            </button>
-          </form>
+          <UserMenu initials={initials} logoutAction={logoutAction} />
         </div>
       </nav>
 
