@@ -1,10 +1,13 @@
+# syntax=docker/dockerfile:1
+
 # ─── Stage 1: deps ────────────────────────────────────────────
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # ─── Stage 2: builder ─────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -21,7 +24,8 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=$NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 # ─── Stage 3: migrator ───────────────────────────────────────
 # Imagen mínima para correr drizzle-kit migrate desde el Droplet.
