@@ -137,7 +137,8 @@ export default function KanbanBoard({
     if (!over) return
 
     const ticketId = active.id as string
-    const newStatus = over.id as TicketStatus
+    // Droppable IDs are "${context}|${status}" to avoid duplicates across sections
+    const newStatus = (over.id as string).split('|')[1] as TicketStatus
     const all = [...negocio, ...personal]
     const ticket = all.find((t) => t.id === ticketId)
     if (!ticket || ticket.status === newStatus) return
@@ -273,8 +274,9 @@ interface KanbanColumnProps {
   onOpen: (id: string) => void
 }
 
-function KanbanColumn({ col, tickets, readonly, onUpdate, onDelete, onOpen }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: col.id })
+function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete, onOpen }: KanbanColumnProps) {
+  const droppableId = `${context}|${col.id}`
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId })
 
   return (
     <div className="flex flex-col gap-2">
