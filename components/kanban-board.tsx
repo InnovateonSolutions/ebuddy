@@ -273,7 +273,7 @@ interface KanbanColumnProps {
   onOpen: (id: string) => void
 }
 
-function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete, onOpen }: KanbanColumnProps) {
+function KanbanColumn({ col, tickets, readonly, onUpdate, onDelete, onOpen }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: col.id })
 
   return (
@@ -352,7 +352,7 @@ function DraggableCard({ id, children }: { id: string; children: React.ReactNode
       {...listeners}
       {...attributes}
       style={{ opacity: isDragging ? 0.35 : 1 }}
-      className="relative group/drag touch-none"
+      className="relative group/drag touch-none select-none cursor-grab active:cursor-grabbing"
     >
       {/* Visual grip hint (pointer-events-none — drag handled by wrapper) */}
       <div className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 text-slate-200 hover:text-slate-400 opacity-0 group-hover/drag:opacity-100 transition-opacity pointer-events-none">
