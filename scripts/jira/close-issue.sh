@@ -17,9 +17,12 @@ import sys
 
 payload = json.loads(sys.argv[1])
 transition_name = sys.argv[2].lower()
+# aliases para tableros en español
+aliases = {"done": ["listo", "finalizada", "done", "cerrado"]}
+candidates = aliases.get(transition_name, [transition_name])
 
 for item in payload.get("transitions", []):
-    if item.get("name", "").lower() == transition_name:
+    if item.get("name", "").lower() in candidates:
         print(item["id"])
         break
 PY
