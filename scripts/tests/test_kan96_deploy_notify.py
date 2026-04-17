@@ -1,26 +1,21 @@
 """Tests KAN-96: notificación automática en fallo de deploy."""
 from pathlib import Path
-import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-def load_deploy():
-    return yaml.safe_load((REPO_ROOT / ".github/workflows/deploy.yml").read_text())
+def read(p): return (REPO_ROOT / p).read_text()
 
 def test_build_job_has_failure_notification():
-    deploy = load_deploy()
-    steps = deploy["jobs"]["build"]["steps"]
-    failure_steps = [s for s in steps if s.get("if") == "failure()"]
-    assert len(failure_steps) >= 1, "build job debe tener al menos un step con if: failure()"
+    content = read(".github/workflows/deploy.yml")
+    build_section = content[content.index("name: Build & Push"):content.index("name: Deploy to Droplet")]
+    assert "if: failure()" in build_section
 
 def test_deploy_job_has_failure_notification():
-    deploy = load_deploy()
-    steps = deploy["jobs"]["deploy"]["steps"]
-    failure_steps = [s for s in steps if s.get("if") == "failure()"]
-    assert len(failure_steps) >= 1, "deploy job debe tener al menos un step con if: failure()"
+    content = read(".github/workflows/deploy.yml")
+    deploy_section = content[content.index("name: Deploy to Droplet"):content.index("name: E2E Smoke Tests")]
+    assert "if: failure()" in deploy_section
 
-def test_failure_step_uses_whatsapp_token():
-    deploy = load_deploy()
-    full_yaml = (REPO_ROOT / ".github/workflows/deploy.yml").read_text()
-    assert "WHATSAPP_API_TOKEN" in full_yaml
-    assert "graph.facebook.com" in full_yaml or "WHATSAPP_PHONE_NUMBER_ID" in full_yaml
+def test_failure_step_uses_whatsapp():
+    content = read(".github/workflows/deploy.yml")
+    assert "WHATSAPP_API_TOKEN" in content
+    assert "graph.facebook.com" in content
