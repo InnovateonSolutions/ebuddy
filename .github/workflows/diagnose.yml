@@ -8,14 +8,28 @@ jobs:
       - name: Get Droplet IP
         id: droplet
         run: |
+          source infra/config/main.env 2>/dev/null || DROPLET_NAME="ebuddy-dev-droplet"
           IP=$(curl -sf "https://api.digitalocean.com/v2/droplets?name=ebuddy-dev-droplet" \
             -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(next(n['ip_address'] for n in d['droplets'][0]['networks']['v4'] if n['type']=='public'))")
           echo "ip=$IP" >> $GITHUB_OUTPUT
 
-      - uses: appleboy/ssh-action@v1
+      - name: Get container logs and DB column check
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ steps.droplet.outputs.ip }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-          script: docker logs ebuddy-app-1 --tail 50 2>&1
+          script: |
+            echo "=== CONTAINER LOGS ==="
+            docker logs ebuddy-app-1 --tail 30 2>&1 || docker logs ebuddy --tail 30 2>&1 || echo "container not found"
+            echo "=== DB COLUMN CHECK ==="
+            DB_URL=$(grep DATABASE_URL /opt/ebuddy/.env | cut -d= -f2-)
+            docker run --rm -e DATABASE_URL="$DB_URL" registry.digitalocean.com/ebuddy-dev/ebuddy:migrator \
+              node -e "
+              const { Pool } = require('pg');
+              const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+              pool.query(\"SELECT column_name FROM information_schema.columns WHERE table_name='tickets' ORDER BY column_name\")
+                .then(r => { console.log('COLUMNS:', r.rows.map(x=>x.column_name).join(', ')); pool.end(); })
+                .catch(e => { console.error('DB ERROR:', e.message); pool.end(); });
+              " 2>&1 || echo "DB check failed"
