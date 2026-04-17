@@ -25,10 +25,11 @@ import {
   Trash2,
   GripVertical,
   X,
+  Pencil,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { Ticket, TicketContext, TicketStatus } from '@/lib/types'
+import type { Ticket, TicketContext, TicketPriority, TicketStatus } from '@/lib/types'
 import {
   deleteTicket as deleteTicketRequest,
   updateTicket as updateTicketRequest,
@@ -43,7 +44,7 @@ interface Column {
   color: string
   headerBg: string
   countBg: string
-  dropBg: string          // highlight when card is hovering over column
+  dropBg: string
   Icon: React.ElementType
   iconColor: string
 }
@@ -109,8 +110,9 @@ export default function KanbanBoard({
   const [negocio, setNegocio] = useState<Ticket[]>(initialNegocio)
   const [personal, setPersonal] = useState<Ticket[]>(initialPersonal)
   const [activeId, setActiveId] = useState<string | null>(null)
-
   const [openTicketId, setOpenTicketId] = useState<string | null>(null)
+  const [filterPriority, setFilterPriority] = useState<TicketPriority | null>(null)
+  const [filterContext, setFilterContext] = useState<'ALL' | 'NEGOCIO' | 'PERSONAL'>('ALL')
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -143,7 +145,6 @@ export default function KanbanBoard({
     const ticket = all.find((t) => t.id === ticketId)
     if (!ticket || ticket.status === newStatus) return
 
-    // Optimistic update
     const previous = { ...ticket }
     updateTicket({ ...ticket, status: newStatus })
 
@@ -152,10 +153,10 @@ export default function KanbanBoard({
       if (json.success) {
         updateTicket(json.data)
       } else {
-        updateTicket(previous) // rollback
+        updateTicket(previous)
       }
     } catch {
-      updateTicket(previous) // rollback
+      updateTicket(previous)
     }
   }
 
@@ -163,32 +164,87 @@ export default function KanbanBoard({
   const activeTicket = activeId ? allTickets.find((t) => t.id === activeId) : null
   const openTicket = openTicketId ? allTickets.find((t) => t.id === openTicketId) : null
 
+  const filteredNegocio = negocio.filter((t) => !filterPriority || t.priority === filterPriority)
+  const filteredPersonal = personal.filter((t) => !filterPriority || t.priority === filterPriority)
+
+  const hasActiveFilters = filterPriority !== null || filterContext !== 'ALL'
+
   return (
     <DndContext
       sensors={readonly ? [] : sensors}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-10">
-        <BoardSection
-          context="NEGOCIO"
-          tickets={negocio}
-          readonly={readonly}
-          onUpdate={updateTicket}
-          onDelete={deleteTicket}
-          onOpen={setOpenTicketId}
-        />
-        <BoardSection
-          context="PERSONAL"
-          tickets={personal}
-          readonly={readonly}
-          onUpdate={updateTicket}
-          onDelete={deleteTicket}
-          onOpen={setOpenTicketId}
-        />
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 flex-wrap mb-6">
+        <span className="text-xs text-slate-400 font-medium">Prioridad</span>
+        {(['ALTA', 'MEDIA', 'BAJA'] as TicketPriority[]).map((p) => (
+          <button
+            key={p}
+            onClick={() => setFilterPriority(filterPriority === p ? null : p)}
+            className={cn(
+              'text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors',
+              filterPriority === p
+                ? p === 'ALTA'
+                  ? 'bg-red-500 text-white'
+                  : p === 'MEDIA'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-slate-500 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            )}
+          >
+            {p.charAt(0) + p.slice(1).toLowerCase()}
+          </button>
+        ))}
+        <div className="w-px h-4 bg-slate-200 mx-1" />
+        <span className="text-xs text-slate-400 font-medium">Contexto</span>
+        {(['NEGOCIO', 'PERSONAL'] as const).map((ctx) => (
+          <button
+            key={ctx}
+            onClick={() => setFilterContext(filterContext === ctx ? 'ALL' : ctx)}
+            className={cn(
+              'text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors',
+              filterContext === ctx
+                ? 'bg-slate-700 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            )}
+          >
+            {ctx.charAt(0) + ctx.slice(1).toLowerCase()}
+          </button>
+        ))}
+        {hasActiveFilters && (
+          <button
+            onClick={() => { setFilterPriority(null); setFilterContext('ALL') }}
+            className="text-[11px] px-2 py-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-0.5"
+          >
+            <X size={10} /> Limpiar
+          </button>
+        )}
       </div>
 
-      {/* Ghost card while dragging */}
+      <div className="space-y-10">
+        {(filterContext === 'ALL' || filterContext === 'NEGOCIO') && (
+          <BoardSection
+            context="NEGOCIO"
+            tickets={filteredNegocio}
+            readonly={readonly}
+            onUpdate={updateTicket}
+            onDelete={deleteTicket}
+            onOpen={setOpenTicketId}
+          />
+        )}
+        {(filterContext === 'ALL' || filterContext === 'PERSONAL') && (
+          <BoardSection
+            context="PERSONAL"
+            tickets={filteredPersonal}
+            readonly={readonly}
+            onUpdate={updateTicket}
+            onDelete={deleteTicket}
+            onOpen={setOpenTicketId}
+          />
+        )}
+      </div>
+
       <DragOverlay>
         {activeTicket ? (
           <div className="rotate-1 opacity-95 pointer-events-none shadow-xl scale-105">
@@ -198,7 +254,11 @@ export default function KanbanBoard({
       </DragOverlay>
 
       {openTicket && (
-        <TicketDetailModal ticket={openTicket} onClose={() => setOpenTicketId(null)} />
+        <TicketDetailModal
+          ticket={openTicket}
+          onClose={() => setOpenTicketId(null)}
+          onUpdate={updateTicket}
+        />
       )}
     </DndContext>
   )
@@ -280,7 +340,6 @@ function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete, onO
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Column header */}
       <div
         className={cn(
           'flex items-center justify-between px-3 py-2 rounded-lg border',
@@ -297,7 +356,6 @@ function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete, onO
         </span>
       </div>
 
-      {/* Drop zone */}
       <div
         ref={setNodeRef}
         className={cn(
@@ -356,7 +414,6 @@ function DraggableCard({ id, children }: { id: string; children: React.ReactNode
       style={{ opacity: isDragging ? 0.35 : 1 }}
       className="relative group/drag touch-none select-none cursor-grab active:cursor-grabbing"
     >
-      {/* Visual grip hint (pointer-events-none — drag handled by wrapper) */}
       <div className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 text-slate-200 hover:text-slate-400 opacity-0 group-hover/drag:opacity-100 transition-opacity pointer-events-none">
         <GripVertical size={12} />
       </div>
@@ -433,7 +490,6 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete, onOpen }: KanbanCard
         deleting && 'opacity-30 pointer-events-none'
       )}
     >
-      {/* Header */}
       <div className="p-3">
         <div className="flex items-start gap-2">
           <button
@@ -495,7 +551,6 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete, onOpen }: KanbanCard
         </div>
       </div>
 
-      {/* Expanded detail */}
       {expanded && (
         <div className="px-3 pb-3 border-t border-slate-100">
           <div className="pl-5 pt-2.5 space-y-2">
@@ -538,7 +593,61 @@ const STATUS_META: Record<TicketStatus, { label: string; color: string }> = {
   DONE:        { label: 'Listo',       color: 'text-emerald-700 bg-emerald-100' },
 }
 
-function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () => void }) {
+interface TicketDetailModalProps {
+  ticket: Ticket
+  onClose: () => void
+  onUpdate: (t: Ticket) => void
+}
+
+function TicketDetailModal({ ticket, onClose, onUpdate }: TicketDetailModalProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState({
+    title: ticket.title,
+    status: ticket.status as TicketStatus,
+    priority: ticket.priority as TicketPriority,
+    dueDate: ticket.dueDate ?? '',
+    overview: ticket.overview ?? '',
+    whatToDo: ticket.whatToDo ?? '',
+  })
+
+  function startEdit() {
+    setDraft({
+      title: ticket.title,
+      status: ticket.status as TicketStatus,
+      priority: ticket.priority as TicketPriority,
+      dueDate: ticket.dueDate ?? '',
+      overview: ticket.overview ?? '',
+      whatToDo: ticket.whatToDo ?? '',
+    })
+    setIsEditing(true)
+  }
+
+  function cancelEdit() {
+    setIsEditing(false)
+  }
+
+  async function saveEdit() {
+    if (!draft.title.trim()) return
+    setSaving(true)
+    try {
+      const json = await updateTicketRequest(ticket.id, {
+        title: draft.title.trim(),
+        status: draft.status,
+        priority: draft.priority,
+        due_date: draft.dueDate || null,
+        overview: draft.overview,
+        what_to_do: draft.whatToDo,
+      })
+      if (json.success) {
+        onUpdate(json.data)
+        setIsEditing(false)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const status = STATUS_META[ticket.status]
 
   return (
@@ -553,61 +662,158 @@ function TicketDetailModal({ ticket, onClose }: { ticket: Ticket; onClose: () =>
         {/* Header */}
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-slate-100">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-900 leading-snug">{ticket.title}</p>
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', status.color)}>
-                {status.label}
-              </span>
-              <Badge variant={ticket.context === 'NEGOCIO' ? 'negocio' : 'personal'}>
-                {ticket.context === 'NEGOCIO' ? 'Negocio' : 'Personal'}
-              </Badge>
-              <Badge variant={ticket.priority.toLowerCase() as 'alta' | 'media' | 'baja'}>
-                {ticket.priority}
-              </Badge>
-              {ticket.dueDate && (
-                <span className="text-xs text-slate-400">{formatTicketDate(ticket.dueDate)}</span>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                value={draft.title}
+                onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+                className="w-full text-sm font-semibold text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <p className="text-sm font-semibold text-slate-900 leading-snug">{ticket.title}</p>
+            )}
+
+            {isEditing ? (
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <select
+                  value={draft.status}
+                  onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as TicketStatus }))}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="PENDING">To Do</option>
+                  <option value="IN_PROGRESS">En progreso</option>
+                  <option value="QA">En revisión</option>
+                  <option value="DONE">Listo</option>
+                </select>
+                <select
+                  value={draft.priority}
+                  onChange={(e) => setDraft((d) => ({ ...d, priority: e.target.value as TicketPriority }))}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="ALTA">Alta</option>
+                  <option value="MEDIA">Media</option>
+                  <option value="BAJA">Baja</option>
+                </select>
+                <input
+                  type="date"
+                  value={draft.dueDate}
+                  onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', status.color)}>
+                  {status.label}
+                </span>
+                <Badge variant={ticket.context === 'NEGOCIO' ? 'negocio' : 'personal'}>
+                  {ticket.context === 'NEGOCIO' ? 'Negocio' : 'Personal'}
+                </Badge>
+                <Badge variant={ticket.priority.toLowerCase() as 'alta' | 'media' | 'baja'}>
+                  {ticket.priority}
+                </Badge>
+                {ticket.dueDate && (
+                  <span className="text-xs text-slate-400">{formatTicketDate(ticket.dueDate)}</span>
+                )}
+              </div>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-slate-100 flex-shrink-0"
-          >
-            <X size={16} />
-          </button>
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {!isEditing && (
+              <button
+                onClick={startEdit}
+                className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50"
+                title="Editar ticket"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-slate-100"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
         <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
-          {ticket.overview && (
-            <div>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Contexto</p>
-              <p className="text-sm text-slate-600 leading-relaxed">{ticket.overview}</p>
-            </div>
-          )}
-          {ticket.whatToDo && (
-            <div>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Qué hacer</p>
-              <p className="text-sm text-slate-700 font-medium">{ticket.whatToDo}</p>
-            </div>
-          )}
-          {ticket.nextSteps.length > 0 && (
-            <div>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Siguientes pasos</p>
-              <ol className="space-y-1.5">
-                {ticket.nextSteps.map((step, i) => (
-                  <li key={i} className="flex gap-2 text-sm text-slate-600">
-                    <span className="text-slate-300 flex-shrink-0 font-medium">{i + 1}.</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-          {!ticket.overview && !ticket.whatToDo && ticket.nextSteps.length === 0 && (
-            <p className="text-sm text-slate-400 text-center py-4">Sin detalle adicional.</p>
+          {isEditing ? (
+            <>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Contexto</p>
+                <textarea
+                  value={draft.overview}
+                  onChange={(e) => setDraft((d) => ({ ...d, overview: e.target.value }))}
+                  rows={3}
+                  placeholder="Contexto y descripción..."
+                  className="w-full text-sm text-slate-600 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Qué hacer</p>
+                <textarea
+                  value={draft.whatToDo}
+                  onChange={(e) => setDraft((d) => ({ ...d, whatToDo: e.target.value }))}
+                  rows={2}
+                  placeholder="Acción concreta..."
+                  className="w-full text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              {ticket.overview && (
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Contexto</p>
+                  <p className="text-sm text-slate-600 leading-relaxed">{ticket.overview}</p>
+                </div>
+              )}
+              {ticket.whatToDo && (
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Qué hacer</p>
+                  <p className="text-sm text-slate-700 font-medium">{ticket.whatToDo}</p>
+                </div>
+              )}
+              {ticket.nextSteps.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Siguientes pasos</p>
+                  <ol className="space-y-1.5">
+                    {ticket.nextSteps.map((step, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-slate-600">
+                        <span className="text-slate-300 flex-shrink-0 font-medium">{i + 1}.</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {!ticket.overview && !ticket.whatToDo && ticket.nextSteps.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-4">Sin detalle adicional.</p>
+              )}
+            </>
           )}
         </div>
+
+        {/* Edit footer */}
+        {isEditing && (
+          <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50">
+            <button
+              onClick={cancelEdit}
+              className="text-sm text-slate-500 hover:text-slate-700 px-4 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={saveEdit}
+              disabled={saving || !draft.title.trim()}
+              className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-1.5 rounded-lg transition-colors"
+            >
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

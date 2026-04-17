@@ -15,6 +15,8 @@ export const updateTicketSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   priority: z.enum(['ALTA', 'MEDIA', 'BAJA']).optional(),
+  overview: z.string().trim().max(2000).optional(),
+  what_to_do: z.string().trim().max(500).optional(),
 }) satisfies z.ZodType<UpdateTicketInput>
 
 export type UpdateTicketPayload = z.infer<typeof updateTicketSchema>
@@ -43,6 +45,8 @@ export function mapUpdateTicketInputToDb(input: UpdateTicketInput) {
     title: input.title,
     dueDate: input.due_date,
     priority: input.priority,
+    overview: input.overview,
+    whatToDo: input.what_to_do,
     updatedAt: new Date(),
   }
 }

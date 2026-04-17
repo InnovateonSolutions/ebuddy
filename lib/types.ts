@@ -76,6 +76,8 @@ export interface UpdateTicketInput {
   title?: string
   due_date?: string | null
   priority?: TicketPriority
+  overview?: string
+  what_to_do?: string
 }
 
 export interface CreateTicketInput {
