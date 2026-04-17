@@ -1,0 +1,21 @@
+name: Diagnose
+on:
+  workflow_dispatch:
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Droplet IP
+        id: droplet
+        run: |
+          IP=$(curl -sf "https://api.digitalocean.com/v2/droplets?name=ebuddy-dev-droplet" \
+            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(next(n['ip_address'] for n in d['droplets'][0]['networks']['v4'] if n['type']=='public'))")
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          script: docker logs ebuddy-app-1 --tail 50 2>&1
