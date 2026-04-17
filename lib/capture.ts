@@ -5,6 +5,7 @@ import { WhisperTranscriptionService } from '@/lib/ai/whisper'
 import { ClaudeAIService } from '@/lib/ai/claude'
 import { logEvent } from '@/lib/utils'
 import type { Ticket } from '@/lib/types'
+import type { StructuredTicket } from '@/lib/ai/types'
 
 const TextInputSchema = z.object({
   text: z.string().min(1, 'El texto no puede estar vacío').max(2000),
@@ -76,7 +77,14 @@ export async function createTicketFromCapturedInput(
   startTime: number
 ): Promise<Ticket> {
   const aiService = new ClaudeAIService()
-  const structured = await aiService.classifyAndStructure(rawText)
+  let structured: StructuredTicket
+  try {
+    structured = await aiService.classifyAndStructure(rawText)
+  } catch (error) {
+    const fallback = buildFallbackTicket(rawText)
+    if (!fallback) throw error
+    structured = fallback
+  }
   const resolvedDueDate = dueDate ?? structured.due_date ?? null
 
   const [ticket] = await db
@@ -104,4 +112,32 @@ export async function createTicketFromCapturedInput(
   })
 
   return ticket
+}
+
+function buildFallbackTicket(rawText: string): StructuredTicket | null {
+  const trimmed = rawText.trim()
+  if (!trimmed) return null
+
+  const lower = trimmed.toLowerCase()
+  const context = lower.includes('personal') ? 'PERSONAL' : 'NEGOCIO'
+
+  let title = trimmed
+    .replace(/^(crear|crea|agregar|agrega)\s+(un\s+)?ticket\s+/i, '')
+    .replace(/\s+en\s+(negocio|personal)\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!title) {
+    title = trimmed
+  }
+
+  return {
+    context,
+    title: title.slice(0, 200),
+    overview: '',
+    what_to_do: title.slice(0, 500),
+    next_steps: [],
+    priority: 'MEDIA',
+    due_date: null,
+  }
 }
