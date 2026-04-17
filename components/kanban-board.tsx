@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -377,19 +377,8 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete, onOpen }: KanbanCard
   const [expanded, setExpanded] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const lastTapRef = useRef(0)
 
   const isDone = ticket.status === 'DONE'
-
-  function handleDoubleTap() {
-    const now = Date.now()
-    if (now - lastTapRef.current < 350) {
-      onOpen(ticket.id)
-      lastTapRef.current = 0
-    } else {
-      lastTapRef.current = now
-    }
-  }
 
   async function cycleStatus() {
     if (updating || readonly) return
@@ -435,10 +424,9 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete, onOpen }: KanbanCard
 
   return (
     <div
-      onClick={handleDoubleTap}
-      onDoubleClick={() => onOpen(ticket.id)}
+      onClick={() => onOpen(ticket.id)}
       className={cn(
-        'bg-white rounded-lg border transition-all pl-4',
+        'bg-white rounded-lg border transition-all pl-4 cursor-pointer',
         isDone ? 'border-slate-100 opacity-55' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
         deleting && 'opacity-30 pointer-events-none'
       )}
