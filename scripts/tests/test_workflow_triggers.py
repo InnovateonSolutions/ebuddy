@@ -379,6 +379,13 @@ class TestDeployWorkflowBuildStep:
         assert "docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator" in self.workflow
         assert "docker run --rm" in self.workflow
 
+    def test_e2e_readiness_check_receives_app_url_env(self):
+        """El polling de readiness debe usar el mismo APP_URL que smoke.sh."""
+        assert "Wait for app readiness" in self.workflow
+        assert self.workflow.count("\n          APP_URL: https://ebuddy.innovateoncorp.com") >= 2, (
+            "El step de readiness debe recibir APP_URL explícitamente para no ejecutar curl sobre una URL vacía"
+        )
+
     def test_concurrency_prevents_parallel_deploys(self):
         """El grupo de concurrencia evita que dos deploys corran en paralelo."""
         assert "concurrency:" in self.workflow

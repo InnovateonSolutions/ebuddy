@@ -344,6 +344,8 @@ jobs:
           done
           echo "La app no respondió saludable a tiempo" >&2
           exit 1
+        env:
+          APP_URL: https://ebuddy.innovateoncorp.com
 
       - name: Run smoke tests
         run: bash scripts/e2e/smoke.sh
