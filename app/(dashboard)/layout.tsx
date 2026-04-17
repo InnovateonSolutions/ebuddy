@@ -3,6 +3,7 @@ import { auth, signOut } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/nav-link'
 import { SearchCommand } from '@/components/search-command'
+import { BottomNav } from '@/components/bottom-nav'
 
 export default async function DashboardLayout({
   children,
@@ -39,7 +40,7 @@ export default async function DashboardLayout({
               <span className="font-semibold text-slate-900 text-sm hidden sm:block">ebuddy</span>
             </Link>
 
-            <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
+            <div className="hidden sm:flex items-center gap-0.5">
               <NavLink href="/today">Hoy</NavLink>
               <NavLink href="/future">Horizonte</NavLink>
               <NavLink href="/kanban">Tablero</NavLink>
@@ -67,7 +68,9 @@ export default async function DashboardLayout({
       </nav>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6">{children}</main>
+
+      <BottomNav />
     </div>
   )
 }
