@@ -45,3 +45,21 @@ def test_google_login_handles_non_redirect_failures_without_leaving_button_block
     assert "setError(" in page, (
         "La UI de login debe mostrar error si Google no completa el flujo"
     )
+
+
+def test_dashboard_routes_require_user_id_not_just_user_object():
+    layout = read("app/(dashboard)/layout.tsx")
+    today_page = read("app/(dashboard)/today/page.tsx")
+    settings_page = read("app/(dashboard)/settings/page.tsx")
+
+    assert "if (!session?.user?.id) redirect('/login')" in layout, (
+        "El layout autenticado debe redirigir si falta session.user.id para evitar shells vacíos"
+    )
+    assert "return null" not in today_page, (
+        "Today page no debe devolver null si falta user.id; debe redirigir para evitar página en blanco"
+    )
+    assert "redirect('/login')" in today_page
+    assert "return null" not in settings_page, (
+        "Settings page no debe devolver null si falta user.id; debe redirigir para evitar página en blanco"
+    )
+    assert "redirect('/login')" in settings_page

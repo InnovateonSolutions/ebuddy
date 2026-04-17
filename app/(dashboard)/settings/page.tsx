@@ -4,6 +4,7 @@ import { calendarTokens, userPreferences } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { env } from '@/lib/env'
 import { ApiKeySection } from '@/components/api-key-section'
+import { redirect } from 'next/navigation'
 
 export default async function SettingsPage({
   searchParams,
@@ -11,7 +12,7 @@ export default async function SettingsPage({
   searchParams: { calendar_connected?: string; calendar_error?: string }
 }) {
   const session = await auth()
-  if (!session?.user?.id) return null
+  if (!session?.user?.id) redirect('/login')
 
   const [tokens, prefs] = await Promise.all([
     db

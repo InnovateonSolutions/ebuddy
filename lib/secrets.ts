@@ -32,3 +32,11 @@ export function decryptSecret(value: string) {
   decipher.setAuthTag(tag)
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8')
 }
+
+export function decryptSecretOrPlaintext(value: string) {
+  try {
+    return decryptSecret(value)
+  } catch {
+    return value
+  }
+}

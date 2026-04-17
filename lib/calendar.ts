@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { calendarTokens, type CalendarToken } from '@/lib/db/schema'
 import { getGoogleCalendarEvents } from '@/lib/calendar/google'
 import { getMicrosoftCalendarEvents } from '@/lib/calendar/microsoft'
-import { decryptSecret, encryptSecret } from '@/lib/secrets'
+import { decryptSecretOrPlaintext, encryptSecret } from '@/lib/secrets'
 import type { CalendarEventsResponse } from '@/lib/types'
 
 interface LoadCalendarEventsOptions {
@@ -67,8 +67,8 @@ async function loadProviderEvents(
 function decryptCalendarToken(token: CalendarToken): CalendarToken {
   return {
     ...token,
-    accessToken: decryptSecret(token.accessToken),
-    refreshToken: decryptSecret(token.refreshToken),
+    accessToken: decryptSecretOrPlaintext(token.accessToken),
+    refreshToken: decryptSecretOrPlaintext(token.refreshToken),
   }
 }
 

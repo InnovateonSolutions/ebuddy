@@ -7,7 +7,10 @@ export async function GET(request: Request) {
   if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
 
   const { searchParams } = new URL(request.url)
-  const daysAhead = Math.min(parseInt(searchParams.get('days') ?? '7'), 30)
+  const parsedDays = Number.parseInt(searchParams.get('days') ?? '7', 10)
+  const daysAhead = Number.isFinite(parsedDays)
+    ? Math.min(Math.max(parsedDays, 1), 30)
+    : 7
 
   try {
     return apiSuccess<CalendarEventsResponse>(

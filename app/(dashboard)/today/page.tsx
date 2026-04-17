@@ -2,12 +2,13 @@ import { auth } from '@/lib/auth/config'
 import DayView from '@/components/day-view'
 import CaptureForm from '@/components/capture-form'
 import { getTodayViewData } from '@/lib/tickets'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
 export default async function TodayPage() {
   const session = await auth()
-  if (!session?.user?.id) return null
+  if (!session?.user?.id) redirect('/login')
 
   const userId = session.user.id
   const { timezone, data: todayData } = await getTodayViewData(userId)
