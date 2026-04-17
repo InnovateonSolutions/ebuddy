@@ -98,7 +98,7 @@ def test_ci_workflow_detects_application_and_infrastructure_changes():
         "permissions:",
         "id-token: write",
         "app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*",
-        "infra/*|.github/workflows/terraform.yml|.github/workflows/bootstrap-deploy.yml",
+        "infra/*|.github/workflows/terraform.yml",
         "terraform-plan:",
         "needs['detect-changes'].outputs.infra_changed",
         "needs['detect-changes'].outputs.app_changed",
@@ -107,6 +107,12 @@ def test_ci_workflow_detects_application_and_infrastructure_changes():
         "uses: ./.github/workflows/terraform.yml",
     ):
         assert expected_path in workflow
+
+
+def test_bootstrap_deploy_workflow_is_removed():
+    assert not (REPO_ROOT / ".github" / "workflows" / "bootstrap-deploy.yml").exists(), (
+        "bootstrap-deploy.yml debe eliminarse para evitar una segunda implementación del pipeline"
+    )
 
 
 # ── Estructura del job build en deploy.yml ────────────────────────────────────

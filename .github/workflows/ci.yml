@@ -58,7 +58,7 @@ jobs:
             esac
 
             case "$file" in
-              infra/*|.github/workflows/terraform.yml|.github/workflows/bootstrap-deploy.yml)
+              infra/*|.github/workflows/terraform.yml)
                 infra_changed=true
                 ;;
             esac
