@@ -141,6 +141,8 @@ Para usar otro estado de cierre: `./scripts/jira/close-issue.sh KAN-XX "In Revie
 
 Toda la lógica reutilizable vive en `lib/`. Las rutas y páginas deben ser delgadas
 y delegar a estos módulos. **No recrear archivos en `types/` ni `hooks/`.**
+Todo helper reutilizable nuevo vive en `lib/`.
+Si aparece una excepción nueva, primero se actualiza `AGENTS.md` y luego se implementa el cambio en el código.
 
 | Módulo | Responsabilidad |
 |---|---|
@@ -165,6 +167,21 @@ y delegar a estos módulos. **No recrear archivos en `types/` ni `hooks/`.**
 3. **El audio nunca se persiste** — procesar y descartar inmediatamente
 4. **Aislamiento por `userId` en cada query** — el middleware de next-auth valida la sesión; el `userId` se extrae del JWT y se aplica como filtro explícito en cada query de Drizzle. No se usa RLS nativo de PostgreSQL (no está disponible en DO Managed DB sin Supabase)
 5. **Sin `any` explícito en TypeScript** — `strict: true` en tsconfig
+
+---
+
+## Reglas anti-drift de UX y producto
+
+Estas reglas existen para evitar que la implementación se vuelva a alejar de la experiencia y organización definidas por el repo.
+
+1. **Las rutas autenticadas comparten un único patrón de navegación** — no se crean navbars o layouts paralelos para superficies privadas equivalentes
+2. **No mezclar `PublicNav` dentro de rutas protegidas** — la navegación pública y la autenticada deben permanecer separadas
+3. **La landing, login, status y settings deben describir el mismo estado real del producto** — si cambia el runtime, se actualiza el copy visible en todas esas superficies dentro del mismo ticket
+4. **Eliminar mensajes legacy de "despliegue inicial"** cuando ya no describan el estado real del producto o del entorno
+5. **Todo texto visible al usuario debe mantener el mismo idioma base por superficie** — si una vista está en español, labels, estados, CTAs y mensajes auxiliares también permanecen en español salvo nombres propios
+6. **No introducir labels de estados en inglés si la UI de esa vista está en español**
+
+Si una nueva feature necesita romper una de estas reglas, el ticket debe incluir la excepción explícita y `AGENTS.md` se actualiza en el mismo cambio para evitar una segunda convención implícita.
 
 ---
 
