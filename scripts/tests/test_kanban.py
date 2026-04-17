@@ -50,13 +50,13 @@ def test_kanban_not_in_public_paths():
 
 
 def test_kanban_page_has_auth_check():
-    """app/kanban/page.tsx debe verificar la sesión antes de cargar datos.
+    """app/(dashboard)/kanban/page.tsx debe verificar la sesión antes de cargar datos.
 
     Cuando el middleware redirige al login (sin auth), la página no se
     renderiza. Pero la página también debe protegerse a sí misma con
     redirect() por si el middleware falla o el path se reutiliza en tests.
     """
-    page = (REPO_ROOT / "app" / "kanban" / "page.tsx").read_text()
+    page = (REPO_ROOT / "app" / "(dashboard)" / "kanban" / "page.tsx").read_text()
     assert "auth()" in page, "kanban/page.tsx debe llamar a auth()"
     assert "redirect" in page, "kanban/page.tsx debe redirigir si no hay sesión"
 
@@ -68,7 +68,7 @@ def test_kanban_page_loads_real_data():
     Con datos reales, la página consulta la DB directamente o delega en
     un módulo compartido de tickets que use Drizzle ORM.
     """
-    page = (REPO_ROOT / "app" / "kanban" / "page.tsx").read_text()
+    page = (REPO_ROOT / "app" / "(dashboard)" / "kanban" / "page.tsx").read_text()
     assert "MOCK_NEGOCIO" not in page and "MOCK_PERSONAL" not in page, (
         "kanban/page.tsx no debe usar datos mock — debe cargar desde la DB"
     )
@@ -83,7 +83,7 @@ def test_kanban_page_not_readonly():
     readonly={true} desactiva todas las interacciones. Con datos reales
     y usuario autenticado, el tablero debe ser completamente interactivo.
     """
-    page = (REPO_ROOT / "app" / "kanban" / "page.tsx").read_text()
+    page = (REPO_ROOT / "app" / "(dashboard)" / "kanban" / "page.tsx").read_text()
     assert "readonly={true}" not in page, (
         "kanban/page.tsx no debe pasar readonly={{true}} — el tablero debe ser interactivo"
     )

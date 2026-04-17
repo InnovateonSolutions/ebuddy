@@ -39,7 +39,7 @@ def test_routes_use_shared_calendar_module():
 
 def test_pages_use_shared_ticket_module():
     today_page = read("app/(dashboard)/today/page.tsx")
-    kanban_page = read("app/kanban/page.tsx")
+    kanban_page = read("app/(dashboard)/kanban/page.tsx")
     future_route = read("app/api/tickets/future/route.ts")
 
     assert "@/lib/tickets" in today_page, (
