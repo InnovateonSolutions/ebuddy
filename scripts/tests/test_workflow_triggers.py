@@ -134,6 +134,19 @@ def test_deploy_workflow_can_start_after_successful_ci_on_main():
     )
 
 
+def test_workflows_force_actions_to_node24():
+    for rel_path in [
+        ".github/workflows/ci.yml",
+        ".github/workflows/deploy.yml",
+        ".github/workflows/operations.yml",
+        ".github/workflows/terraform.yml",
+    ]:
+        workflow = (REPO_ROOT / rel_path).read_text()
+        assert "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24" in workflow, (
+            f"{rel_path} debe forzar acciones JavaScript sobre Node 24 para evitar la deprecación de Node 20"
+        )
+
+
 def test_bootstrap_deploy_workflow_is_removed():
     assert not (REPO_ROOT / ".github" / "workflows" / "bootstrap-deploy.yml").exists(), (
         "bootstrap-deploy.yml debe eliminarse para evitar una segunda implementación del pipeline"
@@ -302,6 +315,18 @@ class TestDeployWorkflowBuildStep:
     def test_build_job_has_timeout(self):
         """El job build tiene timeout-minutes para no colgarse indefinidamente."""
         assert "timeout-minutes:" in self.workflow
+
+    def test_build_detects_when_migrator_image_is_really_needed(self):
+        """El deploy debe construir el migrator solo cuando cambian archivos relevantes."""
+        assert "migrator_changed" in self.workflow, (
+            "deploy.yml debe calcular un flag migrator_changed dentro del build"
+        )
+        assert "drizzle.config.ts" in self.workflow
+        assert "lib/db/" in self.workflow or "lib/db/**" in self.workflow
+        assert "drizzle/" in self.workflow or "drizzle/**" in self.workflow
+        assert "if: steps.changes.outputs.migrator_changed == 'true'" in self.workflow, (
+            "Los pasos de build del migrator deben condicionarse al flag migrator_changed"
+        )
 
     def test_concurrency_prevents_parallel_deploys(self):
         """El grupo de concurrencia evita que dos deploys corran en paralelo."""

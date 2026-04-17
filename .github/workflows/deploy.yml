@@ -16,6 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NEXT_PUBLIC_APP_URL: https://ebuddy.innovateoncorp.com
   NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true"
 
@@ -35,12 +36,47 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
 
       # Deriva IMAGE_NAME desde main.env — sin GitHub Variables
       - name: Load config
         run: |
           source infra/config/main.env
           echo "IMAGE_NAME=registry.digitalocean.com/${APP_NAME}-${ENVIRONMENT}/${APP_NAME}" >> $GITHUB_ENV
+
+      - name: Detect migrator-relevant changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_run" ]; then
+            echo "migrator_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          if ! git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
+            echo "migrator_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "${HEAD_SHA}^" "${HEAD_SHA}")"
+          echo "$CHANGED_FILES"
+
+          migrator_changed=false
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+
+            case "$file" in
+              drizzle/*|lib/db/*|drizzle.config.ts|package.json|package-lock.json|Dockerfile)
+                migrator_changed=true
+                ;;
+            esac
+          done <<EOF
+          $CHANGED_FILES
+          EOF
+
+          echo "migrator_changed=$migrator_changed" >> "$GITHUB_OUTPUT"
 
       - uses: digitalocean/action-doctl@v2
         with:
@@ -111,6 +147,7 @@ jobs:
       # el Droplet (red confiable de DO) — los runners de CI no tienen acceso a la DB.
       - name: Build & Push migrator image
         id: build_migrator
+        if: steps.changes.outputs.migrator_changed == 'true'
         uses: docker/build-push-action@v5
         continue-on-error: true
         with:
@@ -122,7 +159,7 @@ jobs:
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Retry Build & Push migrator image
-        if: steps.build_migrator.outcome == 'failure'
+        if: steps.changes.outputs.migrator_changed == 'true' && steps.build_migrator.outcome == 'failure'
         uses: docker/build-push-action@v5
         with:
           context: .

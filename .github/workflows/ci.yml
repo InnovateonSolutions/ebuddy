@@ -14,6 +14,9 @@ permissions:
   id-token: write
   actions: write  # necesario para que deploy.yml pueda usar cache-to: type=gha
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   detect-changes:
     name: Detect Changes
