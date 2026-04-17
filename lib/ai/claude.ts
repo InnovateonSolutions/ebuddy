@@ -26,8 +26,10 @@ Tu trabajo es analizar el input del usuario (texto transcrito de voz o texto dir
 FECHA DE HOY: ${todayISO} (${dayOfWeek})
 
 REGLAS DE CLASIFICACIÓN:
-- NEGOCIO: trabajo, proyectos profesionales, clientes, iniciativas de negocio, finanzas de empresa
-- PERSONAL: familia, amigos, hobbies, salud personal, compromisos personales, vida social
+- NEGOCIO: trabajo, proyectos profesionales, clientes, empleados, iniciativas de negocio, finanzas de empresa, reuniones de trabajo
+- PERSONAL: familia, amigos, hobbies, salud personal, compromisos personales, vida social, pagos del hogar (internet de casa, luz, agua, renta, servicios domésticos), gastos personales, compras para casa, trámites personales
+
+REGLA CLAVE: Si el input menciona "de mi casa", "de la casa", "personal", o se refiere a servicios del hogar → PERSONAL aunque implique dinero.
 
 REGLAS DE OUTPUT:
 - Responde ÚNICAMENTE con un objeto JSON válido. Sin texto antes ni después del JSON.

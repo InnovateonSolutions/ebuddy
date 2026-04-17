@@ -119,7 +119,12 @@ function buildFallbackTicket(rawText: string): StructuredTicket | null {
   if (!trimmed) return null
 
   const lower = trimmed.toLowerCase()
-  const context = lower.includes('personal') ? 'PERSONAL' : 'NEGOCIO'
+  const PERSONAL_SIGNALS = [
+    'personal', 'casa', 'hogar', 'familia', 'mamá', 'papá', 'hijo', 'hija',
+    'amigo', 'salud', 'médico', 'doctor', 'gym', 'internet de', 'luz de',
+    'agua de', 'renta', 'supermercado', 'compras',
+  ]
+  const context = PERSONAL_SIGNALS.some((s) => lower.includes(s)) ? 'PERSONAL' : 'NEGOCIO'
 
   let title = trimmed
     .replace(/^(crear|crea|agregar|agrega)\s+(un\s+)?ticket\s+/i, '')
