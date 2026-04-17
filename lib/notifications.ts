@@ -1,12 +1,12 @@
 import { Resend } from 'resend'
 import type { Ticket } from '@/lib/types'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = process.env.EMAIL_FROM ?? 'ebuddy <noreply@ebuddy.io>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://ebuddy.innovateoncorp.com'
-
 export async function sendDueTicketsEmail(to: string, tickets: Ticket[]) {
   if (!tickets.length) return
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const FROM = process.env.EMAIL_FROM ?? 'ebuddy <noreply@ebuddy.io>'
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://ebuddy.innovateoncorp.com'
 
   const PRIORITY_LABEL: Record<string, string> = { ALTA: '🔴 Alta', MEDIA: '🟡 Media', BAJA: '⚪ Baja' }
 
