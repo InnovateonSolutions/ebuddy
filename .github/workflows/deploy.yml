@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  actions: write
 
 concurrency:
   group: deploy-${{ github.event.workflow_run.head_branch || github.ref }}
@@ -152,8 +153,12 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=${{ env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cache-from: |
+            type=gha,scope=app-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=app-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       # DOCR token endpoint devuelve 401 intermitentemente — retry con 30s delay
       - name: Retry Build & Push app image
@@ -167,8 +172,12 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=${{ env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cache-from: |
+            type=gha,scope=app-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=app-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       # Migrator: imagen mínima con drizzle-kit. Las migraciones corren desde
       # el Droplet (red confiable de DO) — los runners de CI no tienen acceso a la DB.
@@ -182,8 +191,12 @@ jobs:
           target: migrator
           push: true
           tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cache-from: |
+            type=gha,scope=migrator-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=migrator-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Retry Build & Push migrator image
         if: needs.changes.outputs.migrator_changed == 'true' && steps.build_migrator.outcome == 'failure'
@@ -193,8 +206,12 @@ jobs:
           target: migrator
           push: true
           tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cache-from: |
+            type=gha,scope=migrator-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=migrator-image
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
 
   # ── 2. Deploy al Droplet ──────────────────────────────────────
@@ -245,9 +262,8 @@ jobs:
           target: /opt/ebuddy/
           strip_components: 2
 
-      # Escribe /opt/ebuddy/.env con los valores actuales de GitHub Secrets
-      # y corre migraciones desde el Droplet (red confiable → puede conectar a DO Managed DB).
-      - name: Write .env and run migrations on Droplet
+      # Escribe /opt/ebuddy/.env con los valores actuales de GitHub Secrets.
+      - name: Write .env on Droplet
         uses: appleboy/ssh-action@v1
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -270,7 +286,15 @@ jobs:
             echo "AUTH_URL=https://ebuddy.innovateoncorp.com" >> /opt/ebuddy/.env
             chmod 600 /opt/ebuddy/.env
 
-            # Correr migraciones — el Droplet está en red confiable de DO (DB firewall: solo Droplet)
+      # Corre migraciones solo cuando cambió el schema o tooling de Drizzle.
+      - name: Run migrations on Droplet
+        if: needs.changes.outputs.migrator_changed == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          script: |
             docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
             docker run --rm \
               --env-file /opt/ebuddy/.env \
@@ -284,14 +308,19 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
             /usr/local/bin/ebuddy-deploy
-            # Dar tiempo a que los contenedores estén completamente listos
-            sleep 15
-            # Recargar Caddy para aplicar cambios del Caddyfile (sin downtime).
-            # Si reload falla (caddy aún arrancando tras recreación del app container),
-            # forzar recreación del contenedor caddy.
-            docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile \
-              || docker compose -f /opt/ebuddy/docker-compose.prod.yml up -d --force-recreate caddy
-            echo "Caddy actualizado con nuevo Caddyfile"
+            # Recargar Caddy con retry mientras el contenedor queda listo.
+            for attempt in 1 2 3 4 5 6 7 8; do
+              if docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile; then
+                echo "Caddy actualizado con nuevo Caddyfile"
+                exit 0
+              fi
+              if [ "$attempt" -eq 8 ]; then
+                docker compose -f /opt/ebuddy/docker-compose.prod.yml up -d --force-recreate caddy
+                echo "Caddy recreado tras reintentos fallidos"
+                exit 0
+              fi
+              sleep 2
+            done
 
   # ── 3. Smoke tests E2E ──────────────────────────────────────
   e2e:
@@ -304,8 +333,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for container startup
-        run: sleep 60
+      - name: Wait for app readiness
+        run: |
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl -fsS "$APP_URL/api/health" | grep -q '"status":"ok"'; then
+              echo "App lista tras $attempt intento(s)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "La app no respondió saludable a tiempo" >&2
+          exit 1
 
       - name: Run smoke tests
         run: bash scripts/e2e/smoke.sh

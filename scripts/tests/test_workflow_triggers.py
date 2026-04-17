@@ -271,15 +271,12 @@ class TestDeployWorkflowBuildStep:
     # ── Permisos ─────────────────────────────────────────────────────────────
 
     def test_deploy_workflow_does_not_need_actions_write(self):
-        """deploy.yml no necesita actions: write — usa registry cache, no GHA cache.
+        """deploy.yml debe declarar actions: write cuando exporta cache gha.
 
-        actions: write era necesario para cache-to: type=gha. Al migrar a
-        cache-to: type=registry (DO_TOKEN inline, sin OAuth token refresh),
-        el permiso ya no es necesario y se elimina para seguir mínimo privilegio.
+        El pipeline ahora usa cache híbrida gha + registry para reducir el
+        tiempo de build. Ese backend necesita el permiso de actions.
         """
-        # El permiso puede estar o no — lo importante es que el workflow funcione
-        # con registry cache sin necesitar actions: write
-        assert "cache-to: type=registry" in self.workflow or "cache-from: type=registry" in self.workflow
+        assert "actions: write" in self.workflow
 
     # ── Configuración del build ───────────────────────────────────────────────
 
@@ -301,9 +298,22 @@ class TestDeployWorkflowBuildStep:
         La prohibición anterior era contra doctl/docker/login-action + type=registry.
         Con DO_TOKEN inline en ~/.docker/config.json, registry cache es seguro.
         """
-        assert "cache-from: type=registry" in self.workflow
-        assert "cache-to: type=registry" in self.workflow
+        assert "type=registry,ref=${{ env.IMAGE_NAME }}:buildcache" in self.workflow
         assert "buildcache" in self.workflow
+
+    def test_build_uses_github_actions_cache_for_hot_builds(self):
+        """El build debe aprovechar cache gha para acelerar rebuilds en GitHub-hosted runners.
+
+        Docker recomienda gha como backend de cache dentro de GitHub Actions.
+        Mantenerlo junto a registry cache reduce latencia del build sin perder
+        persistencia fuera del runner actual.
+        """
+        assert "type=gha,scope=app-image" in self.workflow, (
+            "deploy.yml debe importar cache gha para acelerar builds repetidos"
+        )
+        assert "type=gha,mode=max,scope=app-image" in self.workflow, (
+            "deploy.yml debe exportar cache gha en modo max para reutilizar más capas"
+        )
 
     def test_image_tags_include_sha_and_latest(self):
         """La imagen se tagea con el SHA del commit y con 'latest'."""
@@ -341,6 +351,33 @@ class TestDeployWorkflowBuildStep:
         assert "needs.changes.outputs.app_changed == 'true'" in self.workflow, (
             "deploy.yml debe evitar deploy y smoke tests cuando el cambio no afectó la app desplegable"
         )
+
+    def test_deploy_avoids_fixed_sleeps_and_uses_readiness_checks(self):
+        """El deploy no debe depender de sleeps fijos para asumir disponibilidad.
+
+        Los readiness checks reducen tiempo promedio y hacen el deploy más robusto
+        que esperar 15s/60s incondicionales.
+        """
+        assert "sleep 15" not in self.workflow
+        assert "sleep 60" not in self.workflow
+        assert "/api/health" in self.workflow, (
+            "deploy.yml debe esperar readiness consultando el health endpoint real"
+        )
+        assert "until " in self.workflow or "for attempt in" in self.workflow, (
+            "deploy.yml debe hacer polling explícito en lugar de sleeps fijos"
+        )
+
+    def test_deploy_only_runs_migrations_when_schema_changes(self):
+        """Las migraciones deben depender del flag migrator_changed.
+
+        Si no cambió el schema ni tooling de Drizzle, deploy no debe perder tiempo
+        haciendo pull/run del migrator.
+        """
+        assert "needs.changes.outputs.migrator_changed == 'true'" in self.workflow, (
+            "deploy.yml debe condicionar migraciones al flag migrator_changed"
+        )
+        assert "docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator" in self.workflow
+        assert "docker run --rm" in self.workflow
 
     def test_concurrency_prevents_parallel_deploys(self):
         """El grupo de concurrencia evita que dos deploys corran en paralelo."""
