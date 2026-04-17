@@ -53,16 +53,24 @@ const authConfig = isAuthCoreConfigured
         sessionsTable: sessions,
         verificationTokensTable: verificationTokens,
       }),
+      session: {
+        strategy: 'jwt',
+      },
       providers,
       pages: {
         signIn: '/login',
         error: '/login',
       },
       callbacks: {
-        // Exponer el userId en el JWT y en la sesión del cliente
-        session({ session, user }) {
+        jwt({ token, user }) {
+          if (user?.id) {
+            token.id = user.id
+          }
+          return token
+        },
+        session({ session, token }) {
           if (session.user) {
-            session.user.id = user.id
+            ;(session.user as { id?: string }).id = String(token.id ?? token.sub ?? '')
           }
           return session
         },

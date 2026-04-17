@@ -32,7 +32,28 @@ export default function LoginPage() {
 
   async function handleGoogleLogin() {
     setLoading(true)
-    await signIn('google', { callbackUrl: '/today' })
+    setError(null)
+
+    try {
+      const result = await signIn('google', {
+        callbackUrl: '/today',
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError('Error al iniciar sesión con Google. Intenta de nuevo.')
+        return
+      }
+
+      if (result?.url) {
+        window.location.href = result.url
+        return
+      }
+
+      setError('No se pudo completar el acceso con Google. Intenta de nuevo.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -88,6 +109,8 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {error && <p className="mb-3 text-sm text-red-500">{error}</p>}
+
               {emailEnabled && (
                 <form onSubmit={handleMagicLink} className="space-y-3">
                   <input
@@ -98,7 +121,6 @@ export default function LoginPage() {
                     required
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  {error && <p className="text-red-500 text-sm">{error}</p>}
                   <button
                     type="submit"
                     disabled={loading || !email}
