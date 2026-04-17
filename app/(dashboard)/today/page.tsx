@@ -1,6 +1,5 @@
 import { auth } from '@/lib/auth/config'
 import DayView from '@/components/day-view'
-import CaptureForm from '@/components/capture-form'
 import { getTodayViewData } from '@/lib/tickets'
 import { redirect } from 'next/navigation'
 
@@ -29,7 +28,6 @@ export default async function TodayPage() {
           {todayData.tickets.negocio.length + todayData.tickets.personal.length} tareas pendientes hoy
         </p>
       </div>
-      <CaptureForm />
       <DayView initialData={todayData} />
     </div>
   )

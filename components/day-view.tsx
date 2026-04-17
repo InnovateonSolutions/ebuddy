@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { Briefcase, User, Calendar, RefreshCw, Clock, MapPin } from 'lucide-react'
 import TicketCard from '@/components/ticket-card'
 import CaptureForm from '@/components/capture-form'
+import ManualTicketForm from '@/components/manual-ticket-form'
 import type {
   ApiResponse,
   CalendarEvent,
@@ -78,6 +79,9 @@ export default function DayView({ initialData }: DayViewProps) {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Columna principal — Tickets */}
       <div className="lg:col-span-2 space-y-4">
+        <ManualTicketForm onTicketCreated={handleTicketCreated} />
+        <CaptureForm onTicketCreated={handleTicketCreated} />
+
         {/* Tabs de contexto */}
         <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
           <TabButton
@@ -246,7 +250,7 @@ function TicketList({
       <div className="text-center py-12 text-slate-400">
         <p className="text-3xl mb-2">✓</p>
         <p className="text-sm font-medium">{emptyLabel}</p>
-        <p className="text-xs mt-1">Usa el formulario de arriba para capturar algo nuevo</p>
+        <p className="text-xs mt-1">Usa el formulario de arriba para capturar o crear algo nuevo</p>
       </div>
     )
   }

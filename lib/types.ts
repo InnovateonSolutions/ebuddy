@@ -78,6 +78,15 @@ export interface UpdateTicketInput {
   priority?: TicketPriority
 }
 
+export interface CreateTicketInput {
+  title: string
+  context: TicketContext
+  priority?: TicketPriority
+  due_date?: string | null
+  overview?: string
+  what_to_do?: string
+}
+
 export interface CalendarEventsResponse {
   events: CalendarEvent[]
   providers_connected: CalendarProvider[]

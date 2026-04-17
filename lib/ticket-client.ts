@@ -1,4 +1,16 @@
-import type { ApiResponse, Ticket, UpdateTicketInput } from '@/lib/types'
+import type { ApiResponse, CreateTicketInput, Ticket, UpdateTicketInput } from '@/lib/types'
+
+export async function createTicket(
+  input: CreateTicketInput
+): Promise<ApiResponse<Ticket>> {
+  const response = await fetch('/api/tickets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+
+  return response.json() as Promise<ApiResponse<Ticket>>
+}
 
 export async function updateTicket(
   ticketId: string,
