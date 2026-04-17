@@ -33,7 +33,7 @@ check() {
 # ── Health check ──────────────────────────────────────────────────────────────
 
 HEALTH_BODY=$(curl -sf "$APP_URL/api/health" || echo "")
-if echo "$HEALTH_BODY" | grep -q '"status":"ok"'; then
+if echo "$HEALTH_BODY" | grep -q '"status":"ok"' && echo "$HEALTH_BODY" | grep -q '"db":"ok"'; then
   check "health /api/health" "ok" "$HEALTH_BODY"
 else
   check "health /api/health" "fail" "body: $HEALTH_BODY"

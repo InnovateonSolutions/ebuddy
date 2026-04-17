@@ -213,6 +213,31 @@ jobs:
             type=gha,mode=max,scope=migrator-image
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
+      - name: Notify build failure
+        if: failure()
+        continue-on-error: true
+        env:
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_OWNER_USER_ID: ${{ secrets.WHATSAPP_OWNER_USER_ID }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 -c "
+          import os, json, urllib.request
+          payload = json.dumps({
+            'messaging_product': 'whatsapp',
+            'to': os.environ['WHATSAPP_OWNER_USER_ID'],
+            'type': 'text',
+            'text': {'body': f\"🚨 ebuddy Build FALLÓ\n{os.environ['RUN_URL']}\"}
+          }).encode()
+          req = urllib.request.Request(
+            f\"https://graph.facebook.com/v19.0/{os.environ['WHATSAPP_PHONE_NUMBER_ID']}/messages\",
+            data=payload,
+            headers={'Authorization': f\"Bearer {os.environ['WHATSAPP_API_TOKEN']}\", 'Content-Type': 'application/json'}
+          )
+          urllib.request.urlopen(req)
+          "
+
 
   # ── 2. Deploy al Droplet ──────────────────────────────────────
   # Migraciones corren desde el Droplet (red confiable DO → DB).
@@ -328,6 +353,31 @@ jobs:
               fi
               sleep 2
             done
+
+      - name: Notify deploy failure
+        if: failure()
+        continue-on-error: true
+        env:
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_OWNER_USER_ID: ${{ secrets.WHATSAPP_OWNER_USER_ID }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 -c "
+          import os, json, urllib.request
+          payload = json.dumps({
+            'messaging_product': 'whatsapp',
+            'to': os.environ['WHATSAPP_OWNER_USER_ID'],
+            'type': 'text',
+            'text': {'body': f\"🚨 ebuddy Deploy FALLÓ\n{os.environ['RUN_URL']}\"}
+          }).encode()
+          req = urllib.request.Request(
+            f\"https://graph.facebook.com/v19.0/{os.environ['WHATSAPP_PHONE_NUMBER_ID']}/messages\",
+            data=payload,
+            headers={'Authorization': f\"Bearer {os.environ['WHATSAPP_API_TOKEN']}\", 'Content-Type': 'application/json'}
+          )
+          urllib.request.urlopen(req)
+          "
 
   # ── 3. Smoke tests E2E ──────────────────────────────────────
   e2e:

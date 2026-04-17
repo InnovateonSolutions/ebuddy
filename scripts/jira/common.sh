@@ -81,6 +81,15 @@ print(json.dumps(doc))
 PY
 }
 
+map_issue_type() {
+  case "$1" in
+    "Task") echo "Tarea" ;;
+    "Story") echo "Historia" ;;
+    "Bug") echo "Tarea" ;;
+    *) err "Tipo inválido: $1. Válidos: Task, Story, Bug" ;;
+  esac
+}
+
 moscow_label() {
   case "$1" in
     "Must Have") echo "moscow-must-have" ;;
