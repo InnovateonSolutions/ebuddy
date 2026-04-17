@@ -60,9 +60,9 @@ export default async function SettingsPage({
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Calendarios</h2>
 
           {/* Google Calendar */}
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0">
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -82,7 +82,7 @@ export default async function SettingsPage({
             </div>
             <a
               href={`${env.appUrl}/api/auth/calendar/google`}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              className={`self-start sm:self-auto text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
                 googleConnected
                   ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -93,9 +93,9 @@ export default async function SettingsPage({
           </div>
 
           {/* Microsoft Outlook */}
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#0078D4">
                   <path d="M21.17 1H7.83C6.82 1 6 1.82 6 2.83v1.43L13.5 7l7.5-2.74V2.83C21 1.82 20.18 1 21.17 1H21.17zM6 6.45v11.13L13.5 20l7.5-2.42V6.45L13.5 9.19 6 6.45zM3 4.55 0 5.5v13l3-.95V4.55z"/>
                 </svg>
@@ -112,7 +112,7 @@ export default async function SettingsPage({
             </div>
             <a
               href={`${env.appUrl}/api/auth/calendar/microsoft`}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              className={`self-start sm:self-auto text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
                 microsoftConnected
                   ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700'
