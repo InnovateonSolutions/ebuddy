@@ -192,6 +192,37 @@ Si una nueva feature necesita romper una de estas reglas, el ticket debe incluir
 
 ---
 
+## Estándares de UI/UX obligatorios
+
+### Patrones de navegación
+- **Top nav (≥ sm)** + **bottom nav fija (< sm)**: patrón obligatorio en todas las rutas autenticadas del dashboard — no reemplazar por hamburger menu
+- **Dropdown de perfil**: al hacer clic en el avatar → Ajustes + Salir; nunca botón "Salir" inline
+- **Sticky top bar**: `sticky top-0 z-20` en el nav principal para mantener contexto en scroll
+
+### Patrones de layout
+- **Dashboard layout**: `max-w-5xl mx-auto px-4` para contenido principal; `max-w-2xl` para páginas de formulario/detalle
+- **Cards de métricas**: `grid grid-cols-2 sm:grid-cols-4` — nunca 4 columnas en mobile
+- **Secciones de configuración**: `divide-y` dentro de `bg-white rounded-2xl border` — sin tablas
+- **Empty states**: siempre incluir un mensaje amigable + descripción cuando no hay contenido; usar el componente `ComingSoon` para secciones no implementadas
+
+### Patrones de UX
+- **Feedback inmediato**: loaders visibles (`animate-spin`) en operaciones async; mensajes de éxito/error en el mismo lugar que el formulario
+- **Estados vacíos**: nunca dejar una lista en blanco sin mensaje explicativo
+- **Confirmación de acciones destructivas**: modal o dropdown antes de eliminar/archivar
+
+### Responsivo móvil (mobile-first obligatorio)
+- **Touch targets mínimos**: botones e inputs deben tener `py-2` mínimo (≥ 44px de altura); nunca `py-1` en elementos interactivos
+- **Filas de formulario**: `flex flex-col sm:flex-row` para que info + botón se apilen verticalmente en móvil
+- **Grids**: siempre definir el breakpoint móvil explícito — e.g. `grid-cols-1 sm:grid-cols-2`, nunca `grid-cols-2` sin breakpoint si las celdas son anchas
+- **Texto truncado**: usar `truncate` o `line-clamp-X` en texto dinámico dentro de contenedores de ancho fijo
+- **Padding inferior en layout**: `pb-24 sm:pb-6` en `<main>` del dashboard para dejar espacio a la bottom nav
+
+### Iconografía
+- Lucide React — única librería de íconos autorizada
+- Tamaño estándar: `size={16}` en listas, `size={20}` en bottom nav, `size={24}` en heroes/CTAs
+
+---
+
 ## Autenticación DOCR en GitHub Actions
 
 **Método correcto** — escribir inline base64 a `~/.docker/config.json`:
