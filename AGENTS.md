@@ -95,14 +95,21 @@ Convención de commits:
 
 ### 7. Esperar que el pipeline CI/CD pase
 
-- Verificar el resultado en GitHub Actions
-- **NO cerrar el ticket hasta que el pipeline esté verde**
-- Si falla: diagnosticar, corregir, push, iterar hasta pasar
+- Verificar el resultado en GitHub Actions — **SIEMPRE revisar CI y Deploy, no solo CI**
+- **NO cerrar el ticket hasta que CI y Deploy estén en verde**
+- Si falla: diagnosticar leyendo los logs del workflow antes de asumir la causa
 
 ```bash
-gh run list --limit 3
-gh run view <run_id>
+gh run list --limit 5                        # ver estado de CI y Deploy
+gh run view <run_id> --log-failed            # logs del job fallido
+gh run view <run_id> --log | grep -E "(error|Error|failed|FAILED)" | head -20
 ```
+
+**Edge cases críticos a revisar en cada deploy:**
+- El job **Build & Push** puede fallar silenciosamente si `continue-on-error: true` y el retry también falla
+- La migración (`Run migrations on Droplet`) solo corre cuando `migrator_changed == 'true'`. Si un build anterior falló y una migración quedó sin correr, la app se rompe en runtime aunque el build actual sea exitoso. En ese caso: `gh workflow run deploy.yml --ref main` para forzar re-deploy con migración
+- El job **Deploy** puede pasar aunque la app esté en error — siempre verificar que los E2E smoke tests pasen también
+- Si se agrega una nueva variable de entorno al código, debe añadirse también en el step **"Write .env on Droplet"** del `deploy.yml`, de lo contrario la app corre sin ella en producción
 
 ### 8. Cerrar ticket en Jira
 
