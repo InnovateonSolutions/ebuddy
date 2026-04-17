@@ -318,14 +318,28 @@ class TestDeployWorkflowBuildStep:
 
     def test_build_detects_when_migrator_image_is_really_needed(self):
         """El deploy debe construir el migrator solo cuando cambian archivos relevantes."""
+        assert "app_changed" in self.workflow, (
+            "deploy.yml debe calcular también un flag app_changed para evitar builds de app innecesarios"
+        )
         assert "migrator_changed" in self.workflow, (
             "deploy.yml debe calcular un flag migrator_changed dentro del build"
         )
+        assert "app/*" in self.workflow
+        assert "components/*" in self.workflow
+        assert "lib/*" in self.workflow
         assert "drizzle.config.ts" in self.workflow
         assert "lib/db/" in self.workflow or "lib/db/**" in self.workflow
         assert "drizzle/" in self.workflow or "drizzle/**" in self.workflow
-        assert "if: steps.changes.outputs.migrator_changed == 'true'" in self.workflow, (
+        assert "needs.changes.outputs.app_changed == 'true'" in self.workflow, (
+            "El job build debe condicionarse al flag app_changed"
+        )
+        assert "if: needs.changes.outputs.migrator_changed == 'true'" in self.workflow, (
             "Los pasos de build del migrator deben condicionarse al flag migrator_changed"
+        )
+
+    def test_deploy_and_e2e_skip_when_no_app_change_was_detected(self):
+        assert "needs.changes.outputs.app_changed == 'true'" in self.workflow, (
+            "deploy.yml debe evitar deploy y smoke tests cuando el cambio no afectó la app desplegable"
         )
 
     def test_concurrency_prevents_parallel_deploys(self):
@@ -336,9 +350,9 @@ class TestDeployWorkflowBuildStep:
     def test_deploy_job_needs_build(self):
         """El job deploy espera a que build termine antes de arrancar.
         Las migraciones corren en el Droplet (red confiable DO → DB), no desde CI."""
-        assert "needs: [build]" in self.workflow
+        assert "needs: [changes, build]" in self.workflow
 
     def test_e2e_job_runs_after_deploy(self):
         """Los smoke tests E2E corren DESPUÉS del deploy, no en paralelo."""
-        assert "needs: deploy" in self.workflow
+        assert "needs: [changes, deploy]" in self.workflow
         assert "smoke.sh" in self.workflow
