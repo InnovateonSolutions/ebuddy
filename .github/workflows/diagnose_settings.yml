@@ -19,4 +19,4 @@ jobs:
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
-            docker logs $(docker ps -q --filter name=ebuddy) --tail 80 2>&1 | tail -40
+            docker ps --format "{{.Names}}" && CONTAINER=$(docker ps --format "{{.Names}}" | grep -v caddy | head -1) && docker logs "$CONTAINER" --tail 60 2>&1 | tail -50
