@@ -8,14 +8,26 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   db: {
-    insert: () => ({
-      values: mocks.insertValues,
+    insert: () => ({ values: mocks.insertValues }),
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          then: (fn: (rows: unknown[]) => unknown) => Promise.resolve(fn([])),
+        }),
+      }),
     }),
   },
 }))
 
 vi.mock('@/lib/db/schema', () => ({
   tickets: {},
+  userPreferences: {},
+}))
+
+vi.mock('@/lib/ai/provider', () => ({
+  getAIService: vi.fn(() => ({
+    classifyAndStructure: mocks.classifyAndStructure,
+  })),
 }))
 
 vi.mock('@/lib/ai/claude', () => ({
