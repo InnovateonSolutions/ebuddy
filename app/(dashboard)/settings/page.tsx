@@ -8,6 +8,7 @@ import { env } from '@/lib/env'
 import { ApiKeySection } from '@/components/api-key-section'
 import { PreferencesForm } from '@/components/preferences-form'
 import { AiProviderSelector } from '@/components/ai-provider-selector'
+import { OpenClawStatus } from '@/components/openclaw-status'
 import { redirect } from 'next/navigation'
 import { CheckCircle2, Circle } from 'lucide-react'
 
@@ -153,6 +154,8 @@ export default async function SettingsPage({
         aiProvider={(prefsFull.aiProvider ?? 'claude') as 'claude' | 'ollama' | 'auto'}
         ollamaModel={prefsFull.ollamaModel ?? 'llama3:latest'}
       />
+
+      <OpenClawStatus configured={Boolean(env.openclawBaseUrl && env.openclawGatewayToken)} />
 
       <ApiKeySection
         hasKey={Boolean(prefs?.apiKeyHash)}
