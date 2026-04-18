@@ -30,7 +30,7 @@ export async function PUT(req: Request) {
   const body = await req.json().catch(() => null)
   if (!body) return apiError('Cuerpo inválido', 'VALIDATION_ERROR', 400)
 
-  const { timezone, workStart, workEnd } = body
+  const { timezone, workStart, workEnd, aiProvider, ollamaModel } = body
 
   if (timezone !== undefined && !VALID_TIMEZONES.includes(timezone))
     return apiError('Zona horaria inválida', 'VALIDATION_ERROR', 400)
@@ -41,10 +41,15 @@ export async function PUT(req: Request) {
   if (workEnd !== undefined && !TIME_RE.test(workEnd))
     return apiError('workEnd inválido (HH:MM)', 'VALIDATION_ERROR', 400)
 
+  if (aiProvider !== undefined && !['claude', 'ollama', 'auto'].includes(aiProvider))
+    return apiError('aiProvider inválido', 'VALIDATION_ERROR', 400)
+
   const updates: Record<string, string> = {}
   if (timezone) updates.timezone = timezone
   if (workStart) updates.workStart = workStart
   if (workEnd) updates.workEnd = workEnd
+  if (aiProvider) updates.aiProvider = aiProvider
+  if (ollamaModel) updates.ollamaModel = ollamaModel
 
   await db
     .insert(userPreferences)

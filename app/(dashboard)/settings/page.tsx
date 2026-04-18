@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm'
 import { env } from '@/lib/env'
 import { ApiKeySection } from '@/components/api-key-section'
 import { PreferencesForm } from '@/components/preferences-form'
+import { AiProviderSelector } from '@/components/ai-provider-selector'
 import { redirect } from 'next/navigation'
 import { CheckCircle2, Circle } from 'lucide-react'
 
@@ -36,10 +37,12 @@ export default async function SettingsPage({
         timezone: userPreferences.timezone,
         workStart: userPreferences.workStart,
         workEnd: userPreferences.workEnd,
+        aiProvider: userPreferences.aiProvider,
+        ollamaModel: userPreferences.ollamaModel,
       })
       .from(userPreferences)
       .where(eq(userPreferences.userId, session.user.id))
-      .then((rows) => rows[0] ?? { timezone: 'America/Tijuana', workStart: '08:00', workEnd: '19:00' }),
+      .then((rows) => rows[0] ?? { timezone: 'America/Tijuana', workStart: '08:00', workEnd: '19:00', aiProvider: 'claude', ollamaModel: 'llama3:latest' }),
   ])
 
   const connectedProviders = new Set(tokens.map((t) => t.provider))
@@ -144,6 +147,11 @@ export default async function SettingsPage({
         timezone={prefsFull.timezone}
         workStart={prefsFull.workStart}
         workEnd={prefsFull.workEnd}
+      />
+
+      <AiProviderSelector
+        aiProvider={(prefsFull.aiProvider ?? 'claude') as 'claude' | 'ollama' | 'auto'}
+        ollamaModel={prefsFull.ollamaModel ?? 'llama3:latest'}
       />
 
       <ApiKeySection

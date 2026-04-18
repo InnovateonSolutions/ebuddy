@@ -90,6 +90,8 @@ export const userPreferences = pgTable('user_preferences', {
   workEnd: time('work_end').notNull().default('19:00'),
   apiKeyHash: text('api_key_hash'),
   apiKeyPreview: text('api_key_preview'),
+  aiProvider: text('ai_provider').notNull().default('claude'),
+  ollamaModel: text('ollama_model').notNull().default('llama3:latest'),
 })
 
 export const tickets = pgTable(

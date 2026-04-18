@@ -25,6 +25,7 @@ function getEnv(key: RequiredServerKey): string {
 
 export const env = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
 
   // Core — requeridas
   get databaseUrl() { return getEnv('DATABASE_URL') },

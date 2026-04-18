@@ -2,7 +2,10 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { tickets } from '@/lib/db/schema'
 import { WhisperTranscriptionService } from '@/lib/ai/whisper'
-import { ClaudeAIService } from '@/lib/ai/claude'
+import { getAIService } from '@/lib/ai/provider'
+import { db as dbPrefs } from '@/lib/db'
+import { userPreferences } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { logEvent } from '@/lib/utils'
 import type { Ticket } from '@/lib/types'
 import type { StructuredTicket } from '@/lib/ai/types'
@@ -76,7 +79,15 @@ export async function createTicketFromCapturedInput(
   dueDate: string | undefined,
   startTime: number
 ): Promise<Ticket> {
-  const aiService = new ClaudeAIService()
+  const prefs = await dbPrefs
+    .select({ aiProvider: userPreferences.aiProvider, ollamaModel: userPreferences.ollamaModel })
+    .from(userPreferences)
+    .where(eq(userPreferences.userId, userId))
+    .then((rows) => rows[0] ?? null)
+
+  type ValidProvider = import('@/lib/ai/provider').AIProvider
+  const provider = (prefs?.aiProvider ?? 'claude') as ValidProvider
+  const aiService = getAIService(provider, prefs?.ollamaModel ?? undefined)
   let structured: StructuredTicket
   try {
     structured = await aiService.classifyAndStructure(rawText)
