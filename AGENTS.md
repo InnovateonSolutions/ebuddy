@@ -385,10 +385,89 @@ consolidación del stack y la organización por dominio:
 | `CLAUDE.md` | Segunda fuente de verdad | `AGENTS.md` (este archivo) |
 | `docs/architecture/adr/002-supabase-baas.md` | Stack removido | — |
 | `docs/architecture/adr/004-ecs-fargate.md` | Infraestructura no utilizada | — |
-| `docs/architecture/adr/005-openclaw-homelab.md` | Proyecto futuro, no en producción | — |
-| `docs/integrations/openclaw.md` | Ideas futuras, no documentación viva | — |
-| `docs/infrastructure/homelab.md` | Hardware aún no recibido | — |
+| `docs/architecture/adr/005-openclaw-homelab.md` | Reemplazado por sección OpenClaw en AGENTS.md | AGENTS.md |
+| `docs/integrations/openclaw.md` | Reemplazado por sección OpenClaw en AGENTS.md | AGENTS.md |
+| `docs/infrastructure/homelab.md` | Reemplazado por sección OpenClaw en AGENTS.md | AGENTS.md |
 | `docs/plan-trabajo-mvp.md` | Plan ejecutado; estado real en Jira | — |
+
+---
+
+## OpenClaw — Integración de mensajería
+
+OpenClaw es un **AI agent gateway self-hosted** que conecta IA con 30+ plataformas de mensajería (WhatsApp, Telegram, iMessage, Discord, Slack, Signal, etc.).
+
+**Dónde corre:** elitemini (homelab MINISFORUM UM890 Pro, hostname `elitemini`)
+**Puerto por defecto:** `18789`
+**Conectividad con ebuddy:** Tailscale — `OPENCLAW_BASE_URL=http://<tailscale-ip-elitemini>:18789`
+
+### Endpoints principales
+
+| Endpoint | Uso |
+|---|---|
+| `POST /hooks/wake` | Evento fire-and-forget: `{"text":"descripción","mode":"now"}` |
+| `POST /hooks/agent` | Corre un agente con sesión aislada (ver payload abajo) |
+| `POST /v1/responses` | API estilo OpenAI para conversación con sesión persistente |
+
+**Payload `/hooks/agent`:**
+```json
+{
+  "message": "texto del usuario",
+  "agentId": "nombre-del-agente",
+  "deliver": true,
+  "channel": "whatsapp|telegram|imessage|slack",
+  "to": "id-del-destinatario",
+  "timeoutSeconds": 300
+}
+```
+
+**Payload `/v1/responses`:**
+```json
+{
+  "model": "openclaw",
+  "input": "texto",
+  "user": "clave-de-sesion-estable",
+  "stream": false
+}
+```
+
+### Autenticación
+
+Dos tokens separados (nunca reutilizar entre sí):
+- **Webhooks:** `Authorization: Bearer <hooks.token>` — para `/hooks/*`
+- **Gateway:** `Authorization: Bearer <gateway.token>` — para `/v1/responses`
+
+Configurar en elitemini:
+```bash
+openclaw config set hooks.token tu-token-secreto
+openclaw config set gateway.token tu-token-gateway
+```
+
+### Variables de entorno en ebuddy (GitHub Secrets + deploy.yml)
+
+```
+OPENCLAW_BASE_URL=http://<tailscale-ip-elitemini>:18789
+OPENCLAW_HOOK_TOKEN=<hooks.token configurado en elitemini>
+OPENCLAW_GATEWAY_TOKEN=<gateway.token configurado en elitemini>
+```
+
+**Al agregar variables nuevas**, también añadirlas en el step **"Write .env on Droplet"** del `deploy.yml` (env + envs + grep).
+
+### Limitaciones importantes
+
+- **Sin cola persistente:** webhooks se pierden si OpenClaw se reinicia durante el procesamiento
+- **Sin deduplicación:** implementar idempotencia en ebuddy con session keys o event IDs
+- **HTTP plano en 18789:** usar Tailscale para cifrado en tránsito — nunca exponer el puerto a internet
+- OpenClaw en elitemini requiere que Ollama escuche en `OLLAMA_HOST=0.0.0.0` para recibir requests vía Tailscale
+
+### Configuración en elitemini (una sola vez)
+
+```bash
+# OpenClaw escucha en todas las interfaces para Tailscale
+openclaw config set gateway.host 0.0.0.0
+
+# Verificar
+openclaw doctor
+```
 
 ---
 
