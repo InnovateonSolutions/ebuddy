@@ -19,4 +19,4 @@ jobs:
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
-            docker logs $(docker ps -q --filter name=ebuddy) --tail 50 2>&1 | grep -i "error\|Error\|exception\|Exception\|666860269\|settings" | head -30
+            docker logs $(docker ps -q --filter name=ebuddy) --tail 80 2>&1 | tail -40
