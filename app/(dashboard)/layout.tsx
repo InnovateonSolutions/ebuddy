@@ -16,7 +16,8 @@ export default async function DashboardLayout({
 
   async function logoutAction() {
     'use server'
-    await signOut?.({ redirectTo: '/login' })
+    if (!signOut) throw new Error('signOut no disponible — verifica AUTH_SECRET')
+    await signOut({ redirectTo: '/login' })
   }
 
   const name = session.user.name ?? session.user.email ?? ''

@@ -47,10 +47,9 @@ export function UserMenu({ initials, logoutAction }: UserMenuProps) {
           <form action={logoutAction}>
             <button
               type="submit"
-              onClick={() => setOpen(false)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
             >
-              <LogOut size={14} className="text-slate-400" />
+              <LogOut size={14} className="text-red-400" />
               Salir
             </button>
           </form>
