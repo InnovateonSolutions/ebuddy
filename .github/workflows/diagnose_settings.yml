@@ -1,0 +1,22 @@
+name: Diagnose Settings Error
+on: workflow_dispatch
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get Droplet IP
+        id: droplet
+        run: |
+          source infra/config/main.env
+          IP=$(curl -sf "https://api.digitalocean.com/v2/droplets?name=${APP_NAME}-${ENVIRONMENT}-droplet" \
+            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(next(n['ip_address'] for n in d['droplets'][0]['networks']['v4'] if n['type']=='public'))")
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          script: |
+            docker logs $(docker ps -q --filter name=ebuddy) --tail 50 2>&1 | grep -i "error\|Error\|exception\|Exception\|666860269\|settings" | head -30
