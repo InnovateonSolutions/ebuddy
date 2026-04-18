@@ -19,4 +19,16 @@ jobs:
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
-            docker ps --format "{{.Names}}" && CONTAINER=$(docker ps --format "{{.Names}}" | grep -v caddy | head -1) && docker logs "$CONTAINER" --tail 60 2>&1 | tail -50
+            docker run --rm --env-file /opt/ebuddy/.env \
+              --entrypoint "" \
+              postgres:16-alpine \
+              sh -c 'psql "$DATABASE_URL" -c "
+                CREATE EXTENSION IF NOT EXISTS pgcrypto;
+                ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS api_key_hash text;
+                ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS api_key_preview text;
+                ALTER TABLE user_preferences DROP COLUMN IF EXISTS api_key;
+                DROP TABLE IF EXISTS visit_counter;
+                SELECT column_name FROM information_schema.columns WHERE table_name='\''user_preferences'\'';
+              " 2>&1' || docker run --rm \
+              --env-file /opt/ebuddy/.env \
+              registry.digitalocean.com/ebuddy-dev/ebuddy:migrator 2>&1
