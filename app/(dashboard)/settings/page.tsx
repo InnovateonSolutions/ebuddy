@@ -6,6 +6,7 @@ import { calendarTokens, userPreferences } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { env } from '@/lib/env'
 import { ApiKeySection } from '@/components/api-key-section'
+import { PreferencesForm } from '@/components/preferences-form'
 import { redirect } from 'next/navigation'
 import { CheckCircle2, Circle } from 'lucide-react'
 
@@ -17,7 +18,7 @@ export default async function SettingsPage({
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
-  const [tokens, prefs] = await Promise.all([
+  const [tokens, prefs, prefsFull] = await Promise.all([
     db
       .select({ provider: calendarTokens.provider })
       .from(calendarTokens)
@@ -30,6 +31,15 @@ export default async function SettingsPage({
       .from(userPreferences)
       .where(eq(userPreferences.userId, session.user.id))
       .then((rows) => rows[0] ?? null),
+    db
+      .select({
+        timezone: userPreferences.timezone,
+        workStart: userPreferences.workStart,
+        workEnd: userPreferences.workEnd,
+      })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, session.user.id))
+      .then((rows) => rows[0] ?? { timezone: 'America/Tijuana', workStart: '08:00', workEnd: '19:00' }),
   ])
 
   const connectedProviders = new Set(tokens.map((t) => t.provider))
@@ -129,6 +139,12 @@ export default async function SettingsPage({
           </p>
         </div>
       </div>
+
+      <PreferencesForm
+        timezone={prefsFull.timezone}
+        workStart={prefsFull.workStart}
+        workEnd={prefsFull.workEnd}
+      />
 
       <ApiKeySection
         hasKey={Boolean(prefs?.apiKeyHash)}

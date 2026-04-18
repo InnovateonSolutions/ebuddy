@@ -46,7 +46,6 @@ export default async function DashboardLayout({
               <NavLink href="/future">Horizonte</NavLink>
               <NavLink href="/kanban">Tablero</NavLink>
               <NavLink href="/stats">Stats</NavLink>
-              <NavLink href="/settings">Ajustes</NavLink>
             </div>
           </div>
 
