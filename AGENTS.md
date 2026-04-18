@@ -73,6 +73,7 @@ npm run test:run
 - Sin regresiones en la suite completa
 - Sin vulnerabilidades introducidas (XSS, SQL injection, etc.)
 - Sin scope creep respecto al ticket original
+- **Si el ticket toca páginas del dashboard:** agregar un test estructural que verifique que la página importa `export const dynamic = 'force-dynamic'` y que no llama a columnas de DB que no existan en el schema actual
 
 ### 6. Commit y push
 
@@ -108,8 +109,18 @@ gh run view <run_id> --log | grep -E "(error|Error|failed|FAILED)" | head -20
 **Edge cases críticos a revisar en cada deploy:**
 - El job **Build & Push** puede fallar silenciosamente si `continue-on-error: true` y el retry también falla
 - La migración (`Run migrations on Droplet`) solo corre cuando `migrator_changed == 'true'`. Si un build anterior falló y una migración quedó sin correr, la app se rompe en runtime aunque el build actual sea exitoso. En ese caso: `gh workflow run deploy.yml --ref main` para forzar re-deploy con migración
+- **Las migraciones pueden registrarse como "aplicadas" en `__drizzle_migrations` sin haber ejecutado el SQL** — si la app arroja `column "X" does not exist` en producción, verificar columnas con `SELECT column_name FROM information_schema.columns WHERE table_name='<tabla>'` vía psql en el Droplet y aplicar `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` manualmente si falta
 - El job **Deploy** puede pasar aunque la app esté en error — siempre verificar que los E2E smoke tests pasen también
 - Si se agrega una nueva variable de entorno al código, debe añadirse también en el step **"Write .env on Droplet"** del `deploy.yml`, de lo contrario la app corre sin ella en producción
+
+**Diagnóstico rápido de errores de producción:**
+```bash
+# Ver logs del contenedor en el Droplet (acceso vía diagnose.yml o SSH)
+docker logs $(docker ps --format "{{.Names}}" | grep -v caddy | head -1) --tail 80
+
+# Verificar columnas de una tabla en producción
+psql "$DATABASE_URL" -c "SELECT column_name FROM information_schema.columns WHERE table_name='user_preferences';"
+```
 
 ### 8. Cerrar ticket en Jira
 
