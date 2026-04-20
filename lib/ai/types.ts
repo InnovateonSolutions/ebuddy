@@ -11,7 +11,7 @@ export interface ITranscriptionService {
 export interface IAIService {
   classifyAndStructure(
     text: string,
-    userContext?: string
+    timezone?: string
   ): Promise<StructuredTicket>
 }
 

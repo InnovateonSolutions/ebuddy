@@ -5,7 +5,7 @@ import { DrizzleAdapter } from '@auth/drizzle-adapter'
 import { db } from '@/lib/db'
 import { users, accounts, sessions, verificationTokens } from '@/lib/db/schema'
 
-const isAuthCoreConfigured = !!(process.env.DATABASE_URL && process.env.AUTH_SECRET && db)
+const isAuthCoreConfigured = !!(process.env.DATABASE_URL && process.env.AUTH_SECRET)
 const hasGoogleProvider = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 const hasResendProvider = !!process.env.RESEND_API_KEY
 

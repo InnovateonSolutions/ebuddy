@@ -4,7 +4,7 @@ const WA_TOKEN = process.env.WHATSAPP_API_TOKEN
 export async function sendWhatsAppReply(to: string, text: string) {
   if (!PHONE_ID || !WA_TOKEN) return
 
-  await fetch(`https://graph.facebook.com/v19.0/${PHONE_ID}/messages`, {
+  const response = await fetch(`https://graph.facebook.com/v19.0/${PHONE_ID}/messages`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${WA_TOKEN}`,
@@ -17,4 +17,9 @@ export async function sendWhatsAppReply(to: string, text: string) {
       text: { body: text },
     }),
   })
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => response.status.toString())
+    throw new Error(`WhatsApp API error ${response.status}: ${detail}`)
+  }
 }

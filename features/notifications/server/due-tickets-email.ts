@@ -4,7 +4,9 @@ import type { Ticket } from '@/lib/types'
 export async function sendDueTicketsEmail(to: string, tickets: Ticket[]) {
   if (!tickets.length) return
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) throw new Error('RESEND_API_KEY no configurado')
+  const resend = new Resend(apiKey)
   const FROM = process.env.EMAIL_FROM ?? 'ebuddy <noreply@ebuddy.io>'
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://ebuddy.innovateoncorp.com'
 
