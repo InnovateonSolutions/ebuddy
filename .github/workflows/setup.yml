@@ -1,0 +1,103 @@
+name: Setup — Server Playbooks
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Servidor destino'
+        required: true
+        type: choice
+        options: [elitemini, droplet]
+      playbook:
+        description: 'Playbook a ejecutar'
+        required: true
+        type: choice
+        options: [install-node-exporter]
+
+jobs:
+  setup:
+    name: '${{ inputs.playbook }} → ${{ inputs.target }}'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get Droplet IP
+        id: droplet
+        run: |
+          source infra/config/main.env
+          DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet"
+          IP=$(curl -sf \
+            "https://api.digitalocean.com/v2/droplets?name=${DROPLET_NAME}" \
+            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          droplets = data.get('droplets', [])
+          if not droplets:
+              raise SystemExit('Droplet not found')
+          nets = droplets[0]['networks']['v4']
+          ip = next(n['ip_address'] for n in nets if n['type'] == 'public')
+          print(ip)
+          ")
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+          echo "✓ Droplet IP: $IP"
+
+      # ── Droplet ──────────────────────────────────────────────
+      - name: Copy playbook to Droplet
+        if: inputs.target == 'droplet'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: infra/playbooks/${{ inputs.playbook }}.sh
+          target: /tmp/
+          strip_components: 2
+
+      - name: Run playbook on Droplet
+        if: inputs.target == 'droplet'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          script: bash /tmp/${{ inputs.playbook }}.sh
+
+      # ── elitemini (via Droplet como jump host) ───────────────
+      # Runner → SSH → Droplet → SSH vía Tailscale → elitemini
+      - name: Copy playbook to Droplet (jump)
+        if: inputs.target == 'elitemini'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: infra/playbooks/${{ inputs.playbook }}.sh
+          target: /tmp/
+          strip_components: 2
+
+      - name: Run playbook on elitemini via Droplet
+        if: inputs.target == 'elitemini'
+        uses: appleboy/ssh-action@v1
+        env:
+          ELITEMINI_SSH_KEY: ${{ secrets.ELITEMINI_SSH_KEY }}
+          PLAYBOOK: ${{ inputs.playbook }}
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          envs: ELITEMINI_SSH_KEY,PLAYBOOK
+          script: |
+            TMPKEY=$(mktemp)
+            printf '%s' "$ELITEMINI_SSH_KEY" > "$TMPKEY"
+            chmod 600 "$TMPKEY"
+
+            scp -i "$TMPKEY" -o StrictHostKeyChecking=no \
+              /tmp/${PLAYBOOK}.sh root@100.80.59.3:/tmp/${PLAYBOOK}.sh
+
+            ssh -i "$TMPKEY" -o StrictHostKeyChecking=no root@100.80.59.3 \
+              "bash /tmp/${PLAYBOOK}.sh"
+
+            rm -f "$TMPKEY"
