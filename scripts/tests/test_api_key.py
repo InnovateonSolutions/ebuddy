@@ -24,19 +24,20 @@ def test_user_preferences_store_hash_and_preview_instead_of_plaintext_api_key():
 
 
 def test_api_key_route_hashes_keys_before_persisting_them():
-    route = read("app/api/user/api-key/route.ts")
-    assert "createHash('sha256')" in route or 'createHash("sha256")' in route
-    assert "apiKeyHash" in route
-    assert "apiKeyPreview" in route
-    assert "set: { apiKey: newKey }" not in route
-    assert ".values({ userId, apiKey: newKey })" not in route
+    service = read("features/settings/server/service.ts")
+    assert "hashApiKey" in service
+    assert "apiKeyHash" in service
+    assert "apiKeyPreview" in service
+    assert "set: { apiKey: newKey }" not in service
+    assert ".values({ userId, apiKey: newKey })" not in service
 
 
 def test_api_key_get_does_not_return_secret_from_database():
     route = read("app/api/user/api-key/route.ts")
+    service = read("features/settings/server/service.ts")
     assert "return apiSuccess({ key: prefs?.apiKey ?? null })" not in route
-    assert "preview" in route
-    assert "hasKey" in route
+    assert "preview" in service
+    assert "hasKey" in service
 
 
 def test_settings_page_reads_preview_instead_of_secret():

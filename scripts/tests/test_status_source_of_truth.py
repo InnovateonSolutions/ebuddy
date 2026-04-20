@@ -14,8 +14,8 @@ def test_shared_status_module_exists():
         "features/status/server/service.ts debe existir como fuente canónica de checks de estado"
     )
     assert (REPO_ROOT / "features" / "status" / "server" / "types.ts").exists()
-    assert (REPO_ROOT / "lib" / "status.ts").exists(), (
-        "lib/status.ts puede quedar como wrapper de compatibilidad mientras exista deuda legacy"
+    assert not (REPO_ROOT / "lib" / "status.ts").exists(), (
+        "lib/status.ts legacy ya no debe seguir vivo si la app usa features/status"
     )
 
 

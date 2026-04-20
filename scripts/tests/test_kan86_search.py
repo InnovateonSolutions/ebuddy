@@ -26,7 +26,7 @@ def test_search_route_requires_auth():
     assert "getUserIdFromRequest" in route or "userId" in route
 
 def test_search_component_exists():
-    assert (REPO_ROOT / "components" / "search-command.tsx").exists()
+    assert (REPO_ROOT / "features" / "navigation" / "components" / "search-command.tsx").exists()
 
 def test_search_component_has_debounce():
     comp = read("features/navigation/components/search-command.tsx")

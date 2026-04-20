@@ -6,7 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def read(p): return (REPO_ROOT / p).read_text()
 
 def test_user_menu_component_exists():
-    assert (REPO_ROOT / "components" / "user-menu.tsx").exists()
+    assert (REPO_ROOT / "features" / "navigation" / "components" / "user-menu.tsx").exists()
 
 def test_user_menu_has_settings_link():
     content = read("features/navigation/components/user-menu.tsx")

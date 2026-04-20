@@ -13,15 +13,15 @@ def test_preferences_api_accepts_put():
     assert "PUT" in content or "PATCH" in content
 
 def test_preferences_api_validates_timezone():
-    content = read("app/api/user/preferences/route.ts")
+    content = read("features/settings/server/service.ts")
     assert "timezone" in content
 
 def test_preferences_api_validates_work_hours():
-    content = read("app/api/user/preferences/route.ts")
+    content = read("features/settings/server/service.ts")
     assert "workStart" in content or "work_start" in content
 
 def test_preferences_form_component_exists():
-    assert (REPO_ROOT / "components" / "preferences-form.tsx").exists()
+    assert (REPO_ROOT / "features" / "settings" / "components" / "preferences-form.tsx").exists()
 
 def test_preferences_form_is_client():
     content = read("features/settings/components/preferences-form.tsx")

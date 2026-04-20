@@ -6,7 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def read(p): return (REPO_ROOT / p).read_text()
 
 def test_bottom_nav_component_exists():
-    assert (REPO_ROOT / "components" / "bottom-nav.tsx").exists()
+    assert (REPO_ROOT / "features" / "navigation" / "components" / "bottom-nav.tsx").exists()
 
 def test_bottom_nav_hidden_on_desktop():
     content = read("features/navigation/components/bottom-nav.tsx")

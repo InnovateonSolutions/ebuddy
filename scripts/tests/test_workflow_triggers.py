@@ -263,9 +263,9 @@ class TestDeployWorkflowBuildStep:
         assert "repository delete-tag" not in self.workflow
 
     def test_gc_in_operations_workflow(self):
-        """'garbage-collection start' debe estar en operations.yml con cron."""
+        """El GC de registry debe vivir en operations.yml vía script dedicado."""
         ops = (REPO_ROOT / ".github" / "workflows" / "operations.yml").read_text()
-        assert "garbage-collection start" in ops
+        assert "bash scripts/registry-gc.sh" in ops
         assert "schedule" in ops
 
     # ── Permisos ─────────────────────────────────────────────────────────────

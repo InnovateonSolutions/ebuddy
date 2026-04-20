@@ -19,12 +19,12 @@ def test_stats_page_has_auth_check():
     assert "auth()" in page and "redirect" in page
 
 def test_stats_covers_weekly_completions():
-    route = read("app/api/stats/route.ts")
-    assert "DONE" in route and ("week" in route.lower() or "7" in route)
+    stats = read("features/tickets/server/stats.ts")
+    assert "DONE" in stats and ("week" in stats.lower() or "7" in stats)
 
 def test_stats_covers_context_distribution():
-    route = read("app/api/stats/route.ts")
-    assert "NEGOCIO" in route or "context" in route
+    stats = read("features/tickets/server/stats.ts")
+    assert "NEGOCIO" in stats or "context" in stats
 
 def test_dashboard_nav_has_stats_link():
     layout = read("app/(dashboard)/layout.tsx")

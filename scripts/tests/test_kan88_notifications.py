@@ -7,7 +7,7 @@ def read(p): return (REPO_ROOT / p).read_text()
 def test_notifications_module_exists():
     assert (REPO_ROOT / "features" / "notifications" / "server" / "service.ts").exists()
     assert (REPO_ROOT / "features" / "notifications" / "server" / "due-tickets-email.ts").exists()
-    assert (REPO_ROOT / "lib" / "notifications.ts").exists()
+    assert not (REPO_ROOT / "lib" / "notifications.ts").exists()
 
 def test_notifications_exports_send_function():
     lib = read("features/notifications/server/due-tickets-email.ts")

@@ -5,7 +5,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def read(p): return (REPO_ROOT / p).read_text()
 
 def test_coming_soon_component_exists():
-    assert (REPO_ROOT / "components" / "coming-soon.tsx").exists()
+    assert (REPO_ROOT / "features" / "navigation" / "components" / "coming-soon.tsx").exists()
 
 def test_coming_soon_accepts_title_and_description():
     src = read("features/navigation/components/coming-soon.tsx")

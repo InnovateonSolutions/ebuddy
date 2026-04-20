@@ -68,10 +68,10 @@ def test_settings_page_has_ai_provider_selector():
     assert "AiProviderSelector" in content or "aiProvider" in content
 
 def test_ai_provider_selector_component_exists():
-    assert (REPO_ROOT / "components" / "ai-provider-selector.tsx").exists()
+    assert (REPO_ROOT / "features" / "settings" / "components" / "ai-provider-selector.tsx").exists()
 
 def test_preferences_api_accepts_ai_provider():
-    content = read("app/api/user/preferences/route.ts")
+    content = read("features/settings/server/service.ts")
     assert "aiProvider" in content
 
 def test_deploy_yml_has_ollama_url():

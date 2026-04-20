@@ -32,10 +32,10 @@ def test_shared_domain_modules_exist():
     assert (REPO_ROOT / "features" / "messaging" / "whatsapp" / "server" / "service.ts").exists(), (
         "features/messaging/whatsapp/server/service.ts debe centralizar la lógica del webhook"
     )
-    assert (REPO_ROOT / "lib" / "tickets.ts").exists(), "lib/tickets.ts debe mantenerse como wrapper compatible"
-    assert (REPO_ROOT / "lib" / "calendar.ts").exists(), "lib/calendar.ts debe mantenerse como wrapper compatible"
-    assert (REPO_ROOT / "lib" / "notifications.ts").exists(), "lib/notifications.ts debe mantenerse como wrapper compatible"
-    assert (REPO_ROOT / "lib" / "status.ts").exists(), "lib/status.ts debe mantenerse como wrapper compatible"
+    assert not (REPO_ROOT / "lib" / "tickets.ts").exists(), "lib/tickets.ts legacy ya no debe existir"
+    assert not (REPO_ROOT / "lib" / "calendar.ts").exists(), "lib/calendar.ts legacy ya no debe existir"
+    assert not (REPO_ROOT / "lib" / "notifications.ts").exists(), "lib/notifications.ts legacy ya no debe existir"
+    assert not (REPO_ROOT / "lib" / "status.ts").exists(), "lib/status.ts legacy ya no debe existir"
 
 
 def test_routes_use_shared_calendar_module():
@@ -134,10 +134,12 @@ def test_ticket_contract_and_client_logic_are_centralized():
 
 def test_ticket_update_route_uses_shared_public_contract():
     route = read("app/api/tickets/[id]/route.ts")
+    contracts = read("features/tickets/server/contracts.ts")
 
-    assert "UpdateTicketInput" in route, (
+    assert "updateTicketSchema" in route, (
         "El route handler debe depender del contrato compartido de update"
     )
+    assert "UpdateTicketInput" in contracts
     assert "dueDate:" not in route, (
         "El contrato público del route no debe mezclar camelCase con due_date"
     )
