@@ -58,7 +58,7 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 100.80.59.3
-          username: root
+          username: mct
           key: ${{ secrets.ELITEMINI_SSH_KEY }}
           source: infra/playbooks/${{ inputs.playbook }}.sh
           target: /tmp/
@@ -69,9 +69,9 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: 100.80.59.3
-          username: root
+          username: mct
           key: ${{ secrets.ELITEMINI_SSH_KEY }}
-          script: bash /tmp/${{ inputs.playbook }}.sh
+          script: sudo bash /tmp/${{ inputs.playbook }}.sh
 
       # ── Droplet — IP pública directa ────────────────────────
       - name: Copy playbook to Droplet
