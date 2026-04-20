@@ -5,17 +5,19 @@ import { usePathname } from 'next/navigation'
 import { CalendarDays, Map, LayoutGrid, BarChart2, Settings, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const NAV_ITEMS = [
+const USER_NAV = [
   { href: '/today', label: 'Hoy', icon: CalendarDays },
   { href: '/future', label: 'Horizonte', icon: Map },
   { href: '/kanban', label: 'Tablero', icon: LayoutGrid },
   { href: '/stats', label: 'Stats', icon: BarChart2 },
-  { href: '/infra', label: 'Infra', icon: Server },
   { href: '/settings', label: 'Ajustes', icon: Settings },
 ]
 
-export function BottomNav() {
+const OWNER_EXTRA = { href: '/infra', label: 'Infra', icon: Server }
+
+export function BottomNav({ owner = false }: { owner?: boolean }) {
   const pathname = usePathname()
+  const NAV_ITEMS = owner ? [...USER_NAV.slice(0, 4), OWNER_EXTRA, USER_NAV[4]] : USER_NAV
 
   return (
     <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-slate-200 pb-safe">

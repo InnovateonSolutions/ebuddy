@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { auth, signOut } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
+import { isOwner } from '@/lib/auth/owner'
 import { NavLink } from '@/components/nav-link'
 import { SearchCommand } from '@/components/search-command'
 import { BottomNav } from '@/components/bottom-nav'
@@ -20,6 +21,7 @@ export default async function DashboardLayout({
     await signOut({ redirectTo: '/login' })
   }
 
+  const owner = isOwner(session.user.email)
   const name = session.user.name ?? session.user.email ?? ''
   const initials = name
     .split(' ')
@@ -47,7 +49,7 @@ export default async function DashboardLayout({
               <NavLink href="/future">Horizonte</NavLink>
               <NavLink href="/kanban">Tablero</NavLink>
               <NavLink href="/stats">Stats</NavLink>
-              <NavLink href="/infra">Infra</NavLink>
+              {owner && <NavLink href="/infra">Infra</NavLink>}
             </div>
           </div>
 
@@ -62,7 +64,7 @@ export default async function DashboardLayout({
       {/* Content */}
       <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6">{children}</main>
 
-      <BottomNav />
+      <BottomNav owner={owner} />
     </div>
   )
 }

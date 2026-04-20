@@ -2,11 +2,13 @@ export const dynamic = 'force-dynamic'
 
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
+import { isOwner } from '@/lib/auth/owner'
 import { InfraDashboard } from '@/components/infra-dashboard'
 
 export default async function InfraPage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
+  if (!isOwner(session.user.email)) redirect('/today')
 
   let initial = { droplet: { available: false }, elitemini: { available: false }, ts: new Date().toISOString() }
 
