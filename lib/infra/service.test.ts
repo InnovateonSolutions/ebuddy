@@ -6,15 +6,15 @@ const mocks = vi.hoisted(() => ({
   getApplicationMetrics: vi.fn(),
 }))
 
-vi.mock('@/lib/infra/do-metrics', () => ({
+vi.mock('@/features/infra/server/do-metrics', () => ({
   getDigitalOceanDropletMetrics: mocks.getDigitalOceanDropletMetrics,
 }))
 
-vi.mock('@/lib/infra/prometheus-metrics', () => ({
+vi.mock('@/features/infra/server/prometheus-metrics', () => ({
   getPrometheusDiagnostics: mocks.getPrometheusDiagnostics,
 }))
 
-vi.mock('@/lib/infra/app-metrics', () => ({
+vi.mock('@/features/infra/server/app-metrics', () => ({
   getApplicationMetrics: mocks.getApplicationMetrics,
 }))
 

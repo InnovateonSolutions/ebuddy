@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
-vi.mock('@/lib/infra/service', () => ({ getInfraSnapshot: mocks.getInfraSnapshot }))
+vi.mock('@/features/infra/server/service', () => ({ getInfraSnapshot: mocks.getInfraSnapshot }))
 
 describe('GET /api/infra/metrics', () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
 import { getUserIdFromRequest, apiSuccess, apiError } from '@/lib/utils'
-import { searchTickets } from '@/lib/tickets'
+import { searchTickets } from '@/features/tickets/server/queries'
 
 export async function GET(request: Request) {
   const userId = getUserIdFromRequest(request)

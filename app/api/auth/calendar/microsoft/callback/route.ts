@@ -1,4 +1,4 @@
-import { exchangeCodeForTokens } from '@/lib/calendar/microsoft'
+import { exchangeCodeForTokens } from '@/features/calendar/server/microsoft'
 import { db } from '@/lib/db'
 import { calendarTokens } from '@/lib/db/schema'
 import { auth } from '@/lib/auth/config'
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     logEvent('calendar.connected', { userId: session.user.id, provider: 'MICROSOFT' })
     return Response.redirect(`${env.appUrl}/settings?calendar_connected=microsoft`)
   } catch (err) {
-    console.error('Microsoft calendar callback error:', err)
+    console.error('Microsoft calendar callback error:', err instanceof Error ? err.message : String(err))
     return Response.redirect(`${env.appUrl}/settings?calendar_error=microsoft`)
   }
 }

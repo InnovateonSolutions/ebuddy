@@ -9,15 +9,15 @@ def test_user_menu_component_exists():
     assert (REPO_ROOT / "components" / "user-menu.tsx").exists()
 
 def test_user_menu_has_settings_link():
-    content = read("components/user-menu.tsx")
+    content = read("features/navigation/components/user-menu.tsx")
     assert "/settings" in content
 
 def test_user_menu_has_logout():
-    content = read("components/user-menu.tsx")
+    content = read("features/navigation/components/user-menu.tsx")
     assert "logoutAction" in content or "signOut" in content
 
 def test_user_menu_is_client_component():
-    content = read("components/user-menu.tsx")
+    content = read("features/navigation/components/user-menu.tsx")
     assert "'use client'" in content or '"use client"' in content
 
 def test_dashboard_layout_uses_user_menu():

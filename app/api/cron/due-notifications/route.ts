@@ -5,13 +5,16 @@ import { tickets, users } from '@/lib/db/schema'
 import { and, eq, ne } from 'drizzle-orm'
 import { sendDueTicketsEmail } from '@/lib/notifications'
 import { todayInTimezone } from '@/lib/utils'
-import { apiSuccess, apiError } from '@/lib/utils'
+import { apiSuccess, apiError, logEvent } from '@/lib/utils'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
 export async function POST(request: Request) {
+  if (!CRON_SECRET) {
+    return apiError('CRON_SECRET no configurado', 'INTERNAL_ERROR', 500)
+  }
   const auth = request.headers.get('authorization')
-  if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) {
+  if (auth !== `Bearer ${CRON_SECRET}`) {
     return apiError('No autorizado', 'UNAUTHORIZED', 401)
   }
 
@@ -39,8 +42,8 @@ export async function POST(request: Request) {
     try {
       await sendDueTicketsEmail(email, userTickets)
       sent++
-    } catch {
-      // continuar con el siguiente usuario si falla uno
+    } catch (err) {
+      logEvent('email.error', { email, error: err instanceof Error ? err.message : String(err) })
     }
   }
 

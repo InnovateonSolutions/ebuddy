@@ -16,7 +16,7 @@ def test_settings_connect_button_mobile_tap_target():
     assert "py-2" in content
 
 def test_kanban_filter_buttons_tap_target():
-    content = read("components/kanban-board.tsx")
+    content = read("features/tickets/components/kanban-board.tsx")
     # filter buttons need py-2 minimum
     assert "py-2" in content
 

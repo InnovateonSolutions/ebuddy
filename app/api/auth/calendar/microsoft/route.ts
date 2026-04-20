@@ -1,5 +1,5 @@
 import { getUserIdFromRequest, apiError } from '@/lib/utils'
-import { getMicrosoftAuthUrl } from '@/lib/calendar/microsoft'
+import { getMicrosoftAuthUrl } from '@/features/calendar/server/microsoft'
 
 export async function GET(request: Request) {
   const userId = getUserIdFromRequest(request)

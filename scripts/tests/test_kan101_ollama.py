@@ -39,7 +39,7 @@ def test_provider_factory_has_auto_fallback():
     assert "auto" in content
 
 def test_capture_uses_provider_factory():
-    content = read("lib/capture.ts")
+    content = read("features/tickets/server/capture.ts")
     assert "getAIService" in content
 
 def test_schema_has_ai_provider_column():

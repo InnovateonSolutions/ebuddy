@@ -45,16 +45,22 @@ Route Handlers
 
 ## Organización por dominio
 
-- `lib/tickets.ts`
-  Centraliza queries y composición de respuestas de tickets.
-- `lib/calendar.ts`
-  Centraliza carga agregada de eventos y refresh de tokens.
-- `lib/types.ts`
-  Define tipos compartidos y contratos API.
-- `lib/db/`
-  Contiene schema y conexión Drizzle.
+- `features/tickets/`
+  Contiene UI, contratos y lógica de servidor para tickets y captura.
+- `features/calendar/`
+  Agrupa OAuth y lectura de calendarios por proveedor.
+- `features/infra/`
+  Reúne providers de monitoreo y la UI de Infra.
+- `features/settings/`
+  Agrupa componentes y flujos de configuración del usuario.
+- `features/navigation/`
+  Agrupa navegación pública y autenticada.
+- `lib/`
+  Conserva compatibilidad temporal y piezas shared como `db`, `auth`, `env`, `utils` y tipos públicos.
 
-La intención es que páginas y routes sean delgadas y deleguen al dominio.
+La intención es que páginas y routes sean delgadas y deleguen al dominio. Los
+paths legacy en `lib/` y `components/` siguen existiendo como wrappers
+compatibles mientras la suite estructural protege la migración.
 
 ---
 

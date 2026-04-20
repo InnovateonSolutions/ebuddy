@@ -9,11 +9,11 @@ def test_bottom_nav_component_exists():
     assert (REPO_ROOT / "components" / "bottom-nav.tsx").exists()
 
 def test_bottom_nav_hidden_on_desktop():
-    content = read("components/bottom-nav.tsx")
+    content = read("features/navigation/components/bottom-nav.tsx")
     assert "sm:hidden" in content
 
 def test_bottom_nav_has_all_routes():
-    content = read("components/bottom-nav.tsx")
+    content = read("features/navigation/components/bottom-nav.tsx")
     for route in ["/today", "/future", "/kanban", "/stats", "/settings"]:
         assert route in content
 

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { auth } from '@/lib/auth/config'
-import { getInfraSnapshot } from '@/lib/infra/service'
+import { getInfraSnapshot } from '@/features/infra/server/service'
 import { apiSuccess, apiError } from '@/lib/utils'
 
 export async function GET() {

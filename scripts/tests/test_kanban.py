@@ -25,8 +25,8 @@ def test_patch_endpoint_accepts_qa_status():
     columna QA falla con error de validación.
     """
     route = (REPO_ROOT / "app" / "api" / "tickets" / "[id]" / "route.ts").read_text()
-    contracts = (REPO_ROOT / "lib" / "ticket-contracts.ts").read_text()
-    assert "@/lib/ticket-contracts" in route, (
+    contracts = (REPO_ROOT / "features" / "tickets" / "server" / "contracts.ts").read_text()
+    assert "@/features/tickets/server/contracts" in route, (
         "PATCH /api/tickets/:id debe usar el contrato compartido de tickets"
     )
     assert "'QA'" in contracts or '"QA"' in contracts, (
@@ -72,8 +72,8 @@ def test_kanban_page_loads_real_data():
     assert "MOCK_NEGOCIO" not in page and "MOCK_PERSONAL" not in page, (
         "kanban/page.tsx no debe usar datos mock — debe cargar desde la DB"
     )
-    assert "db" in page or "drizzle" in page.lower() or "@/lib/tickets" in page, (
-        "kanban/page.tsx debe cargar datos reales, ya sea directo con Drizzle o via lib/tickets.ts"
+    assert "db" in page or "drizzle" in page.lower() or "@/features/tickets/server/queries" in page, (
+        "kanban/page.tsx debe cargar datos reales, ya sea directo con Drizzle o via el módulo canónico de tickets"
     )
 
 
@@ -108,7 +108,7 @@ def test_kanban_board_uses_dnd_kit():
 
     Sin esta importación, el drag & drop no está implementado.
     """
-    board = (REPO_ROOT / "components" / "kanban-board.tsx").read_text()
+    board = (REPO_ROOT / "features" / "tickets" / "components" / "kanban-board.tsx").read_text()
     assert "@dnd-kit" in board, (
         "kanban-board.tsx debe importar de @dnd-kit/core para implementar drag & drop"
     )
@@ -120,7 +120,7 @@ def test_kanban_board_has_dnd_context():
     DndContext es el provider que habilita el drag & drop en toda la board.
     Sin él, los componentes useDraggable/useDroppable no funcionan.
     """
-    board = (REPO_ROOT / "components" / "kanban-board.tsx").read_text()
+    board = (REPO_ROOT / "features" / "tickets" / "components" / "kanban-board.tsx").read_text()
     assert "DndContext" in board, (
         "kanban-board.tsx debe usar <DndContext> para habilitar drag & drop"
     )
@@ -132,7 +132,7 @@ def test_kanban_board_has_droppable_columns():
     Cada columna (PENDING, IN_PROGRESS, QA, DONE) debe ser un target
     de drop para que los tickets puedan ser arrastrados entre columnas.
     """
-    board = (REPO_ROOT / "components" / "kanban-board.tsx").read_text()
+    board = (REPO_ROOT / "features" / "tickets" / "components" / "kanban-board.tsx").read_text()
     assert "useDroppable" in board, (
         "kanban-board.tsx debe usar useDroppable para convertir columnas en targets de drop"
     )
@@ -143,7 +143,7 @@ def test_kanban_board_has_draggable_cards():
 
     Sin useDraggable, las tarjetas no pueden ser arrastradas.
     """
-    board = (REPO_ROOT / "components" / "kanban-board.tsx").read_text()
+    board = (REPO_ROOT / "features" / "tickets" / "components" / "kanban-board.tsx").read_text()
     assert "useDraggable" in board, (
         "kanban-board.tsx debe usar useDraggable para que las tarjetas sean arrastrables"
     )

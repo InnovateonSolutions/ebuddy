@@ -8,15 +8,15 @@ def test_coming_soon_component_exists():
     assert (REPO_ROOT / "components" / "coming-soon.tsx").exists()
 
 def test_coming_soon_accepts_title_and_description():
-    src = read("components/coming-soon.tsx")
+    src = read("features/navigation/components/coming-soon.tsx")
     assert "title" in src and "description" in src
 
 def test_coming_soon_has_features_list():
-    src = read("components/coming-soon.tsx")
+    src = read("features/navigation/components/coming-soon.tsx")
     assert "features" in src
 
 def test_coming_soon_shows_proximamente_label():
-    src = read("components/coming-soon.tsx")
+    src = read("features/navigation/components/coming-soon.tsx")
     assert "Próximamente" in src or "proximamente" in src.lower()
 
 def test_horizonte_uses_coming_soon():

@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { tickets } from '@/lib/db/schema'
 import { apiError, apiSuccess, getUserIdFromRequest, logEvent } from '@/lib/utils'
-import { createTicketSchema, mapCreateTicketInputToDb } from '@/lib/ticket-contracts'
+import { createTicketSchema, mapCreateTicketInputToDb } from '@/features/tickets/server/contracts'
 import type { CreateTicketInput } from '@/lib/types'
 
 export async function POST(request: Request) {

@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { tickets } from '@/lib/db/schema'
 import { and, eq, gte, ne } from 'drizzle-orm'
 import { apiSuccess, apiError, todayInTimezone } from '@/lib/utils'
-import { getUserTimezone } from '@/lib/tickets'
+import { getUserTimezone } from '@/features/tickets/server/queries'
 
 export async function GET() {
   const session = await auth()

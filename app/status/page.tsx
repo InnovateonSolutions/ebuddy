@@ -1,5 +1,5 @@
 import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
-import PublicNav from '@/components/public-nav'
+import PublicNav from '@/features/navigation/components/public-nav'
 import { getSystemStatus, type ServiceCheck, type ServiceStatus } from '@/lib/status'
 
 // ─── Page ─────────────────────────────────────────────────────

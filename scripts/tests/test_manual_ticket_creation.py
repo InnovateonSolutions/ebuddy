@@ -11,7 +11,7 @@ def read(rel_path: str) -> str:
 
 def test_manual_ticket_contract_is_shared():
     shared_types = read("lib/types.ts")
-    contracts = read("lib/ticket-contracts.ts")
+    contracts = read("features/tickets/server/contracts.ts")
 
     assert "export interface CreateTicketInput" in shared_types, (
         "lib/types.ts debe exponer el contrato público para creación manual de tickets"
@@ -40,7 +40,7 @@ def test_manual_ticket_route_is_thin_and_uses_shared_contract():
 
 
 def test_ticket_client_exposes_manual_create_mutation():
-    ticket_client = read("lib/ticket-client.ts")
+    ticket_client = read("features/tickets/server/client.ts")
 
     assert "export async function createTicket" in ticket_client, (
         "lib/ticket-client.ts debe exponer la mutación cliente para crear tickets manuales"
@@ -50,10 +50,10 @@ def test_ticket_client_exposes_manual_create_mutation():
 
 def test_dashboard_exposes_manual_ticket_form():
     today_page = read("app/(dashboard)/today/page.tsx")
-    day_view = read("components/day-view.tsx")
-    manual_form = read("components/manual-ticket-form.tsx")
+    day_view = read("features/tickets/components/day-view.tsx")
+    manual_form = read("features/tickets/components/manual-ticket-form.tsx")
 
-    assert "@/components/manual-ticket-form" in today_page or "@/components/manual-ticket-form" in day_view, (
+    assert "@/features/tickets/components/manual-ticket-form" in today_page or "@/features/tickets/components/manual-ticket-form" in day_view, (
         "La experiencia autenticada debe exponer un formulario manual de creación de tickets"
     )
     assert "Crear ticket" in manual_form, (

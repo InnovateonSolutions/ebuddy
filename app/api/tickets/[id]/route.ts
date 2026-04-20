@@ -2,7 +2,7 @@ import { db } from '@/lib/db'
 import { tickets } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { apiSuccess, apiError, getUserIdFromRequest, logEvent } from '@/lib/utils'
-import { mapUpdateTicketInputToDb, updateTicketSchema } from '@/lib/ticket-contracts'
+import { mapUpdateTicketInputToDb, updateTicketSchema } from '@/features/tickets/server/contracts'
 import type { UpdateTicketInput } from '@/lib/types'
 
 export async function PATCH(

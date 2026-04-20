@@ -1,5 +1,5 @@
 import { apiSuccess, apiError, getUserIdFromRequest, logEvent } from '@/lib/utils'
-import { createTicketFromCapturedInput, parseCaptureInput } from '@/lib/capture'
+import { createTicketFromCapturedInput, parseCaptureInput } from '@/features/tickets/server/capture'
 
 export async function POST(request: Request) {
   const startTime = Date.now()

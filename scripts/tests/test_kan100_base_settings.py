@@ -24,7 +24,7 @@ def test_preferences_form_component_exists():
     assert (REPO_ROOT / "components" / "preferences-form.tsx").exists()
 
 def test_preferences_form_is_client():
-    content = read("components/preferences-form.tsx")
+    content = read("features/settings/components/preferences-form.tsx")
     assert "'use client'" in content or '"use client"' in content
 
 def test_settings_page_renders_preferences_form():

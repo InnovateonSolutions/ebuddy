@@ -48,6 +48,6 @@ def test_settings_page_reads_preview_instead_of_secret():
 
 
 def test_api_key_component_starts_from_masked_preview_not_persisted_secret():
-    component = read("components/api-key-section.tsx")
+    component = read("features/settings/components/api-key-section.tsx")
     assert "initialPreview" in component
     assert "initialKey" not in component

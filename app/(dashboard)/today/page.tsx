@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth/config'
-import DayView from '@/components/day-view'
-import { getTodayViewData } from '@/lib/tickets'
+import DayView from '@/features/tickets/components/day-view'
+import { getTodayViewData } from '@/features/tickets/server/queries'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'

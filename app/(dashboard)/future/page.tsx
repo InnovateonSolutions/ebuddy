@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 
-import { ComingSoon } from '@/components/coming-soon'
+import { ComingSoon } from '@/features/navigation/components/coming-soon'
 
 export default function FuturePage() {
   return (

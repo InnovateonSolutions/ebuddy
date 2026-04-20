@@ -16,7 +16,7 @@ vi.mock('@/lib/utils', () => ({
   logEvent: mocks.logEvent,
 }))
 
-vi.mock('@/lib/capture', () => ({
+vi.mock('@/features/tickets/server/capture', () => ({
   parseCaptureInput: mocks.parseCaptureInput,
   createTicketFromCapturedInput: mocks.createTicketFromCapturedInput,
 }))

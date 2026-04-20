@@ -2,10 +2,10 @@ import Link from 'next/link'
 import { auth, signOut } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import { isOwner } from '@/lib/auth/owner'
-import { NavLink } from '@/components/nav-link'
-import { SearchCommand } from '@/components/search-command'
-import { BottomNav } from '@/components/bottom-nav'
-import { UserMenu } from '@/components/user-menu'
+import { NavLink } from '@/features/navigation/components/nav-link'
+import { SearchCommand } from '@/features/navigation/components/search-command'
+import { BottomNav } from '@/features/navigation/components/bottom-nav'
+import { UserMenu } from '@/features/navigation/components/user-menu'
 
 export default async function DashboardLayout({
   children,

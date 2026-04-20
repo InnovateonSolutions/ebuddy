@@ -1,5 +1,5 @@
 import { getUserIdFromRequest, apiError } from '@/lib/utils'
-import { getGoogleAuthUrl } from '@/lib/calendar/google'
+import { getGoogleAuthUrl } from '@/features/calendar/server/google'
 
 // Inicia el flujo OAuth2 con Google Calendar
 export async function GET(request: Request) {

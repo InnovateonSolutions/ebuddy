@@ -14,7 +14,7 @@ def test_migration_adds_archived_column():
     assert found, "Debe existir una migración que añada la columna archived"
 
 def test_tickets_lib_excludes_archived():
-    lib = read("lib/tickets.ts")
+    lib = read("features/tickets/server/queries.ts")
     assert "archived" in lib, "Todas las queries deben excluir tickets archivados"
 
 def test_archive_done_route_exists():
@@ -25,5 +25,5 @@ def test_archive_done_route_requires_auth():
     assert "getUserIdFromRequest" in route
 
 def test_kanban_has_archive_button():
-    board = read("components/kanban-board.tsx")
+    board = read("features/tickets/components/kanban-board.tsx")
     assert "Archivar" in board

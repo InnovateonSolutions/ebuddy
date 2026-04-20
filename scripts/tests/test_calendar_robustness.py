@@ -22,7 +22,7 @@ def test_calendar_events_route_sanitizes_invalid_days_query_param():
 
 def test_calendar_secret_utils_support_legacy_plaintext_tokens():
     secrets = read("lib/secrets.ts")
-    calendar = read("lib/calendar.ts")
+    calendar = read("features/calendar/server/index.ts")
 
     assert "decryptSecretOrPlaintext" in secrets, (
         "lib/secrets.ts debe tolerar tokens legacy en texto plano mientras conviven con los cifrados"

@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
-import KanbanBoard from '@/components/kanban-board'
-import { getKanbanTickets } from '@/lib/tickets'
+import KanbanBoard from '@/features/tickets/components/kanban-board'
+import { getKanbanTickets } from '@/features/tickets/server/queries'
 
 export const dynamic = 'force-dynamic'
 

@@ -1,4 +1,4 @@
-import { loadCalendarEvents } from '@/lib/calendar'
+import { loadCalendarEvents } from '@/features/calendar/server'
 import { apiSuccess, apiError, getUserIdFromRequest } from '@/lib/utils'
 import type { CalendarEventsResponse } from '@/lib/types'
 

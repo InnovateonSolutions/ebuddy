@@ -40,7 +40,7 @@ def test_update_ticket_input_includes_what_to_do():
 
 def test_update_schema_validates_overview():
     """updateTicketSchema debe validar el campo overview."""
-    contracts = read("lib/ticket-contracts.ts")
+    contracts = read("features/tickets/server/contracts.ts")
     schema_start = contracts.index("updateTicketSchema")
     schema_block = contracts[schema_start : schema_start + 400]
     assert "overview" in schema_block, (
@@ -50,7 +50,7 @@ def test_update_schema_validates_overview():
 
 def test_update_schema_validates_what_to_do():
     """updateTicketSchema debe validar el campo what_to_do."""
-    contracts = read("lib/ticket-contracts.ts")
+    contracts = read("features/tickets/server/contracts.ts")
     schema_start = contracts.index("updateTicketSchema")
     schema_block = contracts[schema_start : schema_start + 400]
     assert "what_to_do" in schema_block, (
@@ -60,7 +60,7 @@ def test_update_schema_validates_what_to_do():
 
 def test_map_update_ticket_maps_overview():
     """mapUpdateTicketInputToDb debe incluir overview en el objeto de actualización."""
-    contracts = read("lib/ticket-contracts.ts")
+    contracts = read("features/tickets/server/contracts.ts")
     map_fn_start = contracts.index("mapUpdateTicketInputToDb")
     map_fn_block = contracts[map_fn_start : map_fn_start + 300]
     assert "overview" in map_fn_block, (
@@ -70,7 +70,7 @@ def test_map_update_ticket_maps_overview():
 
 def test_ticket_detail_modal_has_edit_state():
     """TicketDetailModal debe tener estado isEditing para alternar modo edición."""
-    board = read("components/kanban-board.tsx")
+    board = read("features/tickets/components/kanban-board.tsx")
     assert "isEditing" in board, (
         "TicketDetailModal debe tener useState<boolean> para isEditing"
     )
@@ -78,7 +78,7 @@ def test_ticket_detail_modal_has_edit_state():
 
 def test_ticket_detail_modal_has_save_button():
     """TicketDetailModal debe tener botón Guardar en modo edición."""
-    board = read("components/kanban-board.tsx")
+    board = read("features/tickets/components/kanban-board.tsx")
     assert "Guardar" in board, (
         "TicketDetailModal debe renderizar botón 'Guardar' en modo edición"
     )
@@ -86,7 +86,7 @@ def test_ticket_detail_modal_has_save_button():
 
 def test_ticket_detail_modal_has_cancel_button():
     """TicketDetailModal debe tener botón Cancelar que descarta cambios."""
-    board = read("components/kanban-board.tsx")
+    board = read("features/tickets/components/kanban-board.tsx")
     assert "Cancelar" in board, (
         "TicketDetailModal debe renderizar botón 'Cancelar' en modo edición"
     )
@@ -94,7 +94,7 @@ def test_ticket_detail_modal_has_cancel_button():
 
 def test_ticket_detail_modal_has_edit_trigger():
     """TicketDetailModal debe tener botón/icono para activar modo edición."""
-    board = read("components/kanban-board.tsx")
+    board = read("features/tickets/components/kanban-board.tsx")
     # Pencil icon o texto "Editar"
     assert "Pencil" in board or "Editar" in board, (
         "TicketDetailModal debe tener un trigger (Pencil icon o 'Editar') para activar edición"

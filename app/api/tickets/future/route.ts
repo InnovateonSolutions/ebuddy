@@ -1,4 +1,4 @@
-import { getFutureTicketsPage } from '@/lib/tickets'
+import { getFutureTicketsPage } from '@/features/tickets/server/queries'
 import { apiSuccess, apiError, getUserIdFromRequest } from '@/lib/utils'
 
 export async function GET(request: Request) {
