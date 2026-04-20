@@ -23,8 +23,19 @@ def test_shared_domain_modules_exist():
     assert (REPO_ROOT / "features" / "calendar" / "server" / "index.ts").exists(), (
         "features/calendar/server/index.ts debe ser la fuente canónica de calendario"
     )
+    assert (REPO_ROOT / "features" / "notifications" / "server" / "service.ts").exists(), (
+        "features/notifications/server/service.ts debe centralizar la lógica de notificaciones"
+    )
+    assert (REPO_ROOT / "features" / "status" / "server" / "service.ts").exists(), (
+        "features/status/server/service.ts debe ser la fuente canónica del status"
+    )
+    assert (REPO_ROOT / "features" / "messaging" / "whatsapp" / "server" / "service.ts").exists(), (
+        "features/messaging/whatsapp/server/service.ts debe centralizar la lógica del webhook"
+    )
     assert (REPO_ROOT / "lib" / "tickets.ts").exists(), "lib/tickets.ts debe mantenerse como wrapper compatible"
     assert (REPO_ROOT / "lib" / "calendar.ts").exists(), "lib/calendar.ts debe mantenerse como wrapper compatible"
+    assert (REPO_ROOT / "lib" / "notifications.ts").exists(), "lib/notifications.ts debe mantenerse como wrapper compatible"
+    assert (REPO_ROOT / "lib" / "status.ts").exists(), "lib/status.ts debe mantenerse como wrapper compatible"
 
 
 def test_routes_use_shared_calendar_module():
@@ -46,6 +57,7 @@ def test_routes_use_shared_calendar_module():
 def test_pages_use_shared_ticket_module():
     today_page = read("app/(dashboard)/today/page.tsx")
     kanban_page = read("app/(dashboard)/kanban/page.tsx")
+    stats_page = read("app/(dashboard)/stats/page.tsx")
     future_route = read("app/api/tickets/future/route.ts")
 
     assert "@/features/tickets/server/queries" in today_page, (
@@ -56,6 +68,9 @@ def test_pages_use_shared_ticket_module():
     )
     assert "@/features/tickets/server/queries" in future_route, (
         "Future route debe delegar paginación y timezone al módulo canónico de tickets"
+    )
+    assert "@/features/tickets/server/queries" in stats_page, (
+        "Stats page debe usar el módulo canónico de tickets en vez del wrapper legacy"
     )
 
 

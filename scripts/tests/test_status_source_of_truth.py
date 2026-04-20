@@ -10,14 +10,18 @@ def read(rel_path: str) -> str:
 
 
 def test_shared_status_module_exists():
+    assert (REPO_ROOT / "features" / "status" / "server" / "service.ts").exists(), (
+        "features/status/server/service.ts debe existir como fuente canónica de checks de estado"
+    )
+    assert (REPO_ROOT / "features" / "status" / "server" / "types.ts").exists()
     assert (REPO_ROOT / "lib" / "status.ts").exists(), (
-        "lib/status.ts debe existir como fuente única de checks de estado"
+        "lib/status.ts puede quedar como wrapper de compatibilidad mientras exista deuda legacy"
     )
 
 
 def test_status_api_route_uses_shared_module():
     route = read("app/api/status/route.ts")
-    assert "@/lib/status" in route
+    assert "@/features/status/server/service" in route
     assert "getSystemStatus" in route
     assert "function checkAI" not in route
     assert "async function checkDatabase" not in route
@@ -25,7 +29,7 @@ def test_status_api_route_uses_shared_module():
 
 def test_status_page_uses_shared_module():
     page = read("app/status/page.tsx")
-    assert "@/lib/status" in page
+    assert "@/features/status/server/service" in page
     assert "getSystemStatus" in page
     assert "function checkAI" not in page
     assert "async function checkDatabase" not in page
