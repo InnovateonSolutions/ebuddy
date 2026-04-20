@@ -1,9 +1,6 @@
-import { db } from '@/lib/db'
-import { tickets } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
-import { apiSuccess, apiError, getUserIdFromRequest, logEvent } from '@/lib/utils'
-import { mapUpdateTicketInputToDb, updateTicketSchema } from '@/features/tickets/server/contracts'
-import type { UpdateTicketInput } from '@/lib/types'
+import { apiSuccess, apiError, getUserIdFromRequest } from '@/lib/utils'
+import { updateTicketSchema } from '@/features/tickets/server/contracts'
+import { updateTicket, deleteTicket } from '@/features/tickets/server/mutations'
 
 export async function PATCH(
   request: Request,
@@ -13,31 +10,17 @@ export async function PATCH(
   if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
 
   let body: unknown
-  try {
-    body = await request.json()
-  } catch {
+  try { body = await request.json() } catch {
     return apiError('Body inválido', 'VALIDATION_ERROR')
   }
 
   const parsed = updateTicketSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 'VALIDATION_ERROR')
-  if (Object.keys(parsed.data).length === 0) return apiError('No se enviaron campos para actualizar', 'VALIDATION_ERROR')
+  if (Object.keys(parsed.data).length === 0)
+    return apiError('No se enviaron campos para actualizar', 'VALIDATION_ERROR')
 
-  const updateInput: UpdateTicketInput = parsed.data
-
-  const [ticket] = await db
-    .update(tickets)
-    .set(mapUpdateTicketInputToDb(updateInput))
-    .where(and(eq(tickets.id, params.id), eq(tickets.userId, userId)))
-    .returning()
-
+  const ticket = await updateTicket(params.id, userId, parsed.data)
   if (!ticket) return apiError('Ticket no encontrado', 'NOT_FOUND', 404)
-
-  logEvent('ticket.updated', {
-    userId,
-    ticketId: ticket.id,
-    fields: Object.keys(updateInput).join(','),
-  })
 
   return apiSuccess(ticket)
 }
@@ -49,13 +32,8 @@ export async function DELETE(
   const userId = getUserIdFromRequest(request)
   if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
 
-  const [deleted] = await db
-    .delete(tickets)
-    .where(and(eq(tickets.id, params.id), eq(tickets.userId, userId)))
-    .returning()
-
+  const deleted = await deleteTicket(params.id, userId)
   if (!deleted) return apiError('Ticket no encontrado', 'NOT_FOUND', 404)
 
-  logEvent('ticket.deleted', { userId, ticketId: params.id })
   return apiSuccess({ deleted: true })
 }
