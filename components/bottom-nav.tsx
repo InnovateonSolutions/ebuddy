@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Map, LayoutGrid, BarChart2, Settings } from 'lucide-react'
+import { CalendarDays, Map, LayoutGrid, BarChart2, Settings, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/kanban', label: 'Tablero', icon: LayoutGrid },
   { href: '/stats', label: 'Stats', icon: BarChart2 },
   { href: '/settings', label: 'Ajustes', icon: Settings },
+  { href: '/infra', label: 'Infra', icon: Server },
 ]
 
 export function BottomNav() {

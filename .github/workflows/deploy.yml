@@ -68,7 +68,7 @@ jobs:
             [ -n "$file" ] || continue
 
             case "$file" in
-              app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*|middleware.ts|package.json|package-lock.json|tsconfig.json|next.config.*|tailwind.config.ts|postcss.config.js|drizzle.config.ts|Dockerfile|docker-compose.yml|docker-compose.prod.yml|infra/caddy/*|.github/workflows/deploy.yml)
+              app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*|middleware.ts|package.json|package-lock.json|tsconfig.json|next.config.*|tailwind.config.ts|postcss.config.js|drizzle.config.ts|Dockerfile|docker-compose.yml|docker-compose.prod.yml|infra/caddy/*|infra/prometheus/*|.github/workflows/deploy.yml)
                 app_changed=true
                 ;;
             esac
@@ -287,6 +287,16 @@ jobs:
           target: /opt/ebuddy/
           strip_components: 2
 
+      - name: Update prometheus.yml on Droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: infra/prometheus/prometheus.yml
+          target: /opt/ebuddy/
+          strip_components: 2
+
       # Escribe /opt/ebuddy/.env con los valores actuales de GitHub Secrets.
       - name: Write .env on Droplet
         uses: appleboy/ssh-action@v1
@@ -320,6 +330,9 @@ jobs:
               > /opt/ebuddy/.env
             echo "NODE_ENV=production" >> /opt/ebuddy/.env
             echo "AUTH_URL=https://ebuddy.innovateoncorp.com" >> /opt/ebuddy/.env
+            echo "PROMETHEUS_URL=http://localhost:9090" >> /opt/ebuddy/.env
+            echo "DROPLET_INSTANCE=localhost:9100" >> /opt/ebuddy/.env
+            echo "ELITEMINI_INSTANCE=100.80.59.3:9100" >> /opt/ebuddy/.env
             chmod 600 /opt/ebuddy/.env
 
       # Corre migraciones solo cuando cambió el schema o tooling de Drizzle.
