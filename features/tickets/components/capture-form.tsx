@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { Mic, MicOff, Send, Loader2 } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { useAudioRecorder } from '@/hooks/use-audio-recorder'
+import { useAudioRecorder } from '@/features/tickets/hooks/use-audio-recorder'
 import { cn } from '@/lib/utils'
 import type { ApiResponse, Ticket } from '@/lib/types'
 
