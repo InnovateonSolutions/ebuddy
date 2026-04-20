@@ -53,7 +53,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=7d'
-      - '--web.listen-address=127.0.0.1:9090'
+      - '--web.listen-address=0.0.0.0:9090'
     depends_on:
       - node-exporter
 

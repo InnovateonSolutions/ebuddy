@@ -3,8 +3,6 @@ export const dynamic = 'force-dynamic'
 import { auth } from '@/lib/auth/config'
 import { apiSuccess, apiError } from '@/lib/utils'
 
-const PROMETHEUS_URL = (process.env.PROMETHEUS_URL ?? 'http://localhost:9090').replace(/\/$/, '')
-
 const QUERIES = {
   cpu: 'avg(rate(node_cpu_seconds_total{mode!="idle"}[2m])) by (instance) * 100',
   ram: '(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100',
@@ -16,6 +14,7 @@ const QUERIES = {
 }
 
 async function query(q: string): Promise<Record<string, number>> {
+  const PROMETHEUS_URL = (process.env.PROMETHEUS_URL ?? 'http://localhost:9090').replace(/\/$/, '')
   const url = `${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(q)}`
   const res = await fetch(url, { signal: AbortSignal.timeout(4000) })
   if (!res.ok) return {}

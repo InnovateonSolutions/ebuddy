@@ -63,4 +63,36 @@ describe('GET /api/infra/metrics', () => {
     expect(body.data.droplet.available).toBe(false)
     expect(body.data.elitemini.available).toBe(false)
   })
+
+  it('retorna available:false cuando Prometheus responde pero sin datos del instance', async () => {
+    // Regresión: target mal configurado (ej: node-exporter:9100 en vez de localhost:9100)
+    // hace que Prometheus responda ok pero sin métricas para el instance esperado
+    mocks.auth.mockResolvedValue({ user: { id: 'user-1' } })
+    mocks.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'success',
+        data: { result: [] }, // Prometheus scrapeó pero no tiene ese instance
+      }),
+    })
+
+    const { GET } = await import('./route')
+    const res = await GET()
+    const body = await res.json()
+
+    expect(body.data.droplet.available).toBe(false)
+    expect(body.data.elitemini.available).toBe(false)
+  })
+
+  it('usa PROMETHEUS_URL del entorno no localhost hardcodeado', async () => {
+    mocks.auth.mockResolvedValue({ user: { id: 'user-1' } })
+    process.env.PROMETHEUS_URL = 'http://host.docker.internal:9090'
+    mocks.fetch.mockResolvedValue(prometheusResponse('10'))
+
+    const { GET } = await import('./route')
+    await GET()
+
+    const calledUrl = (mocks.fetch.mock.calls[0][0] as string)
+    expect(calledUrl).toContain('host.docker.internal:9090')
+  })
 })
