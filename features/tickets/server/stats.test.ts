@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Ticket } from '@/lib/db/schema'
 
 const mocks = vi.hoisted(() => ({
   selectAll: vi.fn(),
@@ -21,16 +22,16 @@ vi.mock('@/lib/utils', () => ({
 import { getTicketStats } from './stats'
 import { db } from '@/lib/db'
 
-const BASE_TICKET = {
+const BASE_TICKET: Ticket = {
   id: 't1',
   userId: 'u1',
   title: 'test',
-  context: 'NEGOCIO' as const,
+  context: 'NEGOCIO',
   overview: '',
   whatToDo: '',
   nextSteps: [],
-  priority: 'MEDIA' as const,
-  status: 'PENDING' as const,
+  priority: 'MEDIA',
+  status: 'PENDING',
   dueDate: null,
   rawInput: '',
   archived: false,
@@ -38,7 +39,7 @@ const BASE_TICKET = {
   updatedAt: new Date('2026-04-01'),
 }
 
-function makeTicket(overrides: Partial<typeof BASE_TICKET>) {
+function makeTicket(overrides: Partial<Ticket>): Ticket {
   return { ...BASE_TICKET, ...overrides }
 }
 
