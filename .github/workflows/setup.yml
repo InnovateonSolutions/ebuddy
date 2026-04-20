@@ -12,7 +12,7 @@ on:
         description: 'Playbook a ejecutar'
         required: true
         type: choice
-        options: [install-node-exporter]
+        options: [install-node-exporter, install-tailscale]
 
 jobs:
   setup:
@@ -88,8 +88,11 @@ jobs:
       - name: Run playbook on Droplet
         if: inputs.target == 'droplet'
         uses: appleboy/ssh-action@v1
+        env:
+          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
         with:
           host: ${{ steps.droplet.outputs.ip }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          envs: TAILSCALE_AUTH_KEY
           script: bash /tmp/${{ inputs.playbook }}.sh
