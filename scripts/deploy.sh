@@ -62,6 +62,13 @@ trap cleanup EXIT
   [ -n "${MICROSOFT_CLIENT_SECRET:-}" ] && printf 'MICROSOFT_CLIENT_SECRET=%s\n' "$MICROSOFT_CLIENT_SECRET"
   [ -n "${MICROSOFT_TENANT_ID:-}" ] && printf 'MICROSOFT_TENANT_ID=%s\n' "$MICROSOFT_TENANT_ID"
   [ -n "${MICROSOFT_REDIRECT_URI:-}" ] && printf 'MICROSOFT_REDIRECT_URI=%s\n' "$MICROSOFT_REDIRECT_URI"
+
+  [ -n "${DO_MONITORING_TOKEN:-}" ] && printf 'DO_MONITORING_TOKEN=%s\n' "$DO_MONITORING_TOKEN"
+  [ -n "${DO_DROPLET_ID:-}" ] && printf 'DO_DROPLET_ID=%s\n' "$DO_DROPLET_ID"
+
+  printf 'PROMETHEUS_URL=http://host.docker.internal:9090\n'
+  printf 'DROPLET_INSTANCE=localhost:9100\n'
+  printf 'ELITEMINI_INSTANCE=100.80.59.3:9100\n'
 } > "$TMP_ENV"
 
 echo "→ Subiendo .env al Droplet $DROPLET_IP"

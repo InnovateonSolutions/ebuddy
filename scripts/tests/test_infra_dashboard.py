@@ -19,10 +19,6 @@ def test_infra_service_modules_exist():
     assert (REPO_ROOT / "features" / "infra" / "server" / "do-metrics.ts").exists()
     assert (REPO_ROOT / "features" / "infra" / "server" / "prometheus-metrics.ts").exists()
     assert (REPO_ROOT / "features" / "infra" / "server" / "app-metrics.ts").exists()
-    assert (REPO_ROOT / "lib" / "infra" / "service.ts").exists()
-    assert (REPO_ROOT / "lib" / "infra" / "do-metrics.ts").exists()
-    assert (REPO_ROOT / "lib" / "infra" / "prometheus-metrics.ts").exists()
-    assert (REPO_ROOT / "lib" / "infra" / "app-metrics.ts").exists()
 
 
 def test_infra_page_stays_force_dynamic():
