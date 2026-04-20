@@ -10,8 +10,8 @@ const NAV_ITEMS = [
   { href: '/future', label: 'Horizonte', icon: Map },
   { href: '/kanban', label: 'Tablero', icon: LayoutGrid },
   { href: '/stats', label: 'Stats', icon: BarChart2 },
-  { href: '/settings', label: 'Ajustes', icon: Settings },
   { href: '/infra', label: 'Infra', icon: Server },
+  { href: '/settings', label: 'Ajustes', icon: Settings },
 ]
 
 export function BottomNav() {
