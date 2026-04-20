@@ -69,7 +69,7 @@ describe('runDueNotificationsCron', () => {
 
     mockDbRows([
       { ticket: { ...BASE_TICKET, dueDate: '2026-04-19' }, userEmail: 'a@test.com', timezone: 'America/Tijuana' },
-      { ticket: { ...BASE_TICKET, id: 't2', dueDate: '2026-04-20' }, userEmail: 'b@test.com', timezone: 'Asia/Tokyo' },
+      { ticket: { ...BASE_TICKET, id: 't2', userId: 'u2', dueDate: '2026-04-20' }, userEmail: 'b@test.com', timezone: 'Asia/Tokyo' },
       { ticket: { ...BASE_TICKET, id: 't3', dueDate: '2026-04-18' }, userEmail: 'a@test.com', timezone: 'America/Tijuana' },
     ])
 

@@ -2,16 +2,14 @@ import { createTicketFromCapturedInput } from '@/features/tickets/server/capture
 import { sendWhatsAppReply } from '@/features/messaging/whatsapp/server/reply'
 import type { WhatsAppTextMessage } from '@/features/messaging/whatsapp/server/types'
 
-const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
-const OWNER_USER_ID = process.env.WHATSAPP_OWNER_USER_ID
-
 export function createWhatsAppChallengeResponse(request: Request) {
+  const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
   const { searchParams } = new URL(request.url)
   const mode = searchParams.get('hub.mode')
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
-  if (VERIFY_TOKEN && mode === 'subscribe' && token === VERIFY_TOKEN) {
+  if (verifyToken && mode === 'subscribe' && token === verifyToken) {
     return new Response(challenge, { status: 200 })
   }
 
@@ -38,12 +36,13 @@ function extractIncomingTextMessage(body: unknown): WhatsAppTextMessage | null {
 }
 
 export async function handleIncomingWhatsAppWebhook(body: unknown) {
+  const ownerUserId = process.env.WHATSAPP_OWNER_USER_ID
   const message = extractIncomingTextMessage(body)
-  if (!message || !OWNER_USER_ID) return
+  if (!message || !ownerUserId) return
 
   try {
     const ticket = await createTicketFromCapturedInput(
-      OWNER_USER_ID,
+      ownerUserId,
       message.rawText,
       undefined,
       Date.now()
