@@ -38,4 +38,15 @@ def test_registry_gc_script_contains_the_docr_operations():
     assert "doctl registry repository list-tags" in script
     assert "doctl registry repository delete-tag" in script
     assert "doctl registry garbage-collection start" in script
-    assert "doctl registry garbage-collection list" in script
+    assert "doctl registry garbage-collection get-active" in script
+
+
+def test_registry_gc_script_uses_machine_readable_output():
+    script = read("scripts/registry-gc.sh")
+
+    assert "--output json" in script, (
+        "El script debe consultar doctl en formato JSON para no depender del layout tabular"
+    )
+    assert "awk '{print $3,$4,$5}'" not in script, (
+        "El monitoreo de GC no debe parsear columnas humanas con awk"
+    )
