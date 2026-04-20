@@ -29,9 +29,7 @@ resource "digitalocean_droplet" "app" {
   })
 
   lifecycle {
-    # No destruir el Droplet si cambia user_data (cloud-init solo corre al crear)
-    # ni si cambia el name (renombrar en DO no requiere recrear el Droplet)
-    ignore_changes = [user_data, name, tags]
+    ignore_changes = [user_data, tags]
   }
 
   tags = [var.app_name, var.environment]

@@ -257,7 +257,6 @@ jobs:
         id: droplet
         run: |
           source infra/config/main.env
-          DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet"
 
           IP=$(curl -sf \
             "https://api.digitalocean.com/v2/droplets?name=${DROPLET_NAME}" \
