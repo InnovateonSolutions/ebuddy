@@ -29,7 +29,7 @@ export const env = {
   openclawBaseUrl: process.env.OPENCLAW_BASE_URL ?? '',
   openclawGatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN ?? '',
   openclawHookToken: process.env.OPENCLAW_HOOK_TOKEN ?? '',
-  doMonitoringToken: process.env.DO_MONITORING_TOKEN ?? '',
+  get doMonitoringToken() { return process.env.DO_MONITORING_TOKEN ?? '' },
 
   // Core — requeridas
   get databaseUrl() { return getEnv('DATABASE_URL') },

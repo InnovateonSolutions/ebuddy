@@ -49,6 +49,10 @@ async function getDropletId() {
   }
 }
 
+function dropletIdResolutionReason() {
+  return 'No se pudo resolver el Droplet ID. Define DO_DROPLET_ID o verifica acceso a metadata de DigitalOcean.'
+}
+
 async function fetchMetricSeries(path: string, dropletId: string, token: string) {
   const end = Math.floor(Date.now() / 1000)
   const start = end - WINDOW_MINUTES * 60
@@ -93,7 +97,7 @@ export async function getDigitalOceanDropletMetrics(): Promise<DigitalOceanDropl
     return {
       available: false,
       source: 'digitalocean',
-      reason: 'No se pudo resolver el Droplet ID desde el runtime',
+      reason: dropletIdResolutionReason(),
     }
   }
 
@@ -123,7 +127,7 @@ export async function getDigitalOceanDropletMetrics(): Promise<DigitalOceanDropl
         available: false,
         source: 'digitalocean',
         hostId: dropletId,
-        reason: 'DigitalOcean Monitoring respondió sin series suficientes',
+        reason: 'DigitalOcean Monitoring no devolvió series. Verifica que Monitoring esté habilitado en el Droplet.',
       }
     }
 
