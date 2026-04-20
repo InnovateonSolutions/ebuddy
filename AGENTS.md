@@ -474,6 +474,7 @@ openclaw doctor
 
 ## Notas de operación
 
+- **Ambiente único:** Solo existe `prod` — no hay dev/staging. `ENVIRONMENT=prod` en `infra/config/main.env`. Todos los recursos DO se llaman `ebuddy-prod-*`.
 - **Costo objetivo:** < $35 USD/mes (Droplet s-1vcpu-2gb + DOCR + DB)
 - **URL producción:** `https://ebuddy.innovateoncorp.com`
 - **Entorno:** MVP de uso propio, un solo usuario (Martín)
