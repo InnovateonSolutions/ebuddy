@@ -38,6 +38,7 @@ Estas cuatro son las que `lib/env.ts` valida en startup.
 | Variable | Descripción |
 |---|---|
 | `NEXT_PUBLIC_APP_URL` | URL pública de la app |
+| `DO_MONITORING_TOKEN` | Token read-only para consultar DigitalOcean Monitoring desde runtime |
 
 ### Google Calendar
 

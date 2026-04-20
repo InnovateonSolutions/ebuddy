@@ -22,6 +22,7 @@ Variables principales:
 - `AUTH_SECRET`
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
+- `DO_MONITORING_TOKEN`
 - `RESEND_API_KEY`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
@@ -41,6 +42,10 @@ Secrets usados para operar Terraform o flujos de despliegue:
 - `DO_SPACES_ACCESS_KEY`
 - `DO_SPACES_SECRET_KEY`
 - `DO_SSH_PRIVATE_KEY`
+
+`DO_MONITORING_TOKEN` es distinto de `DO_TOKEN`: el primero debe ser de runtime y
+con alcance mínimo de lectura para Monitoring; el segundo sigue reservado para
+operación de infraestructura.
 
 ---
 

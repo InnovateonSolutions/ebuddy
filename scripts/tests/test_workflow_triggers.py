@@ -376,7 +376,7 @@ class TestDeployWorkflowBuildStep:
         assert "needs.changes.outputs.migrator_changed == 'true'" in self.workflow, (
             "deploy.yml debe condicionar migraciones al flag migrator_changed"
         )
-        assert "docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator" in self.workflow
+        assert "docker pull registry.digitalocean.com/ebuddy-prod/ebuddy:migrator" in self.workflow
         assert "docker run --rm" in self.workflow
 
     def test_e2e_readiness_check_receives_app_url_env(self):
