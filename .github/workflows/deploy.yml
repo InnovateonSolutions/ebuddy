@@ -297,6 +297,16 @@ jobs:
           target: /opt/ebuddy/
           strip_components: 2
 
+      - name: Update docker-compose.prod.yml on Droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: docker-compose.prod.yml
+          target: /opt/ebuddy/
+          strip_components: 2
+
       # Escribe /opt/ebuddy/.env con los valores actuales de GitHub Secrets.
       - name: Write .env on Droplet
         uses: appleboy/ssh-action@v1
