@@ -18,6 +18,8 @@ services:
     env_file: /opt/ebuddy/.env
     environment:
       NODE_ENV: production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
       interval: 30s
