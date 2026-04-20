@@ -11,7 +11,7 @@ name: ebuddy-prod
 
 services:
   app:
-    image: registry.digitalocean.com/ebuddy-dev/ebuddy:latest
+    image: registry.digitalocean.com/ebuddy-prod/ebuddy:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"  # solo accesible desde Caddy (localhost)

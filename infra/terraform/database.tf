@@ -13,6 +13,10 @@ resource "digitalocean_database_cluster" "postgres" {
   node_count = 1
 
   tags = [var.app_name, var.environment]
+
+  lifecycle {
+    ignore_changes = [name, tags]
+  }
 }
 
 resource "digitalocean_database_firewall" "postgres" {

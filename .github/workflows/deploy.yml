@@ -190,7 +190,7 @@ jobs:
           context: .
           target: migrator
           push: true
-          tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+          tags: registry.digitalocean.com/ebuddy-prod/ebuddy:migrator
           cache-from: |
             type=gha,scope=migrator-image
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
@@ -205,7 +205,7 @@ jobs:
           context: .
           target: migrator
           push: true
-          tags: registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+          tags: registry.digitalocean.com/ebuddy-prod/ebuddy:migrator
           cache-from: |
             type=gha,scope=migrator-image
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
@@ -354,10 +354,10 @@ jobs:
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
-            docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+            docker pull registry.digitalocean.com/ebuddy-prod/ebuddy:migrator
             docker run --rm \
               --env-file /opt/ebuddy/.env \
-              registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+              registry.digitalocean.com/ebuddy-prod/ebuddy:migrator
             echo "Migraciones completadas"
 
       - uses: appleboy/ssh-action@v1
