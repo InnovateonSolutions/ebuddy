@@ -11,7 +11,7 @@ on:
       manage_dns:
         description: 'Crear/actualizar Route 53 desde Terraform'
         required: false
-        default: false
+        default: true
         type: boolean
   workflow_dispatch:
     inputs:
@@ -24,7 +24,7 @@ on:
       manage_dns:
         description: 'Crear/actualizar Route 53 desde Terraform'
         required: true
-        default: false
+        default: true
         type: boolean
 
 # OIDC requiere permiso para solicitar el token JWT de GitHub

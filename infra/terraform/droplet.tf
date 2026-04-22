@@ -10,7 +10,7 @@ data "digitalocean_image" "ubuntu" {
 }
 
 resource "digitalocean_droplet" "app" {
-  name     = "${local.name_prefix}-droplet"
+  name     = "prod"
   size     = var.droplet_size
   image    = data.digitalocean_image.ubuntu.id
   region   = var.do_region
