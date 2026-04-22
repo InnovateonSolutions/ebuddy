@@ -19,7 +19,6 @@ function fallbackDiagnostics(reason: string): PrometheusDiagnostics {
     ...createEmptyInfraSnapshot().diagnostics,
     reason,
     targets: {
-      droplet: { ...createEmptyInfraSnapshot().diagnostics.targets.droplet, reason },
       elitemini: { ...createEmptyInfraSnapshot().diagnostics.targets.elitemini, reason },
     },
   }
