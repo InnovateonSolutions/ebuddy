@@ -31,6 +31,26 @@ def test_deploy_workflow_does_not_force_prometheus_defaults_for_droplet_metrics(
     assert 'echo "ELITEMINI_INSTANCE=100.80.59.3:9100"' not in workflow
 
 
+def test_deploy_workflow_overwrites_docker_compose_on_droplet():
+    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    block_start = workflow.index("- name: Update docker-compose.prod.yml on Droplet")
+    block_end = workflow.index("# Escribe /opt/ebuddy/.env", block_start)
+    block = workflow[block_start:block_end]
+
+    assert "overwrite: true" in block
+
+
+def test_deploy_workflow_fails_fast_if_remote_deploy_command_fails():
+    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    block_start = workflow.index("- uses: appleboy/ssh-action@v1")
+    block_end = workflow.index("- name: Notify deploy failure", block_start)
+    block = workflow[block_start:block_end]
+
+    assert "set -euo pipefail" in block
+
+
 def test_ci_components_path_triggers_app_changed():
     """Cambios en components/ deben ser detectados como app_changed=true.
 
