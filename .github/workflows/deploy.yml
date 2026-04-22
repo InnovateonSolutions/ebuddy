@@ -398,6 +398,8 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --force-recreate || {
               echo "=== APP LOGS (last 80 lines) ==="
               docker compose -f docker-compose.prod.yml logs app --tail=80 2>&1 || true
+              echo "=== HEALTHCHECK HISTORY ==="
+              docker inspect ebuddy-prod-app-1 --format='{{range .State.Health.Log}}ExitCode={{.ExitCode}} Output={{.Output}}{{"\n"}}{{end}}' 2>&1 || true
               echo "=== CONTAINER STATUS ==="
               docker compose -f docker-compose.prod.yml ps 2>&1 || true
               exit 1
