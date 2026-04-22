@@ -390,10 +390,14 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
             set -euo pipefail
-            # One-time migration: remove containers from old project name 'ebuddy'
-            # (cloud-init had no name: field; repo compose has name: ebuddy-prod)
-            docker rm -f ebuddy-app-1 ebuddy-caddy-1 2>/dev/null || true
-            /usr/local/bin/ebuddy-deploy
+            cd /opt/ebuddy
+            # Bring down both old project name (ebuddy) and current (ebuddy-prod)
+            docker compose -p ebuddy    -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+            docker compose -p ebuddy-prod -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+            docker compose -f docker-compose.prod.yml pull app
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
+            docker image prune -f
+            echo "Deploy completado: $(date)"
             # Recargar Caddy con retry mientras el contenedor queda listo.
             for attempt in 1 2 3 4 5 6 7 8; do
               if docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile; then
