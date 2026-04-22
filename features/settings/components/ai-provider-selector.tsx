@@ -62,7 +62,7 @@ export function AiProviderSelector({ aiProvider, ollamaModel }: AiProviderSelect
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100">
+    <div className="dashboard-panel divide-y divide-slate-100">
       <div className="px-5 py-4">
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
           Proveedor de IA
@@ -75,7 +75,7 @@ export function AiProviderSelector({ aiProvider, ollamaModel }: AiProviderSelect
               className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                 provider === p.value
                   ? 'border-blue-200 bg-blue-50'
-                  : 'border-slate-100 hover:bg-slate-50'
+                  : 'border-slate-200 hover:bg-slate-50'
               }`}
             >
               <input
@@ -118,7 +118,7 @@ export function AiProviderSelector({ aiProvider, ollamaModel }: AiProviderSelect
             <button
               onClick={testOllama}
               disabled={ollamaStatus === 'checking'}
-              className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium transition-colors hover:bg-slate-50 disabled:opacity-60"
             >
               {ollamaStatus === 'checking' && <Loader2 size={12} className="animate-spin" />}
               {ollamaStatus === 'ok' && <Check size={12} className="text-emerald-500" />}

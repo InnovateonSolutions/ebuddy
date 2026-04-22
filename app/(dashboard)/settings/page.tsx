@@ -52,10 +52,13 @@ export default async function SettingsPage({
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Ajustes</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Conecta tus calendarios y gestiona tu acceso</p>
-      </div>
+      <section className="dashboard-hero">
+        <p className="dashboard-kicker">Ajustes</p>
+        <h1 className="dashboard-title">Conexion y control</h1>
+        <p className="dashboard-subtitle">
+          Calendarios, preferencias de jornada, proveedor de IA y acceso externo reunidos en una sola superficie clara.
+        </p>
+      </section>
 
       {searchParams.calendar_connected && (
         <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-700">
@@ -69,7 +72,7 @@ export default async function SettingsPage({
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100">
+      <div className="dashboard-panel divide-y divide-slate-100">
         <div className="px-5 py-4">
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Calendarios</h2>
 

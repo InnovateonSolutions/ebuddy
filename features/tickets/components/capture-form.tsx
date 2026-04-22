@@ -84,7 +84,13 @@ export default function CaptureForm({ onTicketCreated }: CaptureFormProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+    <div className="dashboard-panel p-4">
+      <div className="mb-3">
+        <p className="dashboard-section-title">Captura rapida</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Escribe una idea corta o dicta una nota y la convertimos en ticket accionable.
+        </p>
+      </div>
       <form onSubmit={handleTextSubmit} className="space-y-3">
         <Textarea
           value={text}
@@ -98,10 +104,10 @@ export default function CaptureForm({ onTicketCreated }: CaptureFormProps) {
               handleTextSubmit(e as unknown as React.FormEvent)
             }
           }}
-          className="border-0 bg-transparent px-0 focus-visible:ring-0 resize-none text-base placeholder:text-slate-400"
+          className="min-h-[88px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base placeholder:text-slate-400 focus-visible:ring-0"
         />
 
-        <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+        <div className="flex items-center justify-between border-t border-slate-100 pt-2">
           {/* Estado */}
           <div className="text-xs text-slate-400">
             {isRecording && (
@@ -135,7 +141,7 @@ export default function CaptureForm({ onTicketCreated }: CaptureFormProps) {
               onClick={handleVoiceToggle}
               disabled={submitting && !isRecording}
               className={cn(
-                'flex items-center justify-center w-9 h-9 rounded-xl transition-all',
+                'flex h-11 w-11 items-center justify-center rounded-2xl transition-all',
                 isRecording
                   ? 'bg-red-500 text-white recording-pulse'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

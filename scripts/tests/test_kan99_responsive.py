@@ -28,3 +28,18 @@ def test_settings_has_responsive_calendar_layout():
     content = read("app/(dashboard)/settings/page.tsx")
     # calendar provider row: info on top, button below on mobile
     assert "sm:flex-row" in content or "flex-col sm:" in content
+
+def test_dashboard_layout_uses_shared_shell_classes():
+    content = read("app/(dashboard)/layout.tsx")
+    assert "dashboard-shell" in content
+    assert "dashboard-topbar" in content
+
+def test_primary_dashboard_pages_use_shared_hero():
+    for path in [
+        "app/(dashboard)/today/page.tsx",
+        "app/(dashboard)/kanban/page.tsx",
+        "app/(dashboard)/stats/page.tsx",
+        "app/(dashboard)/settings/page.tsx",
+    ]:
+        content = read(path)
+        assert "dashboard-hero" in content

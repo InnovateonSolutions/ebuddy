@@ -30,7 +30,7 @@ export function OpenClawStatus({ configured }: OpenClawStatusProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100">
+    <div className="dashboard-panel divide-y divide-slate-100">
       <div className="px-5 py-4">
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
           OpenClaw
@@ -54,7 +54,7 @@ export function OpenClawStatus({ configured }: OpenClawStatusProps) {
           <button
             onClick={test}
             disabled={!configured || status === 'checking'}
-            className="flex-shrink-0 flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium transition-colors hover:bg-slate-50 disabled:opacity-50"
           >
             {status === 'checking' && <Loader2 size={12} className="animate-spin" />}
             {status === 'ok' && <Check size={12} className="text-emerald-500" />}

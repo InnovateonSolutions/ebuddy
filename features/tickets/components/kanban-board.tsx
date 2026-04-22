@@ -195,15 +195,15 @@ export default function KanbanBoard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Filter bar */}
-      <div className="flex items-center gap-2 flex-wrap mb-6">
+      <div className="dashboard-panel mb-6 p-4">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-slate-400 font-medium">Prioridad</span>
         {(['ALTA', 'MEDIA', 'BAJA'] as TicketPriority[]).map((p) => (
           <button
             key={p}
             onClick={() => setFilterPriority(filterPriority === p ? null : p)}
             className={cn(
-              'text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors',
+              'text-[11px] px-2.5 py-2 rounded-full font-medium transition-colors',
               filterPriority === p
                 ? p === 'ALTA'
                   ? 'bg-red-500 text-white'
@@ -223,7 +223,7 @@ export default function KanbanBoard({
             key={ctx}
             onClick={() => setFilterContext(filterContext === ctx ? 'ALL' : ctx)}
             className={cn(
-              'text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors',
+              'text-[11px] px-2.5 py-2 rounded-full font-medium transition-colors',
               filterContext === ctx
                 ? 'bg-slate-700 text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -235,7 +235,7 @@ export default function KanbanBoard({
         {hasActiveFilters && (
           <button
             onClick={() => { setFilterPriority(null); setFilterContext('ALL') }}
-            className="text-[11px] px-2 py-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-0.5"
+            className="flex items-center gap-0.5 rounded-full px-2 py-2 text-[11px] text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
           >
             <X size={10} /> Limpiar
           </button>
@@ -244,12 +244,13 @@ export default function KanbanBoard({
           <button
             onClick={handleArchiveDone}
             disabled={archiving}
-            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-600 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40"
           >
             <Archive size={12} />
             Archivar completados
           </button>
         </div>
+      </div>
       </div>
 
       <div className="space-y-10">
@@ -311,7 +312,7 @@ function BoardSection({ context, tickets, readonly, onUpdate, onDelete, onOpen }
   const done = tickets.filter((t) => t.status === 'DONE').length
 
   return (
-    <section>
+    <section className="space-y-4">
       <div className="flex items-center gap-3 mb-4">
         <div
           className={cn(
@@ -331,7 +332,7 @@ function BoardSection({ context, tickets, readonly, onUpdate, onDelete, onOpen }
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {COLUMNS.map((col) => {
           const colTickets = tickets.filter((t) => t.status === col.id)
           return (
@@ -369,10 +370,10 @@ function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete, onO
   const { setNodeRef, isOver } = useDroppable({ id: droppableId })
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-h-[220px] flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm shadow-slate-200/50">
       <div
         className={cn(
-          'flex items-center justify-between px-3 py-2 rounded-lg border',
+          'flex items-center justify-between rounded-xl border px-3 py-3',
           col.headerBg,
           col.color
         )}
@@ -389,14 +390,14 @@ function KanbanColumn({ col, tickets, context, readonly, onUpdate, onDelete, onO
       <div
         ref={setNodeRef}
         className={cn(
-          'flex flex-col gap-2 min-h-[120px] rounded-lg transition-colors p-1',
+          'flex flex-1 flex-col gap-2 rounded-xl p-1 transition-colors',
           isOver && col.dropBg
         )}
       >
         {tickets.length === 0 ? (
           <div
             className={cn(
-              'flex-1 flex flex-col items-center justify-center rounded-lg border border-dashed min-h-[80px] transition-all gap-1',
+              'flex min-h-[120px] flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-dashed transition-all',
               isOver ? 'border-blue-300 bg-blue-50/60' : 'border-slate-200'
             )}
           >
@@ -515,7 +516,7 @@ function KanbanCard({ ticket, readonly, onUpdate, onDelete, onOpen }: KanbanCard
     <div
       onClick={() => onOpen(ticket.id)}
       className={cn(
-        'bg-white rounded-lg border transition-all pl-4 cursor-pointer',
+        'cursor-pointer rounded-xl border bg-white pl-4 transition-all shadow-sm shadow-slate-200/50',
         isDone ? 'border-slate-100 opacity-55' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
         deleting && 'opacity-30 pointer-events-none'
       )}

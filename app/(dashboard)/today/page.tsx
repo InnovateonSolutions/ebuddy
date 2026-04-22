@@ -22,12 +22,13 @@ export default async function TodayPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 capitalize">{dateLabel}</h1>
-        <p className="text-slate-500 text-sm mt-0.5">
-          {todayData.tickets.negocio.length + todayData.tickets.personal.length} tareas pendientes hoy
+      <section className="dashboard-hero">
+        <p className="dashboard-kicker">Hoy</p>
+        <h1 className="dashboard-title capitalize">{dateLabel}</h1>
+        <p className="dashboard-subtitle">
+          {todayData.tickets.negocio.length + todayData.tickets.personal.length} tareas activas para hoy. Captura rapido, decide que va primero y ten el dia completo a la vista.
         </p>
-      </div>
+      </section>
       <DayView initialData={todayData} />
     </div>
   )

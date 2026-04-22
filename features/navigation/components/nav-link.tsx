@@ -12,10 +12,10 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
     <Link
       href={href}
       className={cn(
-        'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+        'px-3 py-2 rounded-xl text-sm font-medium transition-all',
         isActive
-          ? 'bg-slate-100 text-slate-900'
-          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+          ? 'bg-white text-slate-950 shadow-sm shadow-slate-200/80'
+          : 'text-slate-500 hover:text-slate-900 hover:bg-white/80'
       )}
     >
       {children}

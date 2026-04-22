@@ -62,8 +62,8 @@ export default function TicketCard({ ticket, onUpdate, onDelete }: TicketCardPro
   return (
     <div
       className={cn(
-        'bg-white rounded-xl border transition-all',
-        ticket.status === 'DONE' ? 'border-slate-100 opacity-60' : 'border-slate-200',
+        'rounded-2xl border bg-white transition-all shadow-sm shadow-slate-200/60',
+        ticket.status === 'DONE' ? 'border-slate-100 opacity-60' : 'border-slate-200 hover:border-slate-300',
         deleting && 'opacity-30 pointer-events-none'
       )}
     >

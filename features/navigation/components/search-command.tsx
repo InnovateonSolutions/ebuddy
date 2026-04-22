@@ -53,7 +53,7 @@ export function SearchCommand({ onSelect }: SearchCommandProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 text-sm text-slate-400 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 shadow-sm shadow-slate-200/70 transition-colors hover:bg-slate-50 hover:text-slate-700"
       >
         <Search size={13} />
         <span className="hidden md:inline text-xs">Buscar</span>
@@ -66,10 +66,10 @@ export function SearchCommand({ onSelect }: SearchCommandProps) {
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden mx-4"
+            className="mx-4 w-full max-w-xl overflow-hidden rounded-3xl border border-white/60 bg-white shadow-2xl shadow-slate-900/10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+            <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4">
               {loading
                 ? <Loader2 size={15} className="text-slate-400 animate-spin flex-shrink-0" />
                 : <Search size={15} className="text-slate-400 flex-shrink-0" />}
@@ -80,7 +80,7 @@ export function SearchCommand({ onSelect }: SearchCommandProps) {
                 placeholder="Buscar tickets..."
                 className="flex-1 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
               />
-              <button onClick={() => setOpen(false)} className="p-1 text-slate-300 hover:text-slate-500 rounded">
+              <button onClick={() => setOpen(false)} className="rounded-lg p-1 text-slate-300 hover:text-slate-500">
                 <X size={13} />
               </button>
             </div>

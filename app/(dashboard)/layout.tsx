@@ -31,17 +31,19 @@ export default async function DashboardLayout({
     .toUpperCase()
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+    <div className="dashboard-shell">
+      <nav className="dashboard-topbar">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           {/* Logo + Nav */}
           <div className="flex items-center gap-5 min-w-0">
             <Link href="/today" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm shadow-slate-300">
                 <span className="text-white text-xs font-bold">e</span>
               </div>
-              <span className="font-semibold text-slate-900 text-sm hidden sm:block">ebuddy</span>
+              <div className="hidden sm:block">
+                <span className="block text-sm font-semibold text-slate-950">ebuddy</span>
+                <span className="block text-[11px] leading-none text-slate-500">Panel operativo personal</span>
+              </div>
             </Link>
 
             <div className="hidden sm:flex items-center gap-0.5">
@@ -61,8 +63,7 @@ export default async function DashboardLayout({
         </div>
       </nav>
 
-      {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6">{children}</main>
+      <main className="max-w-5xl mx-auto px-4 py-5 pb-24 sm:py-6 sm:pb-6">{children}</main>
 
       <BottomNav owner={owner} />
     </div>

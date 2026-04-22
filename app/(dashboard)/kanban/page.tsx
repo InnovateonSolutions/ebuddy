@@ -12,11 +12,14 @@ export default async function KanbanPage() {
   const { negocio, personal } = await getKanbanTickets(session.user.id)
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Tablero</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Mueve tus tareas entre columnas arrastrando o con el menú.</p>
-      </div>
+    <div className="space-y-6">
+      <section className="dashboard-hero">
+        <p className="dashboard-kicker">Tablero</p>
+        <h1 className="dashboard-title">Flujo de trabajo</h1>
+        <p className="dashboard-subtitle">
+          Mueve tareas entre estados, limpia completados y revisa negocio y personal sin perder contexto.
+        </p>
+      </section>
       <KanbanBoard initialNegocio={negocio} initialPersonal={personal} />
     </div>
   )

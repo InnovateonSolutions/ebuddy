@@ -8,7 +8,7 @@ interface ApiKeySectionProps {
 }
 
 function buildApiKeyPreview(apiKey: string) {
-  return `${apiKey.slice(0, 8)}${'•'.repeat(24)}${apiKey.slice(-8)}`
+  return `${apiKey.slice(0, 8)}${'*'.repeat(24)}${apiKey.slice(-8)}`
 }
 
 export function ApiKeySection({ hasKey, initialPreview }: ApiKeySectionProps) {
@@ -42,23 +42,24 @@ export function ApiKeySection({ hasKey, initialPreview }: ApiKeySectionProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200">
+    <div className="dashboard-panel">
       <div className="p-4">
-        <h2 className="text-sm font-semibold text-slate-700 mb-1">API Key</h2>
-        <p className="text-xs text-slate-500 mb-4">
-          Úsala para autenticar requests externos (OpenClaw, scripts, etc.)
+        <p className="dashboard-section-title">API Key</p>
+        <h2 className="mb-1 mt-2 text-sm font-semibold text-slate-700">Acceso externo</h2>
+        <p className="mb-4 text-xs text-slate-500">
+          Usala para autenticar requests externos como OpenClaw o scripts operativos.
         </p>
 
         {hasKey || generatedKey ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              <code className="flex-1 text-xs text-slate-700 font-mono truncate">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <code className="flex-1 truncate font-mono text-xs text-slate-700">
                 {displayKey}
               </code>
               {generatedKey && (
                 <button
                   onClick={() => setRevealed((value) => !value)}
-                  className="text-xs text-slate-500 hover:text-slate-700 shrink-0"
+                  className="shrink-0 text-xs text-slate-500 hover:text-slate-700"
                   type="button"
                 >
                   {revealed ? 'Ocultar' : 'Ver'}
@@ -71,33 +72,33 @@ export function ApiKeySection({ hasKey, initialPreview }: ApiKeySectionProps) {
                 <button
                   onClick={handleCopy}
                   type="button"
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                  className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
                 >
-                  {copied ? '✓ Copiada' : 'Copiar'}
+                  {copied ? 'Copiada' : 'Copiar'}
                 </button>
               )}
               <button
                 onClick={handleGenerate}
                 disabled={loading}
                 type="button"
-                className="text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors disabled:opacity-50"
+                className="rounded-xl bg-amber-100 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-200 disabled:opacity-50"
               >
                 {loading ? 'Generando...' : 'Regenerar'}
               </button>
             </div>
 
             <p className="text-xs text-slate-400">
-              Solo mostramos la key completa al momento de regenerarla. Después conservamos una vista enmascarada.
+              Solo mostramos la key completa al momento de regenerarla. Despues conservamos una vista enmascarada.
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-slate-500">No tienes una API key todavía.</p>
+            <p className="text-sm text-slate-500">Todavia no tienes una API key.</p>
             <button
               onClick={handleGenerate}
               disabled={loading}
               type="button"
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Generando...' : 'Generar API Key'}
             </button>

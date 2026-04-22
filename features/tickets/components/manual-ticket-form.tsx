@@ -65,12 +65,13 @@ export default function ManualTicketForm({ onTicketCreated }: ManualTicketFormPr
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="dashboard-panel">
       <div className="flex items-center justify-between gap-3 p-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Crear ticket</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Alta manual rápida para tareas que ya tienes claras, estilo Jira.
+          <p className="dashboard-section-title">Alta manual</p>
+          <h2 className="mt-2 text-sm font-semibold text-slate-900">Crear ticket</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Para tareas que ya tienes claras y quieres dejar ordenadas desde el inicio.
           </p>
         </div>
         <Button
@@ -90,7 +91,7 @@ export default function ManualTicketForm({ onTicketCreated }: ManualTicketFormPr
         <form onSubmit={handleSubmit} className="border-t border-slate-100 p-4">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block md:col-span-2">
-              <span className="mb-1.5 block text-xs font-medium text-slate-600">Título</span>
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">Titulo</span>
               <input
                 value={form.title}
                 onChange={(e) => updateField('title', e.target.value)}
@@ -146,18 +147,18 @@ export default function ManualTicketForm({ onTicketCreated }: ManualTicketFormPr
               <textarea
                 value={form.overview ?? ''}
                 onChange={(e) => updateField('overview', e.target.value)}
-                placeholder="Notas, antecedentes o criterios de aceptación"
+                placeholder="Notas, antecedentes o criterios de aceptacion"
                 rows={3}
                 className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </label>
 
             <label className="block md:col-span-2">
-              <span className="mb-1.5 block text-xs font-medium text-slate-600">Qué hacer</span>
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">Que hacer</span>
               <input
                 value={form.what_to_do ?? ''}
                 onChange={(e) => updateField('what_to_do', e.target.value)}
-                placeholder="Acción principal esperada"
+                placeholder="Accion principal esperada"
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 maxLength={500}
               />
