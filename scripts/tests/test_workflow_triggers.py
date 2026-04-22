@@ -61,7 +61,7 @@ def test_ci_components_path_triggers_app_changed():
     ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
 
     # El glob components/* debe aparecer junto a app/* en el mismo case arm
-    assert "app/*|components/*" in ci
+    assert "app/*|features/*|components/*" in ci
 
     # Verificar que no está mezclado con los arms de infra o scripts
     infra_arm_pos = ci.index("infra_changed=true")
@@ -126,7 +126,7 @@ def test_ci_workflow_detects_application_and_infrastructure_changes():
     for expected_path in (
         "permissions:",
         "id-token: write",
-        "app/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*",
+        "app/*|features/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*",
         "infra/*|.github/workflows/terraform.yml",
         "terraform-plan:",
         "needs['detect-changes'].outputs.infra_changed",
