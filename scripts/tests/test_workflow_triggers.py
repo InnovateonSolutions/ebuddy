@@ -428,3 +428,106 @@ class TestDeployWorkflowBuildStep:
         """Los smoke tests E2E corren DESPUÉS del deploy, no en paralelo."""
         assert "needs: [changes, deploy]" in self.workflow
         assert "smoke.sh" in self.workflow
+
+
+# ── Tests del job deploy en deploy.yml ───────────────────────────────────────
+#
+# Bugs producción que costaron días de debugging por falta de cobertura:
+#
+#   ❌ strip_components: 2 en scp de docker-compose.prod.yml (raíz del repo)
+#      → tar excluye silenciosamente archivos con < N path components
+#      → droplet nunca recibió el archivo, siguió usando cloud-init con ebuddy-dev
+#   ❌ Sin refresh de creds DOCR en droplet
+#      → cloud-init escribió credenciales para ebuddy-dev, deploy usaba ebuddy-prod
+#      → 401 Unauthorized en docker pull
+#   ❌ Sin --force-recreate ni compose down antes de up
+#      → container stale en estado 'created' (del run fallido por port conflict)
+#      → docker compose up -d lo arranca en lugar de recrearlo → exit 0 inmediato
+
+class TestDeployJobDroplet:
+
+    def setup_method(self):
+        self.workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    def test_scp_docker_compose_uses_strip_components_zero(self):
+        """strip_components >= 1 excluye silenciosamente archivos sin subdirectorios.
+
+        docker-compose.prod.yml está en la raíz del repo (0 path components).
+        tar --strip-components=N descarta entradas con menos de N componentes.
+        Bug: strip_components: 2 → archivo nunca se copiaba al droplet.
+        """
+        start = self.workflow.index("- name: Update docker-compose.prod.yml on Droplet")
+        end = self.workflow.index("overwrite: true", start)
+        block = self.workflow[start:end]
+
+        assert "strip_components: 0" in block, (
+            "docker-compose.prod.yml es un archivo raíz — strip_components debe ser 0"
+        )
+        assert "strip_components: 2" not in block
+
+    def test_deploy_refreshes_docr_credentials_on_droplet(self):
+        """Las credenciales DOCR del cloud-init pueden apuntar al registry anterior.
+
+        cloud-init escribe /root/.docker/config.json una sola vez al crear el droplet.
+        Si el registry cambia (ebuddy-dev → ebuddy-prod), el droplet queda con creds
+        inválidas para el nuevo registry. El deploy debe regenerarlas con DO_TOKEN.
+        """
+        assert "Refresh DOCR credentials on Droplet" in self.workflow
+
+        start = self.workflow.index("Refresh DOCR credentials on Droplet")
+        end = self.workflow.index("Write .env on Droplet", start)
+        block = self.workflow[start:end]
+
+        assert "DO_TOKEN" in block
+        assert "docker/config.json" in block or ".docker/config.json" in block
+        assert "base64" in block
+
+    def test_deploy_refresh_runs_before_env_write(self):
+        """El refresh de creds debe ocurrir antes de escribir .env y antes del deploy."""
+        refresh_pos = self.workflow.index("Refresh DOCR credentials on Droplet")
+        env_pos = self.workflow.index("Write .env on Droplet")
+        assert refresh_pos < env_pos
+
+    def test_deploy_uses_force_recreate(self):
+        """--force-recreate garantiza un container fresco, ignorando containers stale.
+
+        Sin este flag, docker compose up -d reutiliza un container en estado
+        'created' o 'exited' de un run fallido anterior → el proceso arranca
+        en estado inválido y termina con exit 0 en < 1 segundo.
+        """
+        assert "--force-recreate" in self.workflow
+
+    def test_deploy_brings_down_both_project_names(self):
+        """El deploy debe hacer compose down para el nombre de proyecto viejo y el nuevo.
+
+        cloud-init creó contenedores bajo proyecto 'ebuddy' (sin name: en compose).
+        docker-compose.prod.yml tiene name: ebuddy-prod. Sin un down explícito del
+        proyecto viejo, docker compose up -d crea nuevos contenedores mientras los
+        viejos siguen ocupando los puertos → 'port already allocated'.
+        """
+        assert "compose -p ebuddy" in self.workflow and "down" in self.workflow, (
+            "El deploy debe hacer compose down del proyecto antiguo 'ebuddy'"
+        )
+        assert "compose -p ebuddy-prod" in self.workflow, (
+            "El deploy debe hacer compose down del proyecto actual 'ebuddy-prod'"
+        )
+
+        down_pos = self.workflow.index("compose -p ebuddy")
+        up_pos = self.workflow.index("compose -f docker-compose.prod.yml up -d")
+        assert down_pos < up_pos, "compose down debe preceder a compose up"
+
+    def test_docker_compose_prod_uses_prod_registry(self):
+        """docker-compose.prod.yml debe apuntar al registry de producción ebuddy-prod."""
+        compose = (REPO_ROOT / "docker-compose.prod.yml").read_text()
+        assert "registry.digitalocean.com/ebuddy-prod/ebuddy:latest" in compose
+        assert "ebuddy-dev" not in compose
+
+    def test_docker_compose_prod_declares_project_name(self):
+        """docker-compose.prod.yml debe declarar name: ebuddy-prod explícitamente.
+
+        Sin name:, Docker Compose deriva el nombre del directorio de trabajo
+        (/opt/ebuddy → proyecto 'ebuddy'). Esto generó el bug de port conflict
+        al migrar al nombre correcto 'ebuddy-prod'.
+        """
+        compose = (REPO_ROOT / "docker-compose.prod.yml").read_text()
+        assert "name: ebuddy-prod" in compose
