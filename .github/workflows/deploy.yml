@@ -395,7 +395,13 @@ jobs:
             docker compose -p ebuddy    -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
             docker compose -p ebuddy-prod -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
             docker compose -f docker-compose.prod.yml pull app
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
+            docker compose -f docker-compose.prod.yml up -d --force-recreate || {
+              echo "=== APP LOGS (last 80 lines) ==="
+              docker compose -f docker-compose.prod.yml logs app --tail=80 2>&1 || true
+              echo "=== CONTAINER STATUS ==="
+              docker compose -f docker-compose.prod.yml ps 2>&1 || true
+              exit 1
+            }
             docker image prune -f
             echo "Deploy completado: $(date)"
             # Recargar Caddy con retry mientras el contenedor queda listo.
