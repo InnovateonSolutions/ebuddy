@@ -309,8 +309,27 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           source: docker-compose.prod.yml
           target: /opt/ebuddy/
-          strip_components: 2
+          strip_components: 0
           overwrite: true
+
+      # Refresca credenciales DOCR en el Droplet — las de cloud-init pueden apuntar
+      # al registry antiguo (ebuddy-dev) o haber expirado. Se regeneran con DO_TOKEN.
+      - name: Refresh DOCR credentials on Droplet
+        uses: appleboy/ssh-action@v1
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          envs: DO_TOKEN
+          script: |
+            mkdir -p /root/.docker
+            AUTH="$(printf 'docr:%s' "${DO_TOKEN}" | base64 -w 0)"
+            printf '{"auths":{"registry.digitalocean.com":{"auth":"%s"}}}\n' "${AUTH}" \
+              > /root/.docker/config.json
+            chmod 600 /root/.docker/config.json
+            echo "DOCR credentials refreshed"
 
       # Escribe /opt/ebuddy/.env con los valores actuales de GitHub Secrets.
       - name: Write .env on Droplet
