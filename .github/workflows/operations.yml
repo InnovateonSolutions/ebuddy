@@ -124,7 +124,7 @@ jobs:
         env:
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
           APP_NAME: ebuddy
-          ENVIRONMENT: dev
+          ENVIRONMENT: prod
 
   droplet-smoke:
     name: Droplet Smoke Test
