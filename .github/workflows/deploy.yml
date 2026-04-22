@@ -400,6 +400,12 @@ jobs:
               docker compose -f docker-compose.prod.yml logs app --tail=80 2>&1 || true
               echo "=== HEALTHCHECK HISTORY ==="
               docker inspect ebuddy-prod-app-1 --format='{{range .State.Health.Log}}ExitCode={{.ExitCode}} Output={{.Output}}{{"\n"}}{{end}}' 2>&1 || true
+              echo "=== ENV INSIDE CONTAINER ==="
+              docker exec ebuddy-prod-app-1 env 2>&1 | grep -E "HOSTNAME|PORT|NODE_ENV" || true
+              echo "=== PORT BINDING INSIDE CONTAINER ==="
+              docker exec ebuddy-prod-app-1 sh -c "ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || cat /proc/net/tcp6 2>/dev/null || echo 'no tool available'" || true
+              echo "=== TEST 127.0.0.1 DIRECTLY ==="
+              docker exec ebuddy-prod-app-1 wget -qO- http://127.0.0.1:3000/api/health 2>&1 || echo "127.0.0.1 also refused"
               echo "=== CONTAINER STATUS ==="
               docker compose -f docker-compose.prod.yml ps 2>&1 || true
               exit 1
