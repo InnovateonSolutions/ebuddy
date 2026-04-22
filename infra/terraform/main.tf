@@ -45,6 +45,8 @@ provider "digitalocean" {
 # (ej. cuando enable_route53=false y el step OIDC se omite en CI).
 provider "aws" {
   region = "us-east-1"
+  access_key = var.enable_route53 ? null : "noop"
+  secret_key = var.enable_route53 ? null : "noop"
 
   skip_credentials_validation = true
   skip_requesting_account_id  = true
