@@ -192,3 +192,13 @@ jobs:
       action: plan
       manage_dns: true
     secrets: inherit
+
+  terraform-apply:
+    name: Terraform Apply
+    needs: [detect-changes, terraform-plan]
+    if: needs['detect-changes'].outputs.infra_changed == 'true' && github.event_name == 'push'
+    uses: ./.github/workflows/terraform.yml
+    with:
+      action: apply
+      manage_dns: true
+    secrets: inherit
