@@ -390,6 +390,9 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
             set -euo pipefail
+            # One-time migration: remove containers from old project name 'ebuddy'
+            # (cloud-init had no name: field; repo compose has name: ebuddy-prod)
+            docker rm -f ebuddy-app-1 ebuddy-caddy-1 2>/dev/null || true
             /usr/local/bin/ebuddy-deploy
             # Recargar Caddy con retry mientras el contenedor queda listo.
             for attempt in 1 2 3 4 5 6 7 8; do
