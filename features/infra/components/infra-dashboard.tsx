@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
+
 import { Activity, AlertCircle, CheckCircle2, Cpu, Database, HardDrive, MemoryStick, RefreshCw, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DiagnosticsTarget, InfraSnapshot, ResourceUsage } from '@/features/infra/server/types'
@@ -149,6 +150,17 @@ function AppMetricCard({ label, value, helper }: { label: string; value: string 
   )
 }
 
+function OptionalDiagnosticsNotice() {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-500">
+      <p className="font-medium text-slate-700">Diagnóstico avanzado opcional</p>
+      <p className="mt-1">
+        Las métricas del Droplet siguen viniendo de DigitalOcean Monitoring. Prometheus y Node Exporter solo se usan si quieres observabilidad avanzada propia.
+      </p>
+    </div>
+  )
+}
+
 export function InfraDashboard({ initial }: { initial: InfraSnapshot }) {
   const [data, setData] = useState(initial)
   const [loading, setLoading] = useState(false)
@@ -230,25 +242,36 @@ export function InfraDashboard({ initial }: { initial: InfraSnapshot }) {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <SectionHeader
-          icon={Server}
-          title="Diagnóstico Técnico"
-          subtitle="Reachability de Prometheus + node_exporter para el Droplet y elitemini."
-        />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <DiagnosticTargetCard target={data.diagnostics.targets.droplet} />
-          <DiagnosticTargetCard target={data.diagnostics.targets.elitemini} />
-        </div>
-        {!data.diagnostics.available && data.diagnostics.reason ? (
-          <p className="text-sm text-slate-500">{data.diagnostics.reason}</p>
-        ) : null}
-      </section>
+      {data.diagnostics.configured ? (
+        <section className="space-y-4">
+          <SectionHeader
+            icon={Server}
+            title="Diagnóstico Técnico"
+            subtitle="Reachability de Prometheus + node_exporter para targets configurados."
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <DiagnosticTargetCard target={data.diagnostics.targets.droplet} />
+            <DiagnosticTargetCard target={data.diagnostics.targets.elitemini} />
+          </div>
+          {!data.diagnostics.available && data.diagnostics.reason ? (
+            <p className="text-sm text-slate-500">{data.diagnostics.reason}</p>
+          ) : null}
+        </section>
+      ) : (
+        <section className="space-y-4">
+          <SectionHeader
+            icon={Server}
+            title="Diagnóstico Técnico"
+            subtitle="Prometheus + node_exporter quedan disponibles como diagnóstico avanzado opcional."
+          />
+          <OptionalDiagnosticsNotice />
+        </section>
+      )}
 
       <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-xs text-slate-500">
         <p>
           Droplet DO: <span className="font-medium text-slate-700">DigitalOcean Monitoring</span>.
-          Diagnóstico de hosts: <span className="font-medium text-slate-700">Prometheus + Node Exporter</span>.
+          Diagnóstico de hosts: <span className="font-medium text-slate-700">Prometheus + Node Exporter (opcional)</span>.
           App: <span className="font-medium text-slate-700">DB + actividad interna</span>.
         </p>
       </div>

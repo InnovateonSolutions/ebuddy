@@ -25,6 +25,7 @@ export interface DiagnosticsTarget {
 }
 
 export interface PrometheusDiagnostics {
+  configured: boolean
   available: boolean
   source: 'prometheus'
   reason?: string
@@ -65,12 +66,13 @@ export function createEmptyInfraSnapshot(): InfraSnapshot {
       reason: 'DigitalOcean Monitoring no disponible',
     },
     diagnostics: {
+      configured: false,
       available: false,
       source: 'prometheus',
-      reason: 'Prometheus no disponible',
+      reason: 'Diagnóstico avanzado opcional no configurado',
       targets: {
-        droplet: emptyTarget('Droplet DO', 'Sin datos'),
-        elitemini: emptyTarget('elitemini', 'Sin datos'),
+        droplet: emptyTarget('Droplet DO', 'No configurado'),
+        elitemini: emptyTarget('elitemini', 'No configurado'),
       },
     },
     app: {

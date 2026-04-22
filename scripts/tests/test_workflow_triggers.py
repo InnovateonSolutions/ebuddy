@@ -23,6 +23,14 @@ def test_deploy_workflow_is_not_directly_triggered_by_push():
     assert "\n  pull_request:\n" not in workflow
 
 
+def test_deploy_workflow_does_not_force_prometheus_defaults_for_droplet_metrics():
+    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    assert 'echo "PROMETHEUS_URL=http://host.docker.internal:9090"' not in workflow
+    assert 'echo "DROPLET_INSTANCE=localhost:9100"' not in workflow
+    assert 'echo "ELITEMINI_INSTANCE=100.80.59.3:9100"' not in workflow
+
+
 def test_ci_components_path_triggers_app_changed():
     """Cambios en components/ deben ser detectados como app_changed=true.
 

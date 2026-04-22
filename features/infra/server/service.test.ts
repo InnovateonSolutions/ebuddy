@@ -34,6 +34,7 @@ describe('getInfraSnapshot', () => {
       disk: { pct: 58.2, used: 46_000_000_000, total: 80_000_000_000 },
     })
     mocks.getPrometheusDiagnostics.mockResolvedValue({
+      configured: true,
       available: true,
       source: 'prometheus',
       targets: {
@@ -63,6 +64,7 @@ describe('getInfraSnapshot', () => {
   it('degrada solo el bloque del droplet cuando DO falla', async () => {
     mocks.getDigitalOceanDropletMetrics.mockRejectedValue(new Error('do unavailable'))
     mocks.getPrometheusDiagnostics.mockResolvedValue({
+      configured: true,
       available: true,
       source: 'prometheus',
       targets: {

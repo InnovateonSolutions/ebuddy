@@ -25,7 +25,10 @@ function round(value: number) {
 }
 
 async function queryPrometheus(q: string) {
-  const prometheusUrl = (process.env.PROMETHEUS_URL ?? 'http://localhost:9090').replace(/\/$/, '')
+  const prometheusUrl = process.env.PROMETHEUS_URL?.replace(/\/$/, '')
+  if (!prometheusUrl) {
+    throw new Error('PROMETHEUS_URL no configurado')
+  }
   const url = `${prometheusUrl}/api/v1/query?query=${encodeURIComponent(q)}`
   const res = await fetch(url, { signal: AbortSignal.timeout(4000), cache: 'no-store' })
   if (!res.ok) {
@@ -69,10 +72,32 @@ function buildTargetMetrics(label: string, instance: string, results: Record<str
   }
 }
 
+function buildUnconfiguredTarget(label: string): DiagnosticsTarget {
+  return {
+    label,
+    available: false,
+    reason: 'No configurado',
+  }
+}
+
 export async function getPrometheusDiagnostics(): Promise<PrometheusDiagnostics> {
-  const dropletInstance = process.env.DROPLET_INSTANCE ?? 'localhost:9100'
-  const eliteminiInstance = process.env.ELITEMINI_INSTANCE ?? '100.80.59.3:9100'
-  const prometheusUrl = (process.env.PROMETHEUS_URL ?? 'http://localhost:9090').replace(/\/$/, '')
+  const prometheusUrl = process.env.PROMETHEUS_URL?.replace(/\/$/, '')
+  const dropletInstance = process.env.DROPLET_INSTANCE?.trim()
+  const eliteminiInstance = process.env.ELITEMINI_INSTANCE?.trim()
+  const configured = Boolean(prometheusUrl && (dropletInstance || eliteminiInstance))
+
+  if (!configured) {
+    return {
+      configured: false,
+      available: false,
+      source: 'prometheus',
+      reason: 'Diagnóstico avanzado opcional no configurado',
+      targets: {
+        droplet: dropletInstance ? { label: 'Droplet DO', available: false, reason: 'Prometheus no configurado' } : buildUnconfiguredTarget('Droplet DO'),
+        elitemini: eliteminiInstance ? { label: 'elitemini', available: false, reason: 'Prometheus no configurado' } : buildUnconfiguredTarget('elitemini'),
+      },
+    }
+  }
 
   try {
     const results = Object.fromEntries(
@@ -81,10 +106,15 @@ export async function getPrometheusDiagnostics(): Promise<PrometheusDiagnostics>
       )
     ) as Record<string, Record<string, number>>
 
-    const droplet = buildTargetMetrics('Droplet DO', dropletInstance, results)
-    const elitemini = buildTargetMetrics('elitemini', eliteminiInstance, results)
+    const droplet = dropletInstance
+      ? buildTargetMetrics('Droplet DO', dropletInstance, results)
+      : buildUnconfiguredTarget('Droplet DO')
+    const elitemini = eliteminiInstance
+      ? buildTargetMetrics('elitemini', eliteminiInstance, results)
+      : buildUnconfiguredTarget('elitemini')
 
     return {
+      configured: true,
       available: droplet.available || elitemini.available,
       source: 'prometheus',
       reason: droplet.available || elitemini.available
@@ -98,12 +128,13 @@ export async function getPrometheusDiagnostics(): Promise<PrometheusDiagnostics>
   } catch (error) {
     const reason = error instanceof Error ? error.message : `Prometheus no alcanzable en ${prometheusUrl}`
     return {
+      configured: true,
       available: false,
       source: 'prometheus',
       reason,
       targets: {
-        droplet: { label: 'Droplet DO', available: false, reason },
-        elitemini: { label: 'elitemini', available: false, reason },
+        droplet: dropletInstance ? { label: 'Droplet DO', available: false, reason } : buildUnconfiguredTarget('Droplet DO'),
+        elitemini: eliteminiInstance ? { label: 'elitemini', available: false, reason } : buildUnconfiguredTarget('elitemini'),
       },
     }
   }

@@ -34,6 +34,7 @@ describe('GET /api/infra/metrics', () => {
         disk: { pct: 61.4, used: 48_000_000_000, total: 80_000_000_000 },
       },
       diagnostics: {
+        configured: true,
         available: true,
         source: 'prometheus',
         targets: {
