@@ -312,6 +312,17 @@ jobs:
           strip_components: 0
           overwrite: true
 
+      - name: Copy deploy script to Droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: scripts/droplet-deploy.sh
+          target: /usr/local/bin/
+          strip_components: 1
+          overwrite: true
+
       # Refresca credenciales DOCR en el Droplet — las de cloud-init pueden apuntar
       # al registry antiguo (ebuddy-dev) o haber expirado. Se regeneran con DO_TOKEN.
       - name: Refresh DOCR credentials on Droplet
@@ -389,35 +400,8 @@ jobs:
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
-            set -euo pipefail
-            cd /opt/ebuddy
-            # Bring down both old project name (ebuddy) and current (ebuddy-prod)
-            docker compose -p ebuddy    -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
-            docker compose -p ebuddy-prod -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
-            docker compose -f docker-compose.prod.yml pull app
-            docker compose -f docker-compose.prod.yml up -d --force-recreate || {
-              echo "=== APP LOGS (last 80 lines) ==="
-              docker compose -f docker-compose.prod.yml logs app --tail=80 2>&1 || true
-              echo "=== HEALTHCHECK HISTORY ==="
-              docker inspect ebuddy-prod-app-1 --format='{{range .State.Health.Log}}ExitCode={{.ExitCode}} Output={{.Output}}{{"\n"}}{{end}}' 2>&1 || true
-              echo "=== ENV INSIDE CONTAINER ==="
-              docker exec ebuddy-prod-app-1 env 2>&1 | grep -E "HOSTNAME|PORT|NODE_ENV" || true
-              echo "=== PORT BINDING INSIDE CONTAINER ==="
-              docker exec ebuddy-prod-app-1 sh -c "ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || echo 'no tool available'" || true
-              echo "=== PROCESSES INSIDE CONTAINER ==="
-              docker exec ebuddy-prod-app-1 ps aux 2>/dev/null || docker exec ebuddy-prod-app-1 ps -ef 2>/dev/null || true
-              echo "=== SERVER.JS EXISTS ==="
-              docker exec ebuddy-prod-app-1 ls -la /app/server.js 2>&1 || true
-              echo "=== TEST 127.0.0.1 DIRECTLY ==="
-              docker exec ebuddy-prod-app-1 wget -qO- http://127.0.0.1:3000/api/health 2>&1 || echo "127.0.0.1 also refused"
-              echo "=== PROC NET TCP ==="
-              docker exec ebuddy-prod-app-1 cat /proc/net/tcp6 2>/dev/null | head -20 || true
-              echo "=== CONTAINER STATUS ==="
-              docker compose -f docker-compose.prod.yml ps 2>&1 || true
-              exit 1
-            }
-            docker image prune -f
-            echo "Deploy completado: $(date)"
+            chmod +x /usr/local/bin/droplet-deploy.sh
+            bash /usr/local/bin/droplet-deploy.sh
             # Recargar Caddy con retry mientras el contenedor queda listo.
             for attempt in 1 2 3 4 5 6 7 8; do
               if docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile; then

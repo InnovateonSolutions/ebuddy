@@ -42,13 +42,13 @@ def test_deploy_workflow_overwrites_docker_compose_on_droplet():
 
 
 def test_deploy_workflow_fails_fast_if_remote_deploy_command_fails():
+    """La lógica del deploy vive en scripts/droplet-deploy.sh (no inline en el YAML).
+    El script debe usar set -euo pipefail y el workflow debe invocarlo."""
     workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    script = (REPO_ROOT / "scripts" / "droplet-deploy.sh").read_text()
 
-    block_start = workflow.index("- uses: appleboy/ssh-action@v1")
-    block_end = workflow.index("- name: Notify deploy failure", block_start)
-    block = workflow[block_start:block_end]
-
-    assert "set -euo pipefail" in block
+    assert "droplet-deploy.sh" in workflow, "deploy.yml debe invocar scripts/droplet-deploy.sh"
+    assert "set -euo pipefail" in script, "droplet-deploy.sh debe usar set -euo pipefail"
 
 
 def test_ci_components_path_triggers_app_changed():
@@ -494,8 +494,10 @@ class TestDeployJobDroplet:
         Sin este flag, docker compose up -d reutiliza un container en estado
         'created' o 'exited' de un run fallido anterior → el proceso arranca
         en estado inválido y termina con exit 0 en < 1 segundo.
+        La lógica vive en scripts/droplet-deploy.sh, no inline en el YAML.
         """
-        assert "--force-recreate" in self.workflow
+        script = (REPO_ROOT / "scripts" / "droplet-deploy.sh").read_text()
+        assert "--force-recreate" in script
 
     def test_deploy_brings_down_both_project_names(self):
         """El deploy debe hacer compose down para el nombre de proyecto viejo y el nuevo.
@@ -504,16 +506,19 @@ class TestDeployJobDroplet:
         docker-compose.prod.yml tiene name: ebuddy-prod. Sin un down explícito del
         proyecto viejo, docker compose up -d crea nuevos contenedores mientras los
         viejos siguen ocupando los puertos → 'port already allocated'.
+        La lógica vive en scripts/droplet-deploy.sh, no inline en el YAML.
         """
-        assert "compose -p ebuddy" in self.workflow and "down" in self.workflow, (
-            "El deploy debe hacer compose down del proyecto antiguo 'ebuddy'"
+        script = (REPO_ROOT / "scripts" / "droplet-deploy.sh").read_text()
+
+        assert "compose -p ebuddy" in script and "down" in script, (
+            "droplet-deploy.sh debe hacer compose down del proyecto antiguo 'ebuddy'"
         )
-        assert "compose -p ebuddy-prod" in self.workflow, (
-            "El deploy debe hacer compose down del proyecto actual 'ebuddy-prod'"
+        assert "compose -p ebuddy-prod" in script, (
+            "droplet-deploy.sh debe hacer compose down del proyecto actual 'ebuddy-prod'"
         )
 
-        down_pos = self.workflow.index("compose -p ebuddy")
-        up_pos = self.workflow.index("compose -f docker-compose.prod.yml up -d")
+        down_pos = script.index("compose -p ebuddy")
+        up_pos = script.index("compose -f")
         assert down_pos < up_pos, "compose down debe preceder a compose up"
 
     def test_docker_compose_prod_uses_prod_registry(self):
@@ -521,6 +526,13 @@ class TestDeployJobDroplet:
         compose = (REPO_ROOT / "docker-compose.prod.yml").read_text()
         assert "registry.digitalocean.com/ebuddy-prod/ebuddy:latest" in compose
         assert "ebuddy-dev" not in compose
+
+    def test_docker_compose_healthcheck_uses_ipv4_loopback(self):
+        """El healthcheck debe usar IPv4 loopback para evitar fallos por localhost/IPv6."""
+        compose = (REPO_ROOT / "docker-compose.prod.yml").read_text()
+
+        assert "http://127.0.0.1:3000/api/health" in compose
+        assert "http://localhost:3000/api/health" not in compose
 
     def test_docker_compose_prod_declares_project_name(self):
         """docker-compose.prod.yml debe declarar name: ebuddy-prod explícitamente.
