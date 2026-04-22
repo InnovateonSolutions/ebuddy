@@ -62,6 +62,16 @@ describe('validatePreferences', () => {
     expect(validatePreferences({ aiProvider: 'gpt4' })?.field).toBe('aiProvider')
   })
 
+  it('rechaza un rango de trabajo invertido', () => {
+    const error = validatePreferences({ workStart: '19:00', workEnd: '08:00' })
+    expect(error?.field).toBe('workEnd')
+  })
+
+  it('rechaza ollamaModel vacío cuando se envía explícitamente', () => {
+    const error = validatePreferences({ ollamaModel: '   ' })
+    expect(error?.field).toBe('ollamaModel')
+  })
+
   it('acepta aiProvider válido', () => {
     expect(validatePreferences({ aiProvider: 'claude' })).toBeNull()
     expect(validatePreferences({ aiProvider: 'ollama' })).toBeNull()
@@ -79,6 +89,9 @@ describe('updateUserPreferences', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('hace upsert con los campos provistos', async () => {
+    mocks.dbSelect.mockReturnValue({
+      from: () => ({ where: () => Promise.resolve([{ workStart: '08:00', workEnd: '19:00', aiProvider: 'claude', ollamaModel: 'llama3:latest', timezone: 'America/Tijuana' }]) }),
+    })
     mocks.dbInsert.mockResolvedValue(undefined)
 
     const updated = await updateUserPreferences('u1', {
@@ -91,12 +104,25 @@ describe('updateUserPreferences', () => {
   })
 
   it('ignora campos falsy (no los incluye en el update)', async () => {
+    mocks.dbSelect.mockReturnValue({
+      from: () => ({ where: () => Promise.resolve([{ workStart: '08:00', workEnd: '19:00', aiProvider: 'claude', ollamaModel: 'llama3:latest', timezone: 'America/Tijuana' }]) }),
+    })
     mocks.dbInsert.mockResolvedValue(undefined)
 
     const updated = await updateUserPreferences('u1', { timezone: '', workStart: '09:00' })
 
     expect(updated).not.toContain('timezone')
     expect(updated).toContain('workStart')
+  })
+
+  it('rechaza una actualización que deja workStart después de workEnd vigente', async () => {
+    mocks.dbSelect.mockReturnValue({
+      from: () => ({ where: () => Promise.resolve([{ workStart: '08:00', workEnd: '19:00', aiProvider: 'claude', ollamaModel: 'llama3:latest', timezone: 'America/Tijuana' }]) }),
+    })
+
+    await expect(updateUserPreferences('u1', { workStart: '20:00' })).rejects.toMatchObject({
+      field: 'workEnd',
+    })
   })
 })
 

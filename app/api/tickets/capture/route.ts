@@ -1,10 +1,12 @@
-import { apiSuccess, apiError, getUserIdFromRequest, logEvent } from '@/lib/utils'
-import { createTicketFromCapturedInput, parseCaptureInput } from '@/features/tickets/server/capture'
+import { apiSuccess, apiError, logEvent } from '@/lib/utils'
+import { requireAuthenticatedUserId } from '@/lib/auth/request'
+import { AICaptureError, createTicketFromCapturedInput, parseCaptureInput } from '@/features/tickets/server/capture'
 
 export async function POST(request: Request) {
   const startTime = Date.now()
-  const userId = getUserIdFromRequest(request)
-  if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
+  const auth = requireAuthenticatedUserId(request)
+  if ('response' in auth) return auth.response
+  const { userId } = auth
 
   try {
     const parsedInput = await parseCaptureInput(request)
@@ -24,18 +26,29 @@ export async function POST(request: Request) {
       )
     } catch (err) {
       logEvent('ai.error', { userId, error: String(err) })
-      if (err instanceof Error && err.message.startsWith('AI_TIMEOUT:')) {
+      if (err instanceof AICaptureError && err.code === 'AI_TIMEOUT') {
         return apiError(
           'La IA tardó demasiado en responder. Intenta de nuevo.',
           'AI_TIMEOUT',
           504
         )
       }
-      return apiError(
-        'La IA devolvió un formato inesperado. Intenta de nuevo.',
-        'AI_INVALID_RESPONSE',
-        502
-      )
+      if (err instanceof AICaptureError && err.code === 'AI_INVALID_RESPONSE') {
+        return apiError(
+          'La IA devolvió un formato inesperado. Intenta de nuevo.',
+          'AI_INVALID_RESPONSE',
+          502
+        )
+      }
+      if (err instanceof AICaptureError && err.code === 'AI_UPSTREAM_ERROR') {
+        return apiError(
+          'La IA no estuvo disponible. Intenta de nuevo.',
+          'AI_UPSTREAM_ERROR',
+          502
+        )
+      }
+      logEvent('capture.internal_error', { userId, error: String(err) })
+      return apiError('Error interno del servidor', 'INTERNAL_ERROR', 500)
     }
 
     return apiSuccess(ticket)

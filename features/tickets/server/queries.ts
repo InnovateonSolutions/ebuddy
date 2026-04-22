@@ -10,6 +10,74 @@ const SEARCH_LIMIT = 20
 
 const notArchived = eq(tickets.archived, false)
 
+type FutureCursorPayload = {
+  dueDate: string | null
+  createdAt: string
+  id: string
+}
+
+export class InvalidFutureCursorError extends Error {
+  constructor() {
+    super('Cursor inválido')
+    this.name = 'InvalidFutureCursorError'
+  }
+}
+
+function encodeFutureCursor(ticket: Pick<Ticket, 'dueDate' | 'createdAt' | 'id'>): string {
+  const payload: FutureCursorPayload = {
+    dueDate: ticket.dueDate ?? null,
+    createdAt: ticket.createdAt.toISOString(),
+    id: ticket.id,
+  }
+
+  return Buffer.from(JSON.stringify(payload)).toString('base64url')
+}
+
+export function decodeFutureCursor(cursor: string): FutureCursorPayload {
+  try {
+    const raw = Buffer.from(cursor, 'base64url').toString('utf8')
+    const parsed = JSON.parse(raw) as Partial<FutureCursorPayload>
+
+    if (
+      typeof parsed.id !== 'string' ||
+      typeof parsed.createdAt !== 'string' ||
+      !('dueDate' in parsed) ||
+      (parsed.dueDate !== null && typeof parsed.dueDate !== 'string') ||
+      Number.isNaN(new Date(parsed.createdAt).getTime())
+    ) {
+      throw new Error('invalid')
+    }
+
+    return {
+      dueDate: parsed.dueDate,
+      createdAt: parsed.createdAt,
+      id: parsed.id,
+    }
+  } catch {
+    throw new InvalidFutureCursorError()
+  }
+}
+
+function buildFutureCursorFilter(cursor: FutureCursorPayload | null) {
+  if (!cursor) return undefined
+
+  const createdAt = new Date(cursor.createdAt)
+  const sameDateTail = or(
+    lt(tickets.createdAt, createdAt),
+    and(eq(tickets.createdAt, createdAt), lt(tickets.id, cursor.id))
+  )
+
+  if (cursor.dueDate === null) {
+    return and(isNull(tickets.dueDate), sameDateTail)
+  }
+
+  return or(
+    gt(tickets.dueDate, cursor.dueDate),
+    isNull(tickets.dueDate),
+    and(eq(tickets.dueDate, cursor.dueDate), sameDateTail)
+  )
+}
+
 function splitTicketsByContext(ticketList: Ticket[]): TodayResponse['tickets'] {
   return {
     negocio: ticketList.filter((ticket) => ticket.context === 'NEGOCIO'),
@@ -63,6 +131,7 @@ export async function getFutureTicketsPage(
 ): Promise<FutureResponse> {
   const timezone = await getUserTimezone(userId)
   const today = todayInTimezone(timezone)
+  const decodedCursor = cursor ? decodeFutureCursor(cursor) : null
 
   const results = await db
     .select()
@@ -73,16 +142,16 @@ export async function getFutureTicketsPage(
         ne(tickets.status, 'DONE'),
         or(gt(tickets.dueDate, today), isNull(tickets.dueDate)),
         notArchived,
-        cursor ? lt(tickets.createdAt, new Date(cursor)) : undefined
+        buildFutureCursorFilter(decodedCursor)
       )
     )
-    .orderBy(asc(tickets.dueDate), desc(tickets.createdAt))
+    .orderBy(asc(tickets.dueDate), desc(tickets.createdAt), desc(tickets.id))
     .limit(FUTURE_PAGE_SIZE)
 
   const lastTicket = results[results.length - 1]
   const nextCursor =
     results.length === FUTURE_PAGE_SIZE
-      ? lastTicket?.createdAt?.toISOString() ?? null
+      ? encodeFutureCursor(lastTicket)
       : null
 
   return { tickets: results, cursor: nextCursor }

@@ -1,12 +1,14 @@
 import { db } from '@/lib/db'
 import { tickets } from '@/lib/db/schema'
-import { apiError, apiSuccess, getUserIdFromRequest, logEvent } from '@/lib/utils'
+import { apiError, apiSuccess, logEvent } from '@/lib/utils'
+import { requireAuthenticatedUserId } from '@/lib/auth/request'
 import { createTicketSchema, mapCreateTicketInputToDb } from '@/features/tickets/server/contracts'
 import type { CreateTicketInput } from '@/lib/types'
 
 export async function POST(request: Request) {
-  const userId = getUserIdFromRequest(request)
-  if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
+  const auth = requireAuthenticatedUserId(request)
+  if ('response' in auth) return auth.response
+  const { userId } = auth
 
   let body: unknown
   try {

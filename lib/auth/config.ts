@@ -39,6 +39,12 @@ function disabledAuth(arg?: unknown) {
   return Promise.resolve(null)
 }
 
+type SessionLike = { user?: { id?: string; email?: string | null; name?: string | null } } | null
+type AuthHelper = {
+  (): Promise<SessionLike>
+  <T>(handler: T): T
+}
+
 const disabledHandlers = {
   GET: async () => Response.json({ error: 'Auth not configured' }, { status: 503 }),
   POST: async () => Response.json({ error: 'Auth not configured' }, { status: 503 }),
@@ -81,7 +87,7 @@ const authConfig = isAuthCoreConfigured
 export const handlers = (authConfig?.handlers ?? disabledHandlers) as typeof disabledHandlers
 export const signIn = authConfig?.signIn
 export const signOut = authConfig?.signOut
-export const auth: any = authConfig?.auth ?? disabledAuth
+export const auth = (authConfig?.auth ?? disabledAuth) as AuthHelper
 export const authStatus = {
   isConfigured: isAuthCoreConfigured,
   hasGoogleProvider,

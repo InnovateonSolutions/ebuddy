@@ -44,7 +44,10 @@ vi.mock('@/lib/utils', () => ({
   logEvent: mocks.logEvent,
 }))
 
-import { createTicketFromCapturedInput } from './capture'
+import {
+  AICaptureError,
+  createTicketFromCapturedInput,
+} from './capture'
 
 describe('createTicketFromCapturedInput', () => {
   beforeEach(() => {
@@ -111,5 +114,44 @@ describe('createTicketFromCapturedInput', () => {
       title: 'comprar regalo',
       context: 'PERSONAL',
     })
+  })
+
+  it('propaga timeout de IA como error tipado', async () => {
+    mocks.classifyAndStructure.mockRejectedValueOnce(
+      new Error('AI_TIMEOUT: Claude no respondió en 30 segundos')
+    )
+
+    await expect(createTicketFromCapturedInput(
+      'user-1',
+      'redactar reporte mensual',
+      undefined,
+      Date.now()
+    )).rejects.toMatchObject({
+      code: 'AI_TIMEOUT',
+    } satisfies Partial<AICaptureError>)
+  })
+
+  it('no convierte errores de persistencia en errores de IA', async () => {
+    mocks.classifyAndStructure.mockResolvedValueOnce({
+      context: 'NEGOCIO',
+      title: 'Preparar reporte',
+      overview: 'Resumen',
+      what_to_do: 'Abrir documento',
+      next_steps: ['Abrir documento'],
+      priority: 'MEDIA',
+      due_date: null,
+    })
+    mocks.insertValues.mockReturnValueOnce({
+      returning: async () => {
+        throw new Error('db down')
+      },
+    })
+
+    await expect(createTicketFromCapturedInput(
+      'user-1',
+      'redactar reporte mensual',
+      undefined,
+      Date.now()
+    )).rejects.toThrow('db down')
   })
 })

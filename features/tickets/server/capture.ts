@@ -17,6 +17,18 @@ const TextInputSchema = z.object({
 
 const MAX_AUDIO_SIZE_BYTES = 10 * 1024 * 1024
 
+type AICaptureErrorCode = 'AI_TIMEOUT' | 'AI_INVALID_RESPONSE' | 'AI_UPSTREAM_ERROR'
+
+export class AICaptureError extends Error {
+  code: AICaptureErrorCode
+
+  constructor(code: AICaptureErrorCode, message: string) {
+    super(message)
+    this.name = 'AICaptureError'
+    this.code = code
+  }
+}
+
 type ParsedCaptureInput =
   | { rawText: string; dueDate?: string }
   | { error: string; code: 'VALIDATION_ERROR' | 'TRANSCRIPTION_ERROR'; status?: number }
@@ -92,8 +104,11 @@ export async function createTicketFromCapturedInput(
   try {
     structured = await aiService.classifyAndStructure(rawText)
   } catch (error) {
-    const fallback = buildFallbackTicket(rawText)
-    if (!fallback) throw error
+    const aiError = normalizeAICaptureError(error)
+    const fallback = aiError.code === 'AI_INVALID_RESPONSE'
+      ? buildFallbackTicket(rawText)
+      : null
+    if (!fallback) throw aiError
     structured = fallback
   }
   const resolvedDueDate = dueDate ?? structured.due_date ?? null
@@ -123,6 +138,25 @@ export async function createTicketFromCapturedInput(
   })
 
   return ticket
+}
+
+function normalizeAICaptureError(error: unknown): AICaptureError {
+  const message = error instanceof Error ? error.message : String(error)
+
+  if (message.startsWith('AI_TIMEOUT:')) {
+    return new AICaptureError('AI_TIMEOUT', message)
+  }
+
+  if (
+    message.includes('JSON inválido') ||
+    message.includes('schema') ||
+    message.includes('contenido inesperado') ||
+    message.includes('respuesta vacía')
+  ) {
+    return new AICaptureError('AI_INVALID_RESPONSE', message)
+  }
+
+  return new AICaptureError('AI_UPSTREAM_ERROR', message)
 }
 
 function buildFallbackTicket(rawText: string): StructuredTicket | null {

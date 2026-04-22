@@ -28,7 +28,12 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-import { getUserTimezone, getTodayViewData } from './queries'
+import {
+  decodeFutureCursor,
+  getFutureTicketsPage,
+  getTodayViewData,
+  getUserTimezone,
+} from './queries'
 
 const BASE_TICKET = {
   id: 't1', userId: 'u1', title: 'tarea',
@@ -87,5 +92,36 @@ describe('getTodayViewData', () => {
 
     expect(result.data.tickets.negocio).toHaveLength(0)
     expect(result.data.tickets.personal).toHaveLength(0)
+  })
+})
+
+describe('getFutureTicketsPage', () => {
+  beforeEach(() => { queryQueue.length = 0; vi.clearAllMocks() })
+
+  it('genera un cursor opaco y estable alineado con dueDate, createdAt e id', async () => {
+    const createdAt = new Date('2026-04-19T12:00:00.000Z')
+    queryQueue.push([{ timezone: 'America/Tijuana' }])
+    queryQueue.push(Array.from({ length: 20 }, (_, index) => ({
+      ...BASE_TICKET,
+      id: `t${index + 1}`,
+      dueDate: '2026-04-25',
+      createdAt,
+      updatedAt: createdAt,
+    })))
+
+    const result = await getFutureTicketsPage('u1')
+
+    expect(result.cursor).not.toBe(createdAt.toISOString())
+    expect(decodeFutureCursor(result.cursor!)).toMatchObject({
+      dueDate: '2026-04-25',
+      createdAt: createdAt.toISOString(),
+      id: 't20',
+    })
+  })
+
+  it('rechaza cursores inválidos', async () => {
+    queryQueue.push([{ timezone: 'America/Tijuana' }])
+
+    await expect(getFutureTicketsPage('u1', 'cursor-invalido')).rejects.toThrow('Cursor inválido')
   })
 })

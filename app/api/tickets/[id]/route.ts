@@ -1,4 +1,5 @@
-import { apiSuccess, apiError, getUserIdFromRequest } from '@/lib/utils'
+import { apiSuccess, apiError } from '@/lib/utils'
+import { requireAuthenticatedUserId } from '@/lib/auth/request'
 import { updateTicketSchema } from '@/features/tickets/server/contracts'
 import { updateTicket, deleteTicket } from '@/features/tickets/server/mutations'
 
@@ -6,8 +7,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const userId = getUserIdFromRequest(request)
-  if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
+  const auth = requireAuthenticatedUserId(request)
+  if ('response' in auth) return auth.response
+  const { userId } = auth
 
   let body: unknown
   try { body = await request.json() } catch {
@@ -29,8 +31,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const userId = getUserIdFromRequest(request)
-  if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
+  const auth = requireAuthenticatedUserId(request)
+  if ('response' in auth) return auth.response
+  const { userId } = auth
 
   const deleted = await deleteTicket(params.id, userId)
   if (!deleted) return apiError('Ticket no encontrado', 'NOT_FOUND', 404)

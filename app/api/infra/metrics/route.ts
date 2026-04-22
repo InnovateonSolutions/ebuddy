@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic'
 
-import { auth } from '@/lib/auth/config'
 import { getInfraSnapshot } from '@/features/infra/server/service'
 import { apiSuccess, apiError } from '@/lib/utils'
+import { requireAuthenticatedUserId } from '@/lib/auth/request'
 
-export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return apiError('No autorizado', 'UNAUTHORIZED', 401)
+export async function GET(request: Request) {
+  const auth = requireAuthenticatedUserId(request)
+  if ('response' in auth) return auth.response
 
-  const snapshot = await getInfraSnapshot(session.user.id)
+  const snapshot = await getInfraSnapshot(auth.userId)
   return apiSuccess(snapshot)
 }

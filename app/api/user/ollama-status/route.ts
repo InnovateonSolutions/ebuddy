@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic'
 
-import { auth } from '@/lib/auth/config'
 import { OllamaAIService } from '@/lib/ai/ollama'
 import { apiSuccess, apiError } from '@/lib/utils'
+import { requireAuthenticatedUserId } from '@/lib/auth/request'
 
-export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return apiError('No autorizado', 'UNAUTHORIZED', 401)
+export async function GET(request: Request) {
+  const auth = requireAuthenticatedUserId(request)
+  if ('response' in auth) return auth.response
 
   const baseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'
   const available = await OllamaAIService.isAvailable(baseUrl)

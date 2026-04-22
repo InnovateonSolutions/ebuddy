@@ -29,11 +29,6 @@ export function logEvent(
   console.log(JSON.stringify({ event, ...meta, ts: new Date().toISOString() }))
 }
 
-// Extrae el userId del contexto de request (puesto por el middleware)
-export function getUserIdFromRequest(request: Request): string | null {
-  return request.headers.get('x-user-id')
-}
-
 // Fecha de hoy en zona horaria del usuario (o UTC como fallback)
 export function todayInTimezone(timezone: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(

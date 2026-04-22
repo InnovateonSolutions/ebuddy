@@ -1,38 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  auth: vi.fn(),
+  requireAuthenticatedUserId: vi.fn(),
   fetch: vi.fn(),
 }))
 
-vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
+vi.mock('@/lib/auth/request', () => ({ requireAuthenticatedUserId: mocks.requireAuthenticatedUserId }))
 
 vi.stubGlobal('fetch', mocks.fetch)
 
 describe('GET /api/user/openclaw-status', () => {
   beforeEach(() => {
-    mocks.auth.mockReset()
+    mocks.requireAuthenticatedUserId.mockReset()
     mocks.fetch.mockReset()
     process.env.OPENCLAW_BASE_URL = 'http://100.80.59.3:18789'
     process.env.OPENCLAW_GATEWAY_TOKEN = 'test-token'
   })
 
   it('retorna 401 si no hay sesión', async () => {
-    mocks.auth.mockResolvedValue(null)
+    mocks.requireAuthenticatedUserId.mockReturnValue({
+      response: Response.json({ success: false, code: 'UNAUTHORIZED' }, { status: 401 }),
+    })
     const { GET } = await import('./route')
-    const res = await GET()
+    const res = await GET(new Request('http://localhost/api/user/openclaw-status')) as Response
     expect(res.status).toBe(401)
   })
 
   it('retorna available:true con versión cuando OpenClaw responde', async () => {
-    mocks.auth.mockResolvedValue({ user: { id: 'user-1' } })
+    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'user-1' })
     mocks.fetch.mockResolvedValue({
       ok: true,
       json: async () => ({ version: '2026.4.15', commit: '041266a' }),
     })
 
     const { GET } = await import('./route')
-    const res = await GET()
+    const res = await GET(new Request('http://localhost/api/user/openclaw-status')) as Response
     const body = await res.json()
 
     expect(body.data.available).toBe(true)
@@ -46,11 +48,11 @@ describe('GET /api/user/openclaw-status', () => {
   })
 
   it('retorna available:false cuando OpenClaw no responde', async () => {
-    mocks.auth.mockResolvedValue({ user: { id: 'user-1' } })
+    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'user-1' })
     mocks.fetch.mockRejectedValue(new Error('connection refused'))
 
     const { GET } = await import('./route')
-    const res = await GET()
+    const res = await GET(new Request('http://localhost/api/user/openclaw-status')) as Response
     const body = await res.json()
 
     expect(body.data.available).toBe(false)
@@ -58,11 +60,11 @@ describe('GET /api/user/openclaw-status', () => {
   })
 
   it('retorna available:false cuando respuesta HTTP no es ok', async () => {
-    mocks.auth.mockResolvedValue({ user: { id: 'user-1' } })
+    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'user-1' })
     mocks.fetch.mockResolvedValue({ ok: false, status: 401, json: async () => ({}) })
 
     const { GET } = await import('./route')
-    const res = await GET()
+    const res = await GET(new Request('http://localhost/api/user/openclaw-status')) as Response
     const body = await res.json()
 
     expect(body.data.available).toBe(false)

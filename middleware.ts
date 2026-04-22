@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth/config'
+import { AUTH_USER_ID_HEADER } from '@/lib/auth/request'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -30,7 +31,7 @@ export default auth((req: NextRequest & { auth: { user?: { id?: string } } | nul
     }
 
     const requestHeaders = new Headers(req.headers)
-    requestHeaders.set('x-user-id', session.user.id)
+    requestHeaders.set(AUTH_USER_ID_HEADER, session.user.id)
     return NextResponse.next({ request: { headers: requestHeaders } })
   }
 

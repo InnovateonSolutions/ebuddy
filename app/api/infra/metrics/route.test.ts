@@ -1,30 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  auth: vi.fn(),
+  requireAuthenticatedUserId: vi.fn(),
   getInfraSnapshot: vi.fn(),
 }))
 
-vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
+vi.mock('@/lib/auth/request', () => ({ requireAuthenticatedUserId: mocks.requireAuthenticatedUserId }))
 vi.mock('@/features/infra/server/service', () => ({ getInfraSnapshot: mocks.getInfraSnapshot }))
 
 describe('GET /api/infra/metrics', () => {
   beforeEach(() => {
-    mocks.auth.mockReset()
+    mocks.requireAuthenticatedUserId.mockReset()
     mocks.getInfraSnapshot.mockReset()
   })
 
   it('retorna 401 si no hay sesión', async () => {
-    mocks.auth.mockResolvedValue(null)
+    mocks.requireAuthenticatedUserId.mockReturnValue({
+      response: Response.json({ success: false, code: 'UNAUTHORIZED' }, { status: 401 }),
+    })
 
     const { GET } = await import('./route')
-    const res = await GET()
+    const res = await GET(new Request('http://localhost/api/infra/metrics')) as Response
 
     expect(res.status).toBe(401)
   })
 
   it('retorna el snapshot unificado para la página de Infra', async () => {
-    mocks.auth.mockResolvedValue({ user: { id: 'owner-1' } })
+    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'owner-1' })
     mocks.getInfraSnapshot.mockResolvedValue({
       droplet: {
         available: true,
@@ -72,7 +74,7 @@ describe('GET /api/infra/metrics', () => {
     })
 
     const { GET } = await import('./route')
-    const res = await GET()
+    const res = await GET(new Request('http://localhost/api/infra/metrics')) as Response
     const body = await res.json()
 
     expect(res.status).toBe(200)

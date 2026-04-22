@@ -1,9 +1,11 @@
-import { getUserIdFromRequest, apiSuccess, apiError } from '@/lib/utils'
+import { apiSuccess, apiError } from '@/lib/utils'
+import { requireAuthenticatedUserId } from '@/lib/auth/request'
 import { searchTickets } from '@/features/tickets/server/queries'
 
 export async function GET(request: Request) {
-  const userId = getUserIdFromRequest(request)
-  if (!userId) return apiError('No autorizado', 'UNAUTHORIZED', 401)
+  const auth = requireAuthenticatedUserId(request)
+  if ('response' in auth) return auth.response
+  const { userId } = auth
 
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim() ?? ''
