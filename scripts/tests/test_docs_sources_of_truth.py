@@ -49,6 +49,13 @@ def test_environment_variables_match_env_example():
     assert "SUPABASE_SERVICE_ROLE_KEY" not in content
 
 
+def test_agents_describes_only_prod_registry_for_migrations():
+    content = read("AGENTS.md")
+
+    assert "registry.digitalocean.com/ebuddy-prod/ebuddy:migrator" in content
+    assert "registry.digitalocean.com/ebuddy-dev/ebuddy:migrator" not in content
+
+
 def test_architecture_overview_mentions_current_stack_only():
     content = read("docs/architecture/overview.md")
     assert "Drizzle" in content

@@ -150,7 +150,7 @@ jobs:
         run: echo "droplet_ip=$(python3 scripts/get-droplet-ip.py)" >> "$GITHUB_OUTPUT"
         env:
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
-          DROPLET_NAME: ebuddy-dev-droplet
+          DROPLET_NAME: ebuddy-prod-droplet
 
       - name: Run smoke test
         run: /tmp/smoke-droplet

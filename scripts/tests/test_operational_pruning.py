@@ -57,3 +57,15 @@ def test_runbook_does_not_describe_legacy_operational_paths():
 
     assert "Supabase" not in runbook
     assert "scripts/deploy.sh" not in runbook or "DigitalOcean" in runbook
+
+
+def test_unique_environment_is_prod_across_operational_configs():
+    main_env = read("infra/config/main.env")
+    operations = read(".github/workflows/operations.yml")
+    diagnose = read(".github/workflows/diagnose.yml")
+
+    assert "ENVIRONMENT=prod" in main_env
+    assert "DROPLET_NAME=ebuddy-prod-droplet" in main_env
+    assert "ebuddy-dev-droplet" not in main_env
+    assert "ebuddy-dev-droplet" not in operations
+    assert "ebuddy-dev-droplet" not in diagnose

@@ -276,13 +276,13 @@ GC_STATUS="$(doctl registry garbage-collection list "$REGISTRY" --no-header | he
 
 Arquitectura:
 1. `Dockerfile` tiene stage `migrator` con drizzle-kit + archivos de migración
-2. Build job empuja `registry.digitalocean.com/ebuddy-dev/ebuddy:migrator`
+2. Build job empuja `registry.digitalocean.com/ebuddy-prod/ebuddy:migrator`
 3. Deploy job SSH escribe `/opt/ebuddy/.env` y corre el contenedor migrador:
 
 ```bash
-docker pull registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+docker pull registry.digitalocean.com/ebuddy-prod/ebuddy:migrator
 docker run --rm --env-file /opt/ebuddy/.env \
-  registry.digitalocean.com/ebuddy-dev/ebuddy:migrator
+  registry.digitalocean.com/ebuddy-prod/ebuddy:migrator
 ```
 
 **No hay job `migrate` separado** — fue eliminado porque los runners de CI no tienen acceso a la DB.
