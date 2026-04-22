@@ -29,6 +29,42 @@ function parseLatestValue(series: MetricSeries | undefined) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function parseUsageDelta(series: MetricSeries | undefined) {
+  const values = series?.values
+  if (!values || values.length < 2) return null
+
+  const prev = Number.parseFloat(values.at(-2)?.[1] ?? '')
+  const next = Number.parseFloat(values.at(-1)?.[1] ?? '')
+  if (!Number.isFinite(prev) || !Number.isFinite(next)) return null
+
+  return Math.max(next - prev, 0)
+}
+
+function clampPct(value: number) {
+  return Math.max(0, Math.min(100, value))
+}
+
+function parseCpuUtilization(series: MetricSeries[]) {
+  const cpuModes = series.filter((item) => item.metric.mode)
+  if (cpuModes.length === 0) {
+    const raw = parseLatestValue(series[0])
+    return raw === null ? null : clampPct(raw)
+  }
+
+  let totalDelta = 0
+  let idleDelta = 0
+
+  for (const modeSeries of cpuModes) {
+    const delta = parseUsageDelta(modeSeries)
+    if (delta === null) return null
+    totalDelta += delta
+    if (modeSeries.metric.mode === 'idle') idleDelta += delta
+  }
+
+  if (totalDelta <= 0) return null
+  return clampPct((1 - idleDelta / totalDelta) * 100)
+}
+
 function pickFilesystemSeries(series: MetricSeries[]) {
   return series.find((item) => item.metric.mountpoint === '/') ?? series[0]
 }
@@ -110,7 +146,7 @@ export async function getDigitalOceanDropletMetrics(): Promise<DigitalOceanDropl
       fetchMetricSeries('/v2/monitoring/metrics/droplet/filesystem_size', dropletId, token),
     ])
 
-    const cpu = parseLatestValue(cpuSeries[0])
+    const cpu = parseCpuUtilization(cpuSeries)
     const memoryAvailable = parseLatestValue(memoryAvailableSeries[0])
     const memoryTotal = parseLatestValue(memoryTotalSeries[0])
     const diskFree = parseLatestValue(pickFilesystemSeries(diskFreeSeries))

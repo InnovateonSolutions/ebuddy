@@ -74,4 +74,45 @@ describe('getDigitalOceanDropletMetrics', () => {
     expect(metrics.disk?.pct).toBe(57.5)
     expect(fetchMock).toHaveBeenCalledTimes(5)
   })
+
+  it('calcula CPU como porcentaje total a partir de series acumuladas por mode', async () => {
+    process.env.DO_MONITORING_TOKEN = 'token'
+    process.env.DO_DROPLET_ID = '123456'
+
+    const cpuMetric = {
+      status: 'success',
+      data: {
+        resultType: 'matrix',
+        result: [
+          {
+            metric: { mode: 'idle' },
+            values: [[1, '100'], [2, '110']],
+          },
+          {
+            metric: { mode: 'user' },
+            values: [[1, '30'], [2, '50']],
+          },
+          {
+            metric: { mode: 'system' },
+            values: [[1, '20'], [2, '30']],
+          },
+        ],
+      },
+    }
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => cpuMetric })
+      .mockResolvedValueOnce({ ok: true, json: async () => metric('2500000000') })
+      .mockResolvedValueOnce({ ok: true, json: async () => metric('4000000000') })
+      .mockResolvedValueOnce({ ok: true, json: async () => metric('34000000000', { mountpoint: '/' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => metric('80000000000', { mountpoint: '/' }) })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { getDigitalOceanDropletMetrics } = await import('./do-metrics')
+    const metrics = await getDigitalOceanDropletMetrics()
+
+    expect(metrics.available).toBe(true)
+    expect(metrics.cpu).toBe(75)
+  })
 })

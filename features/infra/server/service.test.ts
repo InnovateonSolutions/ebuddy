@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   getDigitalOceanDropletMetrics: vi.fn(),
   getPrometheusDiagnostics: vi.fn(),
+  getEliteminiServices: vi.fn(),
   getApplicationMetrics: vi.fn(),
 }))
 
@@ -14,6 +15,10 @@ vi.mock('@/features/infra/server/prometheus-metrics', () => ({
   getPrometheusDiagnostics: mocks.getPrometheusDiagnostics,
 }))
 
+vi.mock('@/features/infra/server/elitemini-services', () => ({
+  getEliteminiServices: mocks.getEliteminiServices,
+}))
+
 vi.mock('@/features/infra/server/app-metrics', () => ({
   getApplicationMetrics: mocks.getApplicationMetrics,
 }))
@@ -22,6 +27,7 @@ describe('getInfraSnapshot', () => {
   beforeEach(() => {
     mocks.getDigitalOceanDropletMetrics.mockReset()
     mocks.getPrometheusDiagnostics.mockReset()
+    mocks.getEliteminiServices.mockReset()
     mocks.getApplicationMetrics.mockReset()
   })
 
@@ -38,16 +44,33 @@ describe('getInfraSnapshot', () => {
       available: true,
       source: 'prometheus',
       targets: {
-        droplet: { available: true, label: 'Droplet DO' },
         elitemini: { available: true, label: 'elitemini' },
+      },
+    })
+    mocks.getEliteminiServices.mockResolvedValue({
+      source: 'elitemini',
+      openclaw: {
+        configured: true,
+        available: true,
+        baseUrl: 'http://100.80.59.3:18789',
+        version: '2026.4.15',
+      },
+      ollama: {
+        configured: true,
+        available: true,
+        baseUrl: 'http://100.80.59.3:11434',
+        version: '0.8.0',
+        models: ['llama3:latest'],
       },
     })
     mocks.getApplicationMetrics.mockResolvedValue({
       source: 'application',
       health: 'ok',
+      db: 'ok',
       activeTickets: 7,
       createdLast24h: 2,
       completedLast7d: 5,
+      connectedCalendars: 1,
       lastCaptureAt: '2026-04-19T20:00:00.000Z',
     })
 
@@ -57,6 +80,7 @@ describe('getInfraSnapshot', () => {
     expect(mocks.getApplicationMetrics).toHaveBeenCalledWith('user-1')
     expect(snapshot.droplet.source).toBe('digitalocean')
     expect(snapshot.diagnostics.source).toBe('prometheus')
+    expect(snapshot.services.source).toBe('elitemini')
     expect(snapshot.app.source).toBe('application')
     expect(typeof snapshot.ts).toBe('string')
   })
@@ -68,16 +92,18 @@ describe('getInfraSnapshot', () => {
       available: true,
       source: 'prometheus',
       targets: {
-        droplet: { available: true, label: 'Droplet DO' },
         elitemini: { available: false, label: 'elitemini' },
       },
     })
+    mocks.getEliteminiServices.mockRejectedValue(new Error('services unavailable'))
     mocks.getApplicationMetrics.mockResolvedValue({
       source: 'application',
       health: 'degraded',
+      db: 'error',
       activeTickets: 0,
       createdLast24h: 0,
       completedLast7d: 0,
+      connectedCalendars: 0,
       lastCaptureAt: null,
     })
 
@@ -86,6 +112,7 @@ describe('getInfraSnapshot', () => {
 
     expect(snapshot.droplet.available).toBe(false)
     expect(snapshot.diagnostics.available).toBe(true)
+    expect(snapshot.services.openclaw.available).toBe(false)
     expect(snapshot.app.health).toBe('degraded')
   })
 })

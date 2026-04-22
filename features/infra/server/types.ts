@@ -34,6 +34,21 @@ export interface PrometheusDiagnostics {
   }
 }
 
+export interface RemoteServiceStatus {
+  configured: boolean
+  available: boolean
+  baseUrl: string
+  reason?: string
+  version?: string | null
+  models?: string[]
+}
+
+export interface EliteminiServices {
+  source: 'elitemini'
+  openclaw: RemoteServiceStatus
+  ollama: RemoteServiceStatus
+}
+
 export interface ApplicationMetrics {
   source: 'application'
   health: 'ok' | 'degraded'
@@ -49,6 +64,7 @@ export interface ApplicationMetrics {
 export interface InfraSnapshot {
   droplet: DigitalOceanDropletMetrics
   diagnostics: PrometheusDiagnostics
+  services: EliteminiServices
   app: ApplicationMetrics
   ts: string
 }
@@ -71,6 +87,24 @@ export function createEmptyInfraSnapshot(): InfraSnapshot {
       reason: 'Diagnóstico avanzado opcional no configurado',
       targets: {
         elitemini: emptyTarget('elitemini', 'No configurado'),
+      },
+    },
+    services: {
+      source: 'elitemini',
+      openclaw: {
+        configured: false,
+        available: false,
+        baseUrl: '',
+        reason: 'No configurado',
+        version: null,
+      },
+      ollama: {
+        configured: false,
+        available: false,
+        baseUrl: '',
+        reason: 'No configurado',
+        version: null,
+        models: [],
       },
     },
     app: {

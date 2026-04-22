@@ -16,12 +16,34 @@ function buildSnapshot(): InfraSnapshot {
       windowMinutes: 30,
     },
     diagnostics: {
-      configured: false,
-      available: false,
+      configured: true,
+      available: true,
       source: 'prometheus',
-      reason: 'Diagnóstico avanzado opcional no configurado',
+      reason: undefined,
       targets: {
-        elitemini: { label: 'elitemini', available: false, reason: 'No configurado' },
+        elitemini: {
+          label: 'elitemini',
+          available: true,
+          cpu: 19.2,
+          ram: { pct: 43, used: 6_800_000_000, total: 16_000_000_000 },
+          disk: { pct: 58, used: 290_000_000_000, total: 500_000_000_000 },
+        },
+      },
+    },
+    services: {
+      source: 'elitemini',
+      openclaw: {
+        configured: true,
+        available: true,
+        baseUrl: 'http://100.80.59.3:18789',
+        version: '2026.4.15',
+      },
+      ollama: {
+        configured: true,
+        available: true,
+        baseUrl: 'http://100.80.59.3:11434',
+        version: '0.8.0',
+        models: ['llama3:latest', 'qwen3:8b'],
       },
     },
     app: {
@@ -39,12 +61,15 @@ function buildSnapshot(): InfraSnapshot {
 }
 
 describe('InfraDashboard', () => {
-  it('no muestra node_exporter como requisito cuando el diagnóstico opcional no está configurado', () => {
+  it('presenta la consola distribuida separando droplet, app y stack IA del elitemini', () => {
     const html = renderToStaticMarkup(React.createElement(InfraDashboard, { initial: buildSnapshot() }))
 
-    expect(html).toContain('Fuente oficial: DigitalOcean Monitoring')
-    expect(html).not.toContain('Reachability de Prometheus + node_exporter')
-    expect(html).not.toContain('Node Exporter no alcanzable')
-    expect(html).toContain('Diagnóstico avanzado opcional')
+    expect(html).toContain('Infraestructura operativa')
+    expect(html).toContain('Droplet DO')
+    expect(html).toContain('App ebuddy')
+    expect(html).toContain('elitemini')
+    expect(html).toContain('OpenClaw')
+    expect(html).toContain('Ollama')
+    expect(html).toContain('Modelos detectados')
   })
 })

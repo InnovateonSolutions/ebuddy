@@ -42,12 +42,30 @@ describe('GET /api/infra/metrics', () => {
           elitemini: { available: false, label: 'elitemini' },
         },
       },
+      services: {
+        source: 'elitemini',
+        openclaw: {
+          configured: true,
+          available: true,
+          baseUrl: 'http://100.80.59.3:18789',
+          version: '2026.4.15',
+        },
+        ollama: {
+          configured: true,
+          available: true,
+          baseUrl: 'http://100.80.59.3:11434',
+          version: '0.8.0',
+          models: ['llama3:latest'],
+        },
+      },
       app: {
         source: 'application',
         health: 'ok',
+        db: 'ok',
         activeTickets: 12,
         createdLast24h: 3,
         completedLast7d: 8,
+        connectedCalendars: 2,
         lastCaptureAt: '2026-04-19T21:00:00.000Z',
       },
       ts: '2026-04-19T21:01:00.000Z',
@@ -61,6 +79,7 @@ describe('GET /api/infra/metrics', () => {
     expect(mocks.getInfraSnapshot).toHaveBeenCalledWith('owner-1')
     expect(body.data.droplet.source).toBe('digitalocean')
     expect(body.data.diagnostics.source).toBe('prometheus')
+    expect(body.data.services.source).toBe('elitemini')
     expect(body.data.app.source).toBe('application')
   })
 })
