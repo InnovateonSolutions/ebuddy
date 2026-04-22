@@ -91,7 +91,7 @@ export default function ManualTicketForm({ onTicketCreated }: ManualTicketFormPr
         <form onSubmit={handleSubmit} className="border-t border-slate-100 p-4">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block md:col-span-2">
-              <span className="mb-1.5 block text-xs font-medium text-slate-600">Titulo</span>
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">Título</span>
               <input
                 value={form.title}
                 onChange={(e) => updateField('title', e.target.value)}

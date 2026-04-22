@@ -22,7 +22,7 @@ def test_archive_done_route_exists():
 
 def test_archive_done_route_requires_auth():
     route = read("app/api/tickets/archive-done/route.ts")
-    assert "getUserIdFromRequest" in route
+    assert "requireAuthenticatedUserId" in route
 
 def test_kanban_has_archive_button():
     board = read("features/tickets/components/kanban-board.tsx")

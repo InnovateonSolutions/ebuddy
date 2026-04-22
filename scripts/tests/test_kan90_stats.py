@@ -9,7 +9,7 @@ def test_stats_route_exists():
 
 def test_stats_route_requires_auth():
     route = read("app/api/stats/route.ts")
-    assert "auth()" in route or "getUserIdFromRequest" in route
+    assert "auth()" in route or "getUserIdFromRequest" in route or "requireAuthenticatedUserId" in route
 
 def test_stats_page_exists():
     assert (REPO_ROOT / "app" / "(dashboard)" / "stats" / "page.tsx").exists()

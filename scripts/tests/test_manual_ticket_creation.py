@@ -27,7 +27,7 @@ def test_manual_ticket_contract_is_shared():
 def test_manual_ticket_route_is_thin_and_uses_shared_contract():
     route = read("app/api/tickets/route.ts")
 
-    assert "getUserIdFromRequest" in route
+    assert "getUserIdFromRequest" in route or "requireAuthenticatedUserId" in route
     assert "createTicketSchema" in route, (
         "app/api/tickets/route.ts debe validar usando el contrato compartido"
     )
