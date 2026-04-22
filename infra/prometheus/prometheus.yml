@@ -3,12 +3,6 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: droplet
-    static_configs:
-      - targets: ['localhost:9100']
-        labels:
-          instance: localhost:9100
-
   - job_name: elitemini
     static_configs:
       - targets: ['100.80.59.3:9100']

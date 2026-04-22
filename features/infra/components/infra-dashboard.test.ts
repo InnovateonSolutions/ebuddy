@@ -21,7 +21,6 @@ function buildSnapshot(): InfraSnapshot {
       source: 'prometheus',
       reason: 'Diagnóstico avanzado opcional no configurado',
       targets: {
-        droplet: { label: 'Droplet DO', available: false, reason: 'No configurado' },
         elitemini: { label: 'elitemini', available: false, reason: 'No configurado' },
       },
     },

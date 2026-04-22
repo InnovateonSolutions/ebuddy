@@ -82,9 +82,8 @@ function buildUnconfiguredTarget(label: string): DiagnosticsTarget {
 
 export async function getPrometheusDiagnostics(): Promise<PrometheusDiagnostics> {
   const prometheusUrl = process.env.PROMETHEUS_URL?.replace(/\/$/, '')
-  const dropletInstance = process.env.DROPLET_INSTANCE?.trim()
   const eliteminiInstance = process.env.ELITEMINI_INSTANCE?.trim()
-  const configured = Boolean(prometheusUrl && (dropletInstance || eliteminiInstance))
+  const configured = Boolean(prometheusUrl && eliteminiInstance)
 
   if (!configured) {
     return {
@@ -93,7 +92,6 @@ export async function getPrometheusDiagnostics(): Promise<PrometheusDiagnostics>
       source: 'prometheus',
       reason: 'Diagnóstico avanzado opcional no configurado',
       targets: {
-        droplet: dropletInstance ? { label: 'Droplet DO', available: false, reason: 'Prometheus no configurado' } : buildUnconfiguredTarget('Droplet DO'),
         elitemini: eliteminiInstance ? { label: 'elitemini', available: false, reason: 'Prometheus no configurado' } : buildUnconfiguredTarget('elitemini'),
       },
     }
@@ -106,24 +104,16 @@ export async function getPrometheusDiagnostics(): Promise<PrometheusDiagnostics>
       )
     ) as Record<string, Record<string, number>>
 
-    const droplet = dropletInstance
-      ? buildTargetMetrics('Droplet DO', dropletInstance, results)
-      : buildUnconfiguredTarget('Droplet DO')
-    const elitemini = eliteminiInstance
-      ? buildTargetMetrics('elitemini', eliteminiInstance, results)
-      : buildUnconfiguredTarget('elitemini')
+    const elitemini = buildTargetMetrics('elitemini', eliteminiInstance!, results)
 
     return {
       configured: true,
-      available: droplet.available || elitemini.available,
+      available: elitemini.available,
       source: 'prometheus',
-      reason: droplet.available || elitemini.available
+      reason: elitemini.available
         ? undefined
-        : 'Prometheus respondió pero no encontró series para los targets configurados',
-      targets: {
-        droplet,
-        elitemini,
-      },
+        : 'Prometheus respondió pero no encontró series para elitemini',
+      targets: { elitemini },
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : `Prometheus no alcanzable en ${prometheusUrl}`
@@ -133,8 +123,7 @@ export async function getPrometheusDiagnostics(): Promise<PrometheusDiagnostics>
       source: 'prometheus',
       reason,
       targets: {
-        droplet: dropletInstance ? { label: 'Droplet DO', available: false, reason } : buildUnconfiguredTarget('Droplet DO'),
-        elitemini: eliteminiInstance ? { label: 'elitemini', available: false, reason } : buildUnconfiguredTarget('elitemini'),
+        elitemini: { label: 'elitemini', available: false, reason },
       },
     }
   }

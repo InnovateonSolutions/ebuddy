@@ -8,7 +8,6 @@ describe('getPrometheusDiagnostics', () => {
     vi.restoreAllMocks()
     process.env = { ...realEnv }
     delete process.env.PROMETHEUS_URL
-    delete process.env.DROPLET_INSTANCE
     delete process.env.ELITEMINI_INSTANCE
   })
 

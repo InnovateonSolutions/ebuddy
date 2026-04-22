@@ -30,7 +30,6 @@ export interface PrometheusDiagnostics {
   source: 'prometheus'
   reason?: string
   targets: {
-    droplet: DiagnosticsTarget
     elitemini: DiagnosticsTarget
   }
 }
@@ -71,7 +70,6 @@ export function createEmptyInfraSnapshot(): InfraSnapshot {
       source: 'prometheus',
       reason: 'Diagnóstico avanzado opcional no configurado',
       targets: {
-        droplet: emptyTarget('Droplet DO', 'No configurado'),
         elitemini: emptyTarget('elitemini', 'No configurado'),
       },
     },
