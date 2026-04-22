@@ -44,7 +44,7 @@ provider "digitalocean" {
 # Los skip_* evitan que el provider intente EC2 IMDS cuando no hay credenciales AWS
 # (ej. cuando enable_route53=false y el step OIDC se omite en CI).
 provider "aws" {
-  region = "us-east-1"
+  region     = "us-east-1"
   access_key = var.enable_route53 ? null : "noop"
   secret_key = var.enable_route53 ? null : "noop"
 
