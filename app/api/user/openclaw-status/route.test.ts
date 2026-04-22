@@ -26,11 +26,15 @@ describe('GET /api/user/openclaw-status', () => {
     expect(res.status).toBe(401)
   })
 
-  it('retorna available:true con versión cuando OpenClaw responde', async () => {
+  it('retorna available:true cuando OpenClaw responde en /v1/models', async () => {
     mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'user-1' })
     mocks.fetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ version: '2026.4.15', commit: '041266a' }),
+      json: async () => ({
+        data: [
+          { id: 'openclaw', object: 'model' },
+        ],
+      }),
     })
 
     const { GET } = await import('./route')
@@ -38,9 +42,9 @@ describe('GET /api/user/openclaw-status', () => {
     const body = await res.json()
 
     expect(body.data.available).toBe(true)
-    expect(body.data.version).toBe('2026.4.15')
+    expect(body.data.version).toBeNull()
     expect(mocks.fetch).toHaveBeenCalledWith(
-      'http://100.80.59.3:18789/api/version',
+      'http://100.80.59.3:18789/v1/models',
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
       })

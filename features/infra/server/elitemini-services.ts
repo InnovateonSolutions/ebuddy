@@ -17,7 +17,7 @@ async function getOpenClawStatus(): Promise<RemoteServiceStatus> {
   }
 
   try {
-    const res = await fetch(`${baseUrl}/api/version`, {
+    const res = await fetch(`${baseUrl}/v1/models`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(4000),
       cache: 'no-store',
@@ -33,12 +33,11 @@ async function getOpenClawStatus(): Promise<RemoteServiceStatus> {
       }
     }
 
-    const data = await res.json() as { version?: string }
     return {
       configured: true,
       available: true,
       baseUrl,
-      version: data.version ?? null,
+      version: null,
     }
   } catch (error) {
     return {

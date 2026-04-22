@@ -51,6 +51,11 @@ function hostLabel(baseUrl: string) {
   }
 }
 
+function openClawSummaryValue(service: RemoteServiceStatus) {
+  if (!service.available) return service.version ?? 'Sin versión'
+  return service.version ?? 'Disponible'
+}
+
 function toneClasses(ok: boolean) {
   return ok
     ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
@@ -335,7 +340,7 @@ export function InfraDashboard({ initial }: { initial: InfraSnapshot }) {
           <SummaryCard
             icon={Workflow}
             label="OpenClaw"
-            value={data.services.openclaw.version ?? 'Sin versión'}
+            value={openClawSummaryValue(data.services.openclaw)}
             helper={data.services.openclaw.available ? 'Gateway IA alcanzable desde ebuddy.' : (data.services.openclaw.reason ?? 'Sin respuesta')}
             ok={data.services.openclaw.available}
           />

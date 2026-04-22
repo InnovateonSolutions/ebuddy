@@ -13,13 +13,12 @@ export async function GET(request: Request) {
   if (!baseUrl) return apiSuccess({ available: false, version: null, baseUrl: '' })
 
   try {
-    const res = await fetch(`${baseUrl}/api/version`, {
+    const res = await fetch(`${baseUrl}/v1/models`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(4000),
     })
     if (!res.ok) return apiSuccess({ available: false, version: null, baseUrl })
-    const data = await res.json() as { version?: string }
-    return apiSuccess({ available: true, version: data.version ?? null, baseUrl })
+    return apiSuccess({ available: true, version: null, baseUrl })
   } catch {
     return apiSuccess({ available: false, version: null, baseUrl })
   }
