@@ -51,6 +51,14 @@ def test_ansible_cfg_declares_roles_path():
     )
 
 
+def test_ansible_cfg_uses_core_compatible_callback():
+    cfg = (REPO_ROOT / "infra" / "ansible" / "ansible.cfg").read_text()
+    assert "stdout_callback = yaml" not in cfg, (
+        "El callback 'yaml' requiere community.general que no está en ansible-core; "
+        "usar 'default' para compatibilidad con la instalación mínima de CI"
+    )
+
+
 def test_ci_triggers_elitemini_setup_when_ansible_folder_changes():
     workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
 
