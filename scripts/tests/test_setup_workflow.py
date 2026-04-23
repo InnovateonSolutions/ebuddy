@@ -43,6 +43,14 @@ def test_ansible_node_exporter_role_exists_for_elitemini_monitoring():
     )
 
 
+def test_ansible_cfg_declares_roles_path():
+    cfg = (REPO_ROOT / "infra" / "ansible" / "ansible.cfg").read_text()
+    assert "roles_path" in cfg, (
+        "ansible.cfg debe declarar roles_path para que los roles sean encontrados "
+        "sin importar desde qué directorio se invoque el playbook"
+    )
+
+
 def test_ci_triggers_elitemini_setup_when_ansible_folder_changes():
     workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
 
