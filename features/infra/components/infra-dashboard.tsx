@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react'
 import {
-  Activity,
   Bot,
   BrainCircuit,
+  Building2,
   CalendarClock,
   CheckCircle2,
   Cloud,
@@ -12,9 +12,11 @@ import {
   Database,
   HardDrive,
   MemoryStick,
+  Orbit,
   RefreshCw,
   Server,
   ShieldAlert,
+  Sparkles,
   Workflow,
   XCircle,
 } from 'lucide-react'
@@ -98,6 +100,44 @@ function SummaryCard({
         <StatusPill ok={ok}>{ok ? 'Operativo' : 'Revisar'}</StatusPill>
       </div>
     </div>
+  )
+}
+
+function TabButton({
+  active,
+  icon: Icon,
+  title,
+  caption,
+  onClick,
+}: {
+  active: boolean
+  icon: React.ElementType
+  title: string
+  caption: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'group flex min-h-24 w-full items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all',
+        active
+          ? 'border-slate-900 bg-slate-950 text-white shadow-lg shadow-slate-300/50'
+          : 'border-slate-200 bg-white/85 text-slate-700 hover:border-slate-300 hover:bg-white'
+      )}
+    >
+      <div className={cn(
+        'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-colors',
+        active ? 'border-white/10 bg-white/10 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'
+      )}>
+        <Icon size={18} />
+      </div>
+      <div className="space-y-1">
+        <p className={cn('text-sm font-semibold', active ? 'text-white' : 'text-slate-900')}>{title}</p>
+        <p className={cn('text-xs leading-5', active ? 'text-slate-300' : 'text-slate-500')}>{caption}</p>
+      </div>
+    </button>
   )
 }
 
@@ -234,7 +274,123 @@ function AppStat({
   )
 }
 
-function EliteminiPanel({
+function DomainCard({
+  eyebrow,
+  title,
+  description,
+  ok,
+  icon: Icon,
+}: {
+  eyebrow: string
+  title: string
+  description: string
+  ok: boolean
+  icon: React.ElementType
+}) {
+  return (
+    <div className={cn(
+      'rounded-2xl border p-4 shadow-sm transition-colors',
+      ok ? 'border-emerald-200 bg-emerald-50/70 shadow-emerald-100/40' : 'border-rose-200 bg-rose-50/70 shadow-rose-100/40'
+    )}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">{eyebrow}</p>
+          <p className="text-lg font-semibold text-slate-950">{title}</p>
+          <p className="text-sm leading-6 text-slate-600">{description}</p>
+        </div>
+        <div className={cn(
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border',
+          ok ? 'border-emerald-200 bg-white text-emerald-600' : 'border-rose-200 bg-white text-rose-600'
+        )}>
+          <Icon size={18} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SourceCard({
+  icon: Icon,
+  title,
+  detail,
+}: {
+  icon: React.ElementType
+  title: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold text-white">
+        <Icon size={15} />
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-slate-300">{detail}</p>
+    </div>
+  )
+}
+
+function CloudPanel({
+  data,
+  appHealthy,
+}: {
+  data: InfraSnapshot
+  appHealthy: boolean
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+      <SectionCard
+        eyebrow="Capa cloud"
+        title="Droplet DO"
+        subtitle="Capacidad del servidor principal donde corre ebuddy y aterriza cada deploy."
+        accent="bg-white"
+      >
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill ok={data.droplet.available}>{data.droplet.available ? 'Con datos oficiales' : 'Sin lectura'}</StatusPill>
+            <span className="text-sm text-slate-500">
+              {data.droplet.available ? 'Fuente oficial: DigitalOcean Monitoring.' : (data.droplet.reason ?? 'DigitalOcean Monitoring no disponible')}
+            </span>
+          </div>
+
+          <UsageStack cpu={data.droplet.cpu} ram={data.droplet.ram} disk={data.droplet.disk} />
+
+          <div className="grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
+            <KeyValue label="Droplet ID" value={data.droplet.hostId ?? 'No resuelto'} />
+            <KeyValue label="Ventana" value={`Últimos ${data.droplet.windowMinutes ?? 30} min`} />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Aplicación"
+        title="App ebuddy"
+        subtitle="Salud operativa, DB y señales de valor sin mezclar host con producto."
+        accent="bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]"
+      >
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill ok={appHealthy}>{appHealthy ? 'Operativa' : 'Degradada'}</StatusPill>
+            <StatusPill ok={data.app.db === 'ok'}>{data.app.db === 'ok' ? 'DB conectada' : 'DB con error'}</StatusPill>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <AppStat label="Tickets activos" value={data.app.activeTickets} helper="Backlog no archivado." />
+            <AppStat label="Done 7d" value={data.app.completedLast7d} helper="Entrega útil semanal." />
+            <AppStat label="Creados 24h" value={data.app.createdLast24h} helper="Movimiento reciente." />
+            <AppStat label="Calendarios" value={data.app.connectedCalendars} helper="Integraciones activas." />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
+            <KeyValue label="Última captura" value={fmtTime(data.app.lastCaptureAt)} />
+            <KeyValue label="Lectura" value={data.app.reason ?? 'La app responde y la DB reporta actividad.'} />
+          </div>
+        </div>
+      </SectionCard>
+    </div>
+  )
+}
+
+function OnPremPanel({
   diagnostics,
   openclaw,
   ollama,
@@ -244,26 +400,64 @@ function EliteminiPanel({
   ollama: RemoteServiceStatus
 }) {
   return (
-    <SectionCard
-      eyebrow="Nodo Remoto"
-      title="elitemini"
-      subtitle="Host separado del Droplet donde viven OpenClaw y Ollama."
-      accent="bg-white"
-    >
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill ok={diagnostics.available}>{diagnostics.available ? 'Host con métricas' : 'Host sin scrape'}</StatusPill>
-          <span className="text-sm text-slate-500">{diagnostics.reason ?? 'Prometheus está leyendo el host remoto.'}</span>
-        </div>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+      <SectionCard
+        eyebrow="On-prem"
+        title="elitemini"
+        subtitle="Nodo remoto con IA, dependencias locales y dos rutas de observabilidad."
+        accent="bg-[linear-gradient(180deg,#ffffff_0%,#fbf8ff_100%)]"
+      >
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill ok={diagnostics.available}>{diagnostics.available ? 'Host con métricas' : 'Host sin scrape'}</StatusPill>
+            <span className="text-sm text-slate-500">{diagnostics.reason ?? 'Prometheus está leyendo el host remoto.'}</span>
+          </div>
 
-        <UsageStack cpu={diagnostics.cpu} ram={diagnostics.ram} disk={diagnostics.disk} />
+          <UsageStack cpu={diagnostics.cpu} ram={diagnostics.ram} disk={diagnostics.disk} />
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <ServiceRow icon={Workflow} name="OpenClaw" service={openclaw} />
-          <ServiceRow icon={Bot} name="Ollama" service={ollama} />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <ServiceRow icon={Workflow} name="OpenClaw" service={openclaw} />
+            <ServiceRow icon={Bot} name="Ollama" service={ollama} />
+          </div>
         </div>
-      </div>
-    </SectionCard>
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Dominios operativos"
+        title="Lectura sin ruido"
+        subtitle="El objetivo es que cloud y on-prem se entiendan de un vistazo, sin mezclar síntomas."
+        accent="bg-slate-950 text-white"
+      >
+        <div className="space-y-4">
+          <SourceCard
+            icon={Orbit}
+            title="Host remoto"
+            detail="Prometheus mide CPU, RAM y disco del elitemini. Si falta scrape, solo desaparecen las métricas del host; no la lectura de servicios."
+          />
+          <SourceCard
+            icon={Workflow}
+            title="OpenClaw"
+            detail="Se valida con checks HTTP directos al gateway para saber si ebuddy realmente puede alcanzarlo desde producción."
+          />
+          <SourceCard
+            icon={BrainCircuit}
+            title="Ollama"
+            detail="Además del estado, muestra los modelos detectados para distinguir disponibilidad del proceso frente a capacidad útil del nodo."
+          />
+
+          {!diagnostics.available ? (
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+              El nodo puede seguir sirviendo OpenClaw y Ollama aunque Prometheus no lo esté scrapeando todavía.
+            </div>
+          ) : null}
+
+          <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+            <ShieldAlert size={16} className="mt-0.5 shrink-0" />
+            <p>Esta separación evita culpar al Droplet cuando el problema real vive en el nodo remoto, y viceversa.</p>
+          </div>
+        </div>
+      </SectionCard>
+    </div>
   )
 }
 
@@ -271,6 +465,7 @@ export function InfraDashboard({ initial }: { initial: InfraSnapshot }) {
   const [data, setData] = useState(initial)
   const [loading, setLoading] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(new Date(initial.ts))
+  const [activeView, setActiveView] = useState<'cloud' | 'onprem'>('cloud')
 
   async function refresh() {
     setLoading(true)
@@ -286,39 +481,75 @@ export function InfraDashboard({ initial }: { initial: InfraSnapshot }) {
   }
 
   const appHealthy = data.app.health === 'ok' && data.app.db === 'ok'
+  const cloudHealthy = data.droplet.available && appHealthy
+  const onPremHealthy = data.services.openclaw.available && data.services.ollama.available
+  const executiveSignal = [data.droplet.available, appHealthy, data.services.openclaw.available, data.services.ollama.available]
+    .filter(Boolean).length
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#ffffff_50%,#f7f8fc_100%)] p-6 shadow-sm shadow-slate-200/50">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-2xl space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Infra</p>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold text-slate-950">Infraestructura operativa</h1>
-              <p className="text-sm leading-6 text-slate-600">
-                DigitalOcean corre la app principal. elitemini hospeda el stack de IA. Esta vista separa ambos dominios para que los ojos humanos detecten rápido qué host está bien, qué servicio falló y dónde conviene actuar.
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,#f5fbff_0%,#ffffff_42%,#f8f5ff_100%)] p-6 shadow-[0_20px_60px_-32px_rgba(15,23,42,0.35)]">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Infra</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Infraestructura operativa</h1>
+              <p className="max-w-2xl text-sm leading-7 text-slate-600">
+                Un cockpit dividido por dominios reales de operación. Cloud concentra Droplet y app. On-prem muestra el estado del nodo remoto donde viven OpenClaw y Ollama.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-              <StatusPill ok={data.droplet.available}>Droplet DO</StatusPill>
-              <StatusPill ok={appHealthy}>App ebuddy</StatusPill>
-              <StatusPill ok={data.services.openclaw.available}>OpenClaw</StatusPill>
-              <StatusPill ok={data.services.ollama.available}>Ollama</StatusPill>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DomainCard
+                eyebrow="Resumen ejecutivo"
+                title={`${executiveSignal}/4 señales en verde`}
+                description="Un vistazo rápido a host principal, app, gateway IA y modelos locales antes de entrar al detalle."
+                ok={executiveSignal >= 3}
+                icon={Sparkles}
+              />
+              <DomainCard
+                eyebrow="Última lectura"
+                title={lastUpdate.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                description="Timestamp del snapshot para saber si sigues leyendo estado fresco o una foto vieja."
+                ok
+                icon={CalendarClock}
+              />
             </div>
           </div>
 
-          <div className="flex flex-col items-start gap-3 xl:items-end">
-            <button
-              onClick={refresh}
-              disabled={loading}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
-            >
-              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-              Actualizar
-            </button>
-            <p className="text-sm text-slate-500">
-              Actualizado a las {lastUpdate.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
-            </p>
+          <div className="rounded-[24px] border border-slate-200/80 bg-white/80 p-4 backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Navegación</p>
+                <p className="text-lg font-semibold text-slate-950">Dominios operativos</p>
+                <p className="text-sm leading-6 text-slate-500">Cambia de plano sin perder el estado global.</p>
+              </div>
+              <button
+                onClick={refresh}
+                disabled={loading}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+              >
+                <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+                Actualizar
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              <TabButton
+                active={activeView === 'cloud'}
+                icon={Cloud}
+                title="Cloud"
+                caption="Droplet, app y actividad útil en una sola lectura."
+                onClick={() => setActiveView('cloud')}
+              />
+              <TabButton
+                active={activeView === 'onprem'}
+                icon={Orbit}
+                title="On-prem"
+                caption="elitemini, OpenClaw, Ollama y observabilidad remota."
+                onClick={() => setActiveView('onprem')}
+              />
+            </div>
           </div>
         </div>
 
@@ -354,130 +585,45 @@ export function InfraDashboard({ initial }: { initial: InfraSnapshot }) {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <SectionCard
-          eyebrow="Infraestructura Base"
-          title="Droplet DO"
-          subtitle="Capacidad del servidor principal donde corre ebuddy."
-        >
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill ok={data.droplet.available}>{data.droplet.available ? 'Con datos oficiales' : 'Sin lectura'}</StatusPill>
-              <span className="text-sm text-slate-500">
-                {data.droplet.available ? 'Fuente oficial: DigitalOcean Monitoring.' : (data.droplet.reason ?? 'DigitalOcean Monitoring no disponible')}
-              </span>
-            </div>
-
-            <UsageStack cpu={data.droplet.cpu} ram={data.droplet.ram} disk={data.droplet.disk} />
-
-            <div className="grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
-              <KeyValue label="Droplet ID" value={data.droplet.hostId ?? 'No resuelto'} />
-              <KeyValue label="Ventana" value={`Últimos ${data.droplet.windowMinutes ?? 30} min`} />
-            </div>
-          </div>
-        </SectionCard>
-
-        <EliteminiPanel
+      {activeView === 'cloud' ? (
+        <CloudPanel data={data} appHealthy={appHealthy} />
+      ) : (
+        <OnPremPanel
           diagnostics={data.diagnostics.targets.elitemini}
           openclaw={data.services.openclaw}
           ollama={data.services.ollama}
         />
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionCard
-          eyebrow="Aplicación"
-          title="App ebuddy"
-          subtitle="Salud operativa y actividad útil separadas de la infraestructura."
-          accent="bg-white"
-        >
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill ok={appHealthy}>{appHealthy ? 'Operativa' : 'Degradada'}</StatusPill>
-              <StatusPill ok={data.app.db === 'ok'}>{data.app.db === 'ok' ? 'DB conectada' : 'DB con error'}</StatusPill>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <AppStat label="Tickets activos" value={data.app.activeTickets} helper="Backlog no archivado." />
-              <AppStat label="Creados 24h" value={data.app.createdLast24h} helper="Movimiento reciente." />
-              <AppStat label="Done 7d" value={data.app.completedLast7d} helper="Entrega semanal." />
-              <AppStat label="Calendarios" value={data.app.connectedCalendars} helper="Integraciones activas." />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
-              <KeyValue label="Última captura" value={fmtTime(data.app.lastCaptureAt)} />
-              <KeyValue label="Lectura" value={data.app.reason ?? 'La app responde y la DB reporta actividad.'} />
-            </div>
+      <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40">
+        <div className="mb-4 flex items-center gap-2">
+          <Building2 size={16} className="text-slate-500" />
+          <p className="text-sm font-semibold text-slate-900">Mapa de responsabilidades</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Cloud size={15} className="text-slate-500" />
+              DigitalOcean
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Host principal, deploy y métricas oficiales del Droplet en el plano cloud.</p>
           </div>
-        </SectionCard>
-
-        <SectionCard
-          eyebrow="Diagnóstico"
-          title="Lectura de fuentes"
-          subtitle="Qué dato viene de qué sistema para no mezclar responsabilidades."
-          accent="bg-slate-950 text-white"
-        >
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <p className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <Server size={15} />
-                  Droplet y app
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  El Droplet usa DigitalOcean Monitoring para host metrics. La app usa métricas internas de base de datos y actividad.
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <p className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <BrainCircuit size={15} />
-                  Stack IA
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  elitemini se observa por dos vías: Prometheus para recursos del host y checks HTTP directos para OpenClaw y Ollama.
-                </p>
-              </div>
-            </div>
-
-            {!data.diagnostics.configured ? (
-              <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
-                Prometheus no está configurado, así que el host remoto se mostrará sin métricas aunque OpenClaw u Ollama sí respondan.
-              </div>
-            ) : null}
-
-            <div className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-              <ShieldAlert size={16} className="mt-0.5 shrink-0" />
-              <p>
-                Si un servicio remoto cae pero el host sigue con métricas, la interfaz lo va a mostrar como problema de servicio, no como problema del Droplet.
-              </p>
-            </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Workflow size={15} className="text-slate-500" />
+              Stack IA
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">OpenClaw y Ollama viven en el nodo remoto, con chequeos propios y métricas separadas.</p>
           </div>
-        </SectionCard>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Cloud size={15} className="text-slate-500" />
-            DigitalOcean
-          </p>
-          <p className="mt-2 text-sm text-slate-500">Host principal, deploy y métricas oficiales del Droplet.</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <CalendarClock size={15} className="text-slate-500" />
+              Flujo útil
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Tickets, capturas y DB dicen si el sistema sigue entregando valor, no solo si “está arriba”.</p>
+          </div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Workflow size={15} className="text-slate-500" />
-            OpenClaw
-          </p>
-          <p className="mt-2 text-sm text-slate-500">Gateway de mensajería y orquestación IA en el nodo remoto.</p>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <CalendarClock size={15} className="text-slate-500" />
-            Flujo útil
-          </p>
-          <p className="mt-2 text-sm text-slate-500">Los tickets y la última captura ayudan a saber si el sistema sigue produciendo valor.</p>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

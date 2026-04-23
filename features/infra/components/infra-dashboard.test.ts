@@ -61,15 +61,17 @@ function buildSnapshot(): InfraSnapshot {
 }
 
 describe('InfraDashboard', () => {
-  it('presenta la consola distribuida separando droplet, app y stack IA del elitemini', () => {
+  it('presenta una vista resumida con navegación separada entre cloud y on-prem', () => {
     const html = renderToStaticMarkup(React.createElement(InfraDashboard, { initial: buildSnapshot() }))
 
     expect(html).toContain('Infraestructura operativa')
+    expect(html).toContain('Resumen ejecutivo')
+    expect(html).toContain('Cloud')
+    expect(html).toContain('On-prem')
+    expect(html).toContain('Dominios operativos')
     expect(html).toContain('Droplet DO')
     expect(html).toContain('App ebuddy')
-    expect(html).toContain('elitemini')
-    expect(html).toContain('OpenClaw')
-    expect(html).toContain('Ollama')
-    expect(html).toContain('Modelos detectados')
+    expect(html).toContain('Capa cloud')
+    expect(html).not.toContain('Host separado del Droplet donde viven OpenClaw y Ollama.')
   })
 })

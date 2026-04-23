@@ -3,15 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   requireAuthenticatedUserId: vi.fn(),
   getInfraSnapshot: vi.fn(),
+  auth: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/request', () => ({ requireAuthenticatedUserId: mocks.requireAuthenticatedUserId }))
 vi.mock('@/features/infra/server/service', () => ({ getInfraSnapshot: mocks.getInfraSnapshot }))
+vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
 
 describe('GET /api/infra/metrics', () => {
   beforeEach(() => {
     mocks.requireAuthenticatedUserId.mockReset()
     mocks.getInfraSnapshot.mockReset()
+    mocks.auth.mockReset()
   })
 
   it('retorna 401 si no hay sesión', async () => {
@@ -25,8 +28,30 @@ describe('GET /api/infra/metrics', () => {
     expect(res.status).toBe(401)
   })
 
+  it('retorna 403 si el usuario autenticado no es martin.cuevas.t@gmail.com', async () => {
+    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'user-2' })
+    mocks.auth.mockResolvedValue({
+      user: {
+        id: 'user-2',
+        email: 'otro@gmail.com',
+      },
+    })
+
+    const { GET } = await import('./route')
+    const res = await GET(new Request('http://localhost/api/infra/metrics')) as Response
+
+    expect(res.status).toBe(403)
+    expect(mocks.getInfraSnapshot).not.toHaveBeenCalled()
+  })
+
   it('retorna el snapshot unificado para la página de Infra', async () => {
     mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'owner-1' })
+    mocks.auth.mockResolvedValue({
+      user: {
+        id: 'owner-1',
+        email: 'martin.cuevas.t@gmail.com',
+      },
+    })
     mocks.getInfraSnapshot.mockResolvedValue({
       droplet: {
         available: true,
