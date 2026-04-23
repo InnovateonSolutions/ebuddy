@@ -420,7 +420,7 @@ function OnPremPanel({
   ollama: RemoteServiceStatus
 }) {
   return (
-    <div className="grid items-start grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+    <div className="grid items-start grid-cols-1 gap-4">
       <SectionCard
         eyebrow="On-prem"
         title="elitemini"
@@ -444,36 +444,6 @@ function OnPremPanel({
         </div>
       </SectionCard>
 
-      <SectionCard
-        eyebrow="Dominios operativos"
-        title="Lectura sin ruido"
-        subtitle="El objetivo es que cloud y on-prem se entiendan de un vistazo, sin mezclar síntomas."
-        accent="bg-slate-950 text-white"
-      >
-        <div className="space-y-4">
-          <SourceCard
-            icon={Orbit}
-            title="Host remoto"
-            detail="Prometheus mide CPU, RAM y disco del elitemini. Si falta scrape, solo desaparecen las métricas del host; no la lectura de servicios."
-          />
-          <SourceCard
-            icon={Workflow}
-            title="OpenClaw"
-            detail="Se valida con checks HTTP directos al gateway para saber si ebuddy realmente puede alcanzarlo desde producción."
-          />
-          <SourceCard
-            icon={BrainCircuit}
-            title="Ollama"
-            detail="Además del estado, muestra los modelos detectados para distinguir disponibilidad del proceso frente a capacidad útil del nodo."
-          />
-
-          {!diagnostics.available ? (
-            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-              El nodo puede seguir sirviendo OpenClaw y Ollama aunque Prometheus no lo esté scrapeando todavía.
-            </div>
-          ) : null}
-        </div>
-      </SectionCard>
     </div>
   )
 }
