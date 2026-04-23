@@ -23,12 +23,27 @@ def test_deploy_workflow_is_not_directly_triggered_by_push():
     assert "\n  pull_request:\n" not in workflow
 
 
-def test_deploy_workflow_does_not_force_prometheus_defaults_for_droplet_metrics():
+def test_deploy_workflow_writes_prometheus_config_hardcoded():
+    """PROMETHEUS_URL y ELITEMINI_INSTANCE se escriben hardcoded en el .env del Droplet.
+
+    Son valores no-sensibles y fijos para el ambiente de producción:
+    - PROMETHEUS_URL: Prometheus corre siempre en el mismo host vía docker-compose
+      (network_mode: host, puerto 9090); el container app lo alcanza por host.docker.internal.
+    - ELITEMINI_INSTANCE: coincide con el label 'instance' en infra/prometheus/prometheus.yml
+      que ya está commiteado en el repo con el mismo IP.
+
+    Patrón consistente con NODE_ENV y AUTH_URL que también son hardcoded en este step.
+    No deben venir de GitHub Secrets porque no son sensibles ni varían entre deploys.
+    """
     workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
 
-    assert 'echo "PROMETHEUS_URL=http://host.docker.internal:9090"' not in workflow
-    assert 'echo "DROPLET_INSTANCE=localhost:9100"' not in workflow
-    assert 'echo "ELITEMINI_INSTANCE=100.80.59.3:9100"' not in workflow
+    assert 'echo "PROMETHEUS_URL=http://host.docker.internal:9090"' in workflow, (
+        "PROMETHEUS_URL debe estar hardcoded para que el dashboard de infra pueda "
+        "conectarse a Prometheus sin configuración manual de Secrets"
+    )
+    assert 'echo "ELITEMINI_INSTANCE=100.80.59.3:9100"' in workflow, (
+        "ELITEMINI_INSTANCE debe coincidir con el label 'instance' en prometheus.yml"
+    )
 
 
 def test_deploy_workflow_overwrites_docker_compose_on_droplet():
