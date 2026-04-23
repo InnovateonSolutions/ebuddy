@@ -1,0 +1,20 @@
+---
+- name: Install Tailscale if missing
+  ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+  args:
+    creates: /usr/bin/tailscale
+
+- name: Check Tailscale self status
+  ansible.builtin.command: tailscale status --self
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Bring up Tailscale when not authenticated yet
+  ansible.builtin.command:
+    cmd: tailscale up --authkey={{ tailscale_auth_key }} --accept-routes
+  when: tailscale_status.rc != 0
+
+- name: Verify Tailscale final status
+  ansible.builtin.command: tailscale status --self
+  changed_when: false

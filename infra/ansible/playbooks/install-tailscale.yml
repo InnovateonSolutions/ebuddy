@@ -1,0 +1,6 @@
+---
+- name: Install Tailscale on elitemini
+  hosts: elitemini
+  gather_facts: true
+  roles:
+    - role: tailscale

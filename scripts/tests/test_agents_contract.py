@@ -52,3 +52,14 @@ def test_agents_requires_single_language_for_user_facing_labels():
     assert "No introducir labels de estados en inglés si la UI de esa vista está en español" in content, (
         "AGENTS.md debe fijar una regla concreta para estados y labels"
     )
+
+
+def test_agents_requires_openclaw_installation_to_be_managed_by_ansible():
+    content = read("AGENTS.md")
+
+    assert "Toda instalación, upgrade, bootstrap o cambio persistente de configuración de OpenClaw debe gestionarse vía Ansible" in content, (
+        "AGENTS.md debe dejar Ansible como fuente de verdad para instalación y configuración persistente de OpenClaw"
+    )
+    assert "Los comandos `openclaw ...` en shell se permiten solo para:" in content, (
+        "AGENTS.md debe distinguir entre diagnóstico temporal y configuración persistente de OpenClaw"
+    )

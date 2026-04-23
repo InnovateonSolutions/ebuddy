@@ -470,6 +470,16 @@ openclaw config set gateway.host 0.0.0.0
 openclaw doctor
 ```
 
+### Regla operativa para OpenClaw
+
+- **Toda instalación, upgrade, bootstrap o cambio persistente de configuración de OpenClaw debe gestionarse vía Ansible** — no dejar pasos manuales como fuente de verdad operativa
+- Los comandos `openclaw ...` en shell se permiten solo para:
+  - diagnóstico temporal
+  - verificación puntual
+  - recuperación manual durante incidentes, seguida de la automatización equivalente en Ansible
+- Si una tarea nueva requiere tocar OpenClaw en `elitemini`, primero se actualiza el playbook o rol correspondiente y luego se ejecuta vía Ansible
+- GitHub Secrets y `deploy.yml` siguen siendo la fuente de verdad para credenciales/runtime de ebuddy; Ansible es la fuente de verdad para el host `elitemini` y la instalación/configuración persistente de OpenClaw
+
 ---
 
 ## Notas de operación

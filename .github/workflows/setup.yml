@@ -30,6 +30,22 @@ jobs:
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
 
+      - name: Install Ansible
+        if: inputs.target == 'elitemini'
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install ansible-core
+
+      - name: Prepare Ansible SSH key
+        if: inputs.target == 'elitemini'
+        env:
+          ELITEMINI_SSH_KEY: ${{ secrets.ELITEMINI_SSH_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$ELITEMINI_SSH_KEY" > ~/.ssh/elitemini
+          chmod 600 ~/.ssh/elitemini
+
       - name: Get Droplet IP
         id: droplet
         if: inputs.target == 'droplet'
@@ -52,26 +68,17 @@ jobs:
           echo "ip=$IP" >> $GITHUB_OUTPUT
           echo "✓ Droplet IP: $IP"
 
-      # ── elitemini — directo vía Tailscale ───────────────────
-      - name: Copy playbook to elitemini
+      # ── elitemini — directo vía Tailscale + Ansible ─────────
+      - name: Run Ansible playbook on elitemini
         if: inputs.target == 'elitemini'
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: 100.80.59.3
-          username: mct
-          key: ${{ secrets.ELITEMINI_SSH_KEY }}
-          source: infra/playbooks/${{ inputs.playbook }}.sh
-          target: /tmp/
-          strip_components: 2
-
-      - name: Run playbook on elitemini
-        if: inputs.target == 'elitemini'
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 100.80.59.3
-          username: mct
-          key: ${{ secrets.ELITEMINI_SSH_KEY }}
-          script: sudo bash /tmp/${{ inputs.playbook }}.sh
+        env:
+          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+        run: |
+          export ANSIBLE_CONFIG="$GITHUB_WORKSPACE/infra/ansible/ansible.cfg"
+          export ANSIBLE_PRIVATE_KEY_FILE="$HOME/.ssh/elitemini"
+          ansible-playbook \
+            "infra/ansible/playbooks/${{ inputs.playbook }}.yml" \
+            --extra-vars "tailscale_auth_key=${TAILSCALE_AUTH_KEY}"
 
       # ── Droplet — IP pública directa ────────────────────────
       - name: Copy playbook to Droplet
