@@ -390,6 +390,8 @@ jobs:
               > /opt/ebuddy/.env
             echo "NODE_ENV=production" >> /opt/ebuddy/.env
             echo "AUTH_URL=https://ebuddy.innovateoncorp.com" >> /opt/ebuddy/.env
+            echo "PROMETHEUS_URL=http://host.docker.internal:9090" >> /opt/ebuddy/.env
+            echo "ELITEMINI_INSTANCE=100.80.59.3:9100" >> /opt/ebuddy/.env
             chmod 600 /opt/ebuddy/.env
 
       # Corre migraciones solo cuando cambió el schema o tooling de Drizzle.
