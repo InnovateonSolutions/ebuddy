@@ -1,7 +1,7 @@
 import type { DiagnosticsTarget, PrometheusDiagnostics } from '@/features/infra/server/types'
 
 const QUERIES = {
-  cpu: 'avg(rate(node_cpu_seconds_total{mode!="idle"}[2m])) by (instance) * 100',
+  cpu: '(1 - avg(rate(node_cpu_seconds_total{mode="idle"}[2m])) by (instance)) * 100',
   ram: '(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100',
   disk: '(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100',
   ram_used: 'node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes',

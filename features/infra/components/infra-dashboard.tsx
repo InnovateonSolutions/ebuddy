@@ -15,7 +15,6 @@ import {
   Orbit,
   RefreshCw,
   Server,
-  ShieldAlert,
   Sparkles,
   Workflow,
   XCircle,
@@ -473,11 +472,6 @@ function OnPremPanel({
               El nodo puede seguir sirviendo OpenClaw y Ollama aunque Prometheus no lo esté scrapeando todavía.
             </div>
           ) : null}
-
-          <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            <ShieldAlert size={16} className="mt-0.5 shrink-0" />
-            <p>Esta separación evita culpar al Droplet cuando el problema real vive en el nodo remoto, y viceversa.</p>
-          </div>
         </div>
       </SectionCard>
     </div>
