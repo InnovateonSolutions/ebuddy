@@ -52,6 +52,7 @@ export default async function DashboardLayout({
               <NavLink href="/kanban">Tablero</NavLink>
               <NavLink href="/stats">Stats</NavLink>
               {owner && <NavLink href="/infra">Infra</NavLink>}
+              {owner && <NavLink href="/costs">Costos</NavLink>}
             </div>
           </div>
 

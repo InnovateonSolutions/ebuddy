@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Map, LayoutGrid, BarChart2, Settings, Server } from 'lucide-react'
+import { CalendarDays, Map, LayoutGrid, BarChart2, Settings, Server, CircleDollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const USER_NAV = [
@@ -13,11 +13,14 @@ const USER_NAV = [
   { href: '/settings', label: 'Ajustes', icon: Settings },
 ]
 
-const OWNER_EXTRA = { href: '/infra', label: 'Infra', icon: Server }
+const OWNER_EXTRA = [
+  { href: '/infra', label: 'Infra', icon: Server },
+  { href: '/costs', label: 'Costos', icon: CircleDollarSign },
+]
 
 export function BottomNav({ owner = false }: { owner?: boolean }) {
   const pathname = usePathname()
-  const NAV_ITEMS = owner ? [...USER_NAV.slice(0, 4), OWNER_EXTRA, USER_NAV[4]] : USER_NAV
+  const NAV_ITEMS = owner ? [...USER_NAV.slice(0, 3), ...OWNER_EXTRA, USER_NAV[4]] : USER_NAV
 
   return (
     <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur-xl pb-safe">
