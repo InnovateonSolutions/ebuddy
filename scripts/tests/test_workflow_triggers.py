@@ -162,6 +162,22 @@ def test_deploy_workflow_can_start_after_successful_ci_on_main():
     )
 
 
+def test_deploy_workflow_requires_explicit_force_for_manual_main_redeploy():
+    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    assert "force:" in workflow, (
+        "workflow_dispatch debe exponer un input force para distinguir redeploy manual real de un dispatch redundante"
+    )
+    assert "default: false" in workflow, (
+        "force debe defaultear a false para evitar deploys manuales redundantes en main"
+    )
+    assert "github.event_name != 'workflow_dispatch'" in workflow
+    assert "github.ref != 'refs/heads/main'" in workflow
+    assert "inputs.force" in workflow or "github.event.inputs.force" in workflow, (
+        "deploy.yml debe permitir redeploy manual en main solo cuando force=true"
+    )
+
+
 def test_workflows_force_actions_to_node24():
     for rel_path in [
         ".github/workflows/ci.yml",

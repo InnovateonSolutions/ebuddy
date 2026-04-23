@@ -6,6 +6,12 @@ on:
     types: [completed]
   workflow_call:
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Permitir redeploy manual en main aunque CI ya dispare CD automaticamente"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -26,11 +32,18 @@ jobs:
     name: Detect Deploy-Relevant Changes
     runs-on: ubuntu-latest
     if: |
-      github.event_name != 'workflow_run' ||
       (
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_branch == 'main' &&
-        github.event.workflow_run.event == 'push'
+        github.event_name != 'workflow_dispatch' ||
+        github.ref != 'refs/heads/main' ||
+        inputs.force
+      ) &&
+      (
+        github.event_name != 'workflow_run' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.event == 'push'
+        )
       )
     outputs:
       app_changed: ${{ steps.changes.outputs.app_changed }}
