@@ -4,7 +4,6 @@ import React, { useState } from 'react'
 import {
   Bot,
   BrainCircuit,
-  Building2,
   CalendarClock,
   CheckCircle2,
   Cloud,
@@ -581,36 +580,6 @@ export function InfraDashboard({ initial }: { initial: InfraSnapshot }) {
           ollama={data.services.ollama}
         />
       )}
-
-      <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/40">
-        <div className="mb-4 flex items-center gap-2">
-          <Building2 size={16} className="text-slate-500" />
-          <p className="text-sm font-semibold text-slate-900">Mapa de responsabilidades</p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <Cloud size={15} className="text-slate-500" />
-              DigitalOcean
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Host principal, deploy y métricas oficiales del Droplet en el plano cloud.</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <Workflow size={15} className="text-slate-500" />
-              Stack IA
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">OpenClaw y Ollama viven en el nodo remoto, con chequeos propios y métricas separadas.</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <CalendarClock size={15} className="text-slate-500" />
-              Flujo útil
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Tickets, capturas y DB dicen si el sistema sigue entregando valor, no solo si “está arriba”.</p>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }
