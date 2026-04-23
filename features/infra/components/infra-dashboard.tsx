@@ -213,11 +213,19 @@ function SectionCard({
   )
 }
 
-function KeyValue({ label, value }: { label: string; value: string }) {
+function KeyValue({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string
+  value: string
+  valueClassName?: string
+}) {
   return (
     <div className="space-y-1">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="text-sm font-medium text-slate-900">{value}</p>
+      <p className={cn('text-sm font-medium text-slate-900', valueClassName)}>{value}</p>
     </div>
   )
 }
@@ -234,24 +242,37 @@ function ServiceRow({
   const models = service.models?.length ?? 0
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+    <div className="min-w-0 space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
             <Icon size={15} className="text-slate-500" />
             {name}
           </p>
-          <p className="text-xs text-slate-500">{hostLabel(service.baseUrl)}</p>
+          <p className="truncate text-xs text-slate-500">{hostLabel(service.baseUrl)}</p>
         </div>
-        <StatusPill ok={service.available}>{service.available ? 'Disponible' : service.configured ? 'Sin respuesta' : 'No configurado'}</StatusPill>
+        <div className="shrink-0">
+          <StatusPill ok={service.available}>{service.available ? 'Disponible' : service.configured ? 'Sin respuesta' : 'No configurado'}</StatusPill>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 text-sm text-slate-600 sm:grid-cols-2">
-        <KeyValue label="Versión" value={service.version ?? 'Sin dato'} />
-        <KeyValue label="Endpoint" value={service.baseUrl || 'Sin configurar'} />
+        <KeyValue label="Versión" value={service.version ?? 'Sin dato'} valueClassName="font-semibold" />
+        <KeyValue label="Endpoint" value={service.baseUrl || 'Sin configurar'} valueClassName="break-all text-xs leading-5 text-slate-600" />
         {service.models ? <KeyValue label="Modelos detectados" value={String(models)} /> : null}
-        {service.reason ? <KeyValue label="Estado" value={service.reason} /> : null}
+        {service.reason ? <KeyValue label="Estado" value={service.reason} valueClassName="text-xs leading-5 text-slate-600" /> : null}
       </div>
+    </div>
+  )
+}
+
+function RemoteEmptyState() {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-5">
+      <p className="text-sm font-semibold text-slate-900">Sin scrape todavía</p>
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        El nodo remoto sigue mostrando el estado de OpenClaw y Ollama, pero las métricas de CPU, RAM y disco aparecerán cuando Prometheus quede configurado.
+      </p>
     </div>
   )
 }
@@ -337,7 +358,7 @@ function CloudPanel({
   appHealthy: boolean
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+    <div className="grid items-start grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
       <SectionCard
         eyebrow="Capa cloud"
         title="Droplet DO"
@@ -400,7 +421,7 @@ function OnPremPanel({
   ollama: RemoteServiceStatus
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+    <div className="grid items-start grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
       <SectionCard
         eyebrow="On-prem"
         title="elitemini"
@@ -413,9 +434,11 @@ function OnPremPanel({
             <span className="text-sm text-slate-500">{diagnostics.reason ?? 'Prometheus está leyendo el host remoto.'}</span>
           </div>
 
-          <UsageStack cpu={diagnostics.cpu} ram={diagnostics.ram} disk={diagnostics.disk} />
+          {diagnostics.available
+            ? <UsageStack cpu={diagnostics.cpu} ram={diagnostics.ram} disk={diagnostics.disk} />
+            : <RemoteEmptyState />}
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ServiceRow icon={Workflow} name="OpenClaw" service={openclaw} />
             <ServiceRow icon={Bot} name="Ollama" service={ollama} />
           </div>

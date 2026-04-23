@@ -25,6 +25,7 @@ jobs:
       app_changed: ${{ steps.filter.outputs.app_changed }}
       infra_changed: ${{ steps.filter.outputs.infra_changed }}
       scripts_changed: ${{ steps.filter.outputs.scripts_changed }}
+      ansible_changed: ${{ steps.filter.outputs.ansible_changed }}
 
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +51,7 @@ jobs:
           app_changed=false
           infra_changed=false
           scripts_changed=false
+          ansible_changed=false
 
           while IFS= read -r file; do
             [ -n "$file" ] || continue
@@ -67,8 +69,14 @@ jobs:
             esac
 
             case "$file" in
-              scripts/*|docs/iam/*|.github/workflows/ci.yml)
+              scripts/*|docs/iam/*|.github/workflows/ci.yml|.github/workflows/setup.yml|infra/ansible/*)
                 scripts_changed=true
+                ;;
+            esac
+
+            case "$file" in
+              infra/ansible/*|.github/workflows/setup.yml)
+                ansible_changed=true
                 ;;
             esac
           done <<EOF
@@ -78,6 +86,7 @@ jobs:
           echo "app_changed=$app_changed" >> "$GITHUB_OUTPUT"
           echo "infra_changed=$infra_changed" >> "$GITHUB_OUTPUT"
           echo "scripts_changed=$scripts_changed" >> "$GITHUB_OUTPUT"
+          echo "ansible_changed=$ansible_changed" >> "$GITHUB_OUTPUT"
 
   node-tests:
     name: Node Tests
@@ -201,4 +210,20 @@ jobs:
     with:
       action: apply
       manage_dns: true
+    secrets: inherit
+
+  elitemini-setup:
+    name: Elitemini Setup
+    needs: [detect-changes, python-tests, terratest, terraform-plan]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      needs['detect-changes'].outputs.ansible_changed == 'true' &&
+      (needs.python-tests.result == 'success' || needs.python-tests.result == 'skipped') &&
+      (needs.terratest.result == 'success' || needs.terratest.result == 'skipped') &&
+      (needs.terraform-plan.result == 'success' || needs.terraform-plan.result == 'skipped')
+    uses: ./.github/workflows/setup.yml
+    with:
+      target: elitemini
+      playbook: install-node-exporter
     secrets: inherit

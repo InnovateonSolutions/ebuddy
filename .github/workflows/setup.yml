@@ -1,6 +1,16 @@
 name: Setup — Server Playbooks
 
 on:
+  workflow_call:
+    inputs:
+      target:
+        description: 'Servidor destino'
+        required: true
+        type: string
+      playbook:
+        description: 'Playbook a ejecutar'
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       target:

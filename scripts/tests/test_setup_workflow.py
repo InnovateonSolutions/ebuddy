@@ -19,6 +19,9 @@ def test_setup_workflow_uses_ansible_for_elitemini_playbooks():
     assert "Run playbook on elitemini" not in workflow, (
         "elitemini debe ejecutarse vía Ansible y no con bash remoto directo"
     )
+    assert "workflow_call:" in workflow, (
+        "setup.yml debe poder invocarse desde CI para automatizar cambios en infra/ansible"
+    )
 
 
 def test_setup_workflow_keeps_shell_transport_for_droplet_setup():
@@ -38,3 +41,19 @@ def test_ansible_node_exporter_role_exists_for_elitemini_monitoring():
     assert (REPO_ROOT / "infra" / "ansible" / "inventory" / "hosts.yml").exists(), (
         "Ansible debe tener inventario versionado para elitemini"
     )
+
+
+def test_ci_triggers_elitemini_setup_when_ansible_folder_changes():
+    workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+    assert "ansible_changed" in workflow, (
+        "ci.yml debe detectar cambios en infra/ansible para disparar setup automatico"
+    )
+    assert "infra/ansible/*" in workflow or "infra/ansible/**" in workflow, (
+        "ci.yml debe considerar infra/ansible como superficie operativa con auto-setup"
+    )
+    assert "uses: ./.github/workflows/setup.yml" in workflow, (
+        "ci.yml debe invocar setup.yml cuando cambie la automatizacion de elitemini"
+    )
+    assert "target: elitemini" in workflow
+    assert "playbook: install-node-exporter" in workflow
