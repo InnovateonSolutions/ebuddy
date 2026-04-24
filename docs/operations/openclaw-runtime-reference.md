@@ -78,8 +78,13 @@ Toda variable nueva tambien debe agregarse al step `Write .env on Droplet` del
 
 ```bash
 openclaw config set gateway.host 0.0.0.0
+openclaw config set agents.defaults.llm.idleTimeoutSeconds 0  # Ollama puede tardar — deshabilitar timeout
 openclaw doctor
 ```
+
+> **Nota:** `idleTimeoutSeconds 0` deshabilita el timeout de inactividad del LLM.
+> Necesario con Ollama local porque el primer token puede tardar 30-120 segundos.
+> Si no está en 0, el agente falla con "did not produce a response before the LLM idle timeout".
 
 ## Regla operativa
 

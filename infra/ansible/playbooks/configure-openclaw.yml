@@ -1,0 +1,6 @@
+---
+- name: Configure OpenClaw on elitemini
+  hosts: elitemini
+  gather_facts: false
+  roles:
+    - role: openclaw
