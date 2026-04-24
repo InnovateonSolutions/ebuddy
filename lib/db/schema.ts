@@ -9,11 +9,13 @@ import {
   integer,
   primaryKey,
   index,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 import type { AdapterAccountType } from 'next-auth/adapters'
 
 // ─── Enums ───────────────────────────────────────────────────
 
+export const integrationStatusEnum = pgEnum('integration_status', ['active', 'inactive', 'error'])
 export const ticketContextEnum = pgEnum('ticket_context', ['NEGOCIO', 'PERSONAL'])
 export const ticketPriorityEnum = pgEnum('ticket_priority', ['ALTA', 'MEDIA', 'BAJA'])
 export const ticketStatusEnum = pgEnum('ticket_status', ['PENDING', 'IN_PROGRESS', 'QA', 'DONE'])
@@ -165,6 +167,19 @@ export const privilegedAccessAudit = pgTable(
   })
 )
 
+// ─── Integrations ────────────────────────────────────────────
+
+export const integrations = pgTable('integrations', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull().unique(),
+  status: integrationStatusEnum('status').notNull().default('inactive'),
+  lastCheckedAt: timestamp('last_checked_at'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
 // ─── Inferred types ───────────────────────────────────────────
 
 export type User = typeof users.$inferSelect
@@ -173,3 +188,4 @@ export type NewTicket = typeof tickets.$inferInsert
 export type UserPreferences = typeof userPreferences.$inferSelect
 export type CalendarToken = typeof calendarTokens.$inferSelect
 export type PrivilegedAccessAudit = typeof privilegedAccessAudit.$inferSelect
+export type Integration = typeof integrations.$inferSelect
