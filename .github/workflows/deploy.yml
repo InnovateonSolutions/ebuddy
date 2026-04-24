@@ -23,7 +23,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NEXT_PUBLIC_APP_URL: https://ebuddy.innovateoncorp.com
   NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true"
 
@@ -50,7 +49,7 @@ jobs:
       migrator_changed: ${{ steps.changes.outputs.migrator_changed }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 2
@@ -108,7 +107,7 @@ jobs:
       needs.changes.outputs.app_changed == 'true'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 2
@@ -124,7 +123,7 @@ jobs:
           token: ${{ secrets.DO_TOKEN }}
 
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
@@ -152,11 +151,11 @@ jobs:
             > ~/.docker/config.json
           echo "✓ DOCR credentials written to ~/.docker/config.json"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Build & Push app image
         id: build_app
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         continue-on-error: true
         with:
           context: .
@@ -176,7 +175,7 @@ jobs:
       # DOCR token endpoint devuelve 401 intermitentemente — retry con 30s delay
       - name: Retry Build & Push app image
         if: steps.build_app.outcome == 'failure'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -197,7 +196,7 @@ jobs:
       - name: Build & Push migrator image
         id: build_migrator
         if: needs.changes.outputs.migrator_changed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         continue-on-error: true
         with:
           context: .
@@ -213,7 +212,7 @@ jobs:
 
       - name: Retry Build & Push migrator image
         if: needs.changes.outputs.migrator_changed == 'true' && steps.build_migrator.outcome == 'failure'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: migrator
@@ -250,7 +249,7 @@ jobs:
     if: needs.changes.outputs.app_changed == 'true' && needs.build.result == 'success'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Obtiene la IP del Droplet en tiempo real — sin GitHub Variables
       - name: Get Droplet IP
@@ -430,7 +429,7 @@ jobs:
     if: needs.changes.outputs.app_changed == 'true' && needs.deploy.result == 'success'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Wait for app readiness
         run: |

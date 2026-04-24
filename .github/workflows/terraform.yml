@@ -36,9 +36,6 @@ concurrency:
   group: terraform-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 defaults:
   run:
     working-directory: infra/terraform
@@ -73,7 +70,7 @@ jobs:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Derive SSH public key from deploy key
         run: |
@@ -143,7 +140,7 @@ jobs:
       TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Derive SSH public key from deploy key
         run: |

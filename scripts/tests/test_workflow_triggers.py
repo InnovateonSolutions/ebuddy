@@ -193,16 +193,29 @@ def test_deploy_workflow_requires_explicit_force_for_manual_main_redeploy():
     )
 
 
-def test_workflows_force_actions_to_node24():
-    for rel_path in [
+def test_workflows_use_node24_native_actions():
+    """Las actions están en versiones que soportan Node.js 24 nativamente.
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 ya no es necesario."""
+    node24_actions = [
+        "actions/checkout@v6",
+        "actions/setup-node@v6",
+        "actions/setup-python@v6",
+        "actions/setup-go@v6",
+    ]
+    workflows_with_actions = [
         ".github/workflows/ci.yml",
         ".github/workflows/deploy.yml",
         ".github/workflows/operations.yml",
-        ".github/workflows/terraform.yml",
-    ]:
+    ]
+    for rel_path in workflows_with_actions:
         workflow = (REPO_ROOT / rel_path).read_text()
-        assert "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24" in workflow, (
-            f"{rel_path} debe forzar acciones JavaScript sobre Node 24 para evitar la deprecación de Node 20"
+        for action in node24_actions:
+            if action.split("@")[0].replace("actions/", "") in workflow.replace("actions/", ""):
+                assert action in workflow or action.split("@")[0] not in workflow, (
+                    f"{rel_path} usa {action.split('@')[0]} pero no en versión Node.js 24 ({action})"
+                )
+        assert "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24" not in workflow, (
+            f"{rel_path} aún tiene FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 — ya no es necesario con actions v6"
         )
 
 

@@ -14,9 +14,6 @@ permissions:
   id-token: write
   actions: write  # necesario para que deploy.yml pueda usar cache-to: type=gha
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   detect-changes:
     name: Detect Changes
@@ -28,7 +25,7 @@ jobs:
       ansible_changed: ${{ steps.filter.outputs.ansible_changed }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -95,9 +92,9 @@ jobs:
     if: needs['detect-changes'].outputs.app_changed == 'true'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -123,9 +120,9 @@ jobs:
     if: needs['detect-changes'].outputs.app_changed == 'true'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -146,9 +143,9 @@ jobs:
     if: needs['detect-changes'].outputs.scripts_changed == 'true'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
@@ -167,9 +164,9 @@ jobs:
     if: needs['detect-changes'].outputs.infra_changed == 'true'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.22'
           cache-dependency-path: |
