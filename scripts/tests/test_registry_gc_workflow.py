@@ -1,5 +1,7 @@
 """Tests estructurales para el mantenimiento operativo de DOCR."""
 
+import os
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -50,3 +52,49 @@ def test_registry_gc_script_uses_machine_readable_output():
     assert "awk '{print $3,$4,$5}'" not in script, (
         "El monitoreo de GC no debe parsear columnas humanas con awk"
     )
+
+
+def test_registry_gc_script_tolerates_only_protected_tags(tmp_path):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    doctl = fake_bin / "doctl"
+    doctl.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+
+case "$*" in
+  "registry repository list-tags ebuddy-prod/ebuddy --no-header --format Tag")
+    printf '%s\\n' latest migrator
+    ;;
+  "registry garbage-collection start ebuddy-prod --force --include-untagged-manifests --output json")
+    printf '%s\\n' '[{"uuid":"fake-gc","status":"requested"}]'
+    ;;
+  "registry garbage-collection get-active --output json")
+    printf '%s\\n' '[]'
+    ;;
+  "registry garbage-collection list ebuddy-prod --output json")
+    printf '%s\\n' '[{"uuid":"fake-gc","status":"succeeded","blobs_deleted":0,"freed_bytes":0}]'
+    ;;
+  *)
+    printf 'unexpected doctl call: %s\\n' "$*" >&2
+    exit 99
+    ;;
+esac
+"""
+    )
+    doctl.chmod(0o755)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}:{env['PATH']}"
+
+    result = subprocess.run(
+        ["bash", "scripts/registry-gc.sh"],
+        cwd=REPO_ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert "Registry GC completado" in result.stdout

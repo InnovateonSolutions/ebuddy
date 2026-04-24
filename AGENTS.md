@@ -47,6 +47,7 @@ Antes de dar un cambio por listo:
 - no hay scope creep respecto al requerimiento actual
 - el impacto en seguridad, runtime o deploy fue revisado si aplicaba
 - las docs o contratos estructurales se actualizaron si cambió una convención viva
+- si el objetivo incluye integración completa, el trabajo no termina en verde local
 - **cualquier push requiere revisar CI y Deploy en GitHub Actions — no solo integración completa, sino siempre; el trabajo no termina hasta que ambos estén en verde o el fallo esté diagnosticado**
 
 ## [SIEMPRE] Reglas no negociables
@@ -203,6 +204,8 @@ Convención de commits:
 - `test:` solo tests
 - `chore:` mantenimiento (deps, config)
 - `refactor:` reestructuración sin cambio de comportamiento
+
+**Agrupación de commits:** Cuando varias iters pertenecen al mismo dominio, agruparlas en 1-2 commits y hacer un solo push — no un commit + esperar CI por cada cambio minúsculo. Un commit por iter solo aplica si las iters son independientes y de alto impacto individual.
 
 ### 7. Esperar que el pipeline CI/CD pase
 

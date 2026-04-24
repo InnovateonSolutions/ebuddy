@@ -19,7 +19,7 @@ REPO="${APP_NAME}"
 echo "→ Limpiando tags antiguas en ${REGISTRY}/${REPO}"
 doctl registry repository list-tags "$REGISTRY/$REPO" \
   --no-header --format Tag 2>/dev/null \
-| grep -v -E "^(latest|migrator)$" \
+| { grep -v -E "^(latest|migrator)$" || true; } \
 | while read -r tag; do
     [ -n "$tag" ] || continue
     doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force
