@@ -96,7 +96,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -124,7 +124,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -168,14 +168,14 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.22'
+          go-version: '1.24'
           cache-dependency-path: |
             scripts/go.mod
             scripts/go.sum
 
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '~> 1.7'
+          terraform_version: '~> 1.10'
 
       - name: Resolve Go modules
         working-directory: scripts

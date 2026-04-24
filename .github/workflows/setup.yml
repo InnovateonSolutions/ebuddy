@@ -34,9 +34,11 @@ jobs:
       - uses: actions/checkout@v6
 
       # Une el runner a Tailscale para acceso directo a elitemini
+      # TODO: migrar authkey → oauth-client-id + oauth-secret cuando se creen
+      # credenciales OAuth en https://tailscale.com/s/oauth-clients
       - name: Connect to Tailscale
         if: inputs.target == 'elitemini'
-        uses: tailscale/github-action@v2
+        uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
 

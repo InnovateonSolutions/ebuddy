@@ -115,7 +115,7 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '~> 1.7'
+          terraform_version: '~> 1.10'
 
       # Credenciales DO Spaces vía -backend-config para no pisar las de OIDC (AWS)
       - name: Terraform Init
@@ -180,7 +180,7 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '~> 1.7'
+          terraform_version: '~> 1.10'
 
       - name: Terraform Init
         run: |
