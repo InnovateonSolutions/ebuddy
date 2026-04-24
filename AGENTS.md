@@ -263,6 +263,8 @@ Estos patrones están implementados y deben aplicarse en cada ruta o función nu
 Toda ruta que toque datos o acciones del owner debe llamar `requireCapability()` con audit context (3er argumento).
 MEMBER tiene solo `tickets.write`. OWNER tiene todas.
 
+**Excepción documentada:** `/api/costs` pasa `undefined` como `request` porque es llamable desde cron interno (no tiene header `x-user-id`). En ese caso `requireCapability` omite la validación del header pero sí verifica la sesión y loguea el audit. Usar este patrón solo en rutas que no reciben request HTTP directo del browser.
+
 ### Cuándo usar `requireStepUp(15 * 60)`
 
 Obligatorio en operaciones destructivas o de alto impacto:
