@@ -61,20 +61,9 @@ jobs:
         if: inputs.target == 'droplet'
         run: |
           source infra/config/main.env
-          DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet"
-          IP=$(curl -sf \
-            "https://api.digitalocean.com/v2/droplets?name=${DROPLET_NAME}" \
-            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
-            | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          droplets = data.get('droplets', [])
-          if not droplets:
-              raise SystemExit('Droplet not found')
-          nets = droplets[0]['networks']['v4']
-          ip = next(n['ip_address'] for n in nets if n['type'] == 'public')
-          print(ip)
-          ")
+          IP=$(DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet" \
+            DO_TOKEN="${{ secrets.DO_TOKEN }}" \
+            python3 scripts/get-droplet-ip.py)
           echo "ip=$IP" >> $GITHUB_OUTPUT
           echo "✓ Droplet IP: $IP"
 

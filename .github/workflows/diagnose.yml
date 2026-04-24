@@ -5,12 +5,13 @@ jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Get Droplet IP
         id: droplet
         run: |
-          IP=$(curl -sf "https://api.digitalocean.com/v2/droplets?name=ebuddy-prod-droplet" \
-            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(next(n['ip_address'] for n in d['droplets'][0]['networks']['v4'] if n['type']=='public'))")
+          IP=$(DROPLET_NAME="ebuddy-prod-droplet" DO_TOKEN="${{ secrets.DO_TOKEN }}" \
+            python3 scripts/get-droplet-ip.py)
           echo "ip=$IP" >> $GITHUB_OUTPUT
 
       - name: Fix archived column via psql
