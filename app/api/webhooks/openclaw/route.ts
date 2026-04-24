@@ -1,4 +1,5 @@
 import { createTicketFromCapturedInput } from '@/features/tickets/server/capture'
+import { resolveOwnerUserId } from '@/lib/auth/owner'
 
 export async function POST(request: Request) {
   const token = process.env.OPENCLAW_HOOK_TOKEN
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const ownerUserId = process.env.WHATSAPP_OWNER_USER_ID
+  const ownerUserId = await resolveOwnerUserId()
   if (!ownerUserId) return new Response('Owner no configurado', { status: 503 })
 
   let body: { text?: string }

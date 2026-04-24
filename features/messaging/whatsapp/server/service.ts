@@ -1,5 +1,6 @@
 import { createTicketFromCapturedInput } from '@/features/tickets/server/capture'
 import { sendWhatsAppReply } from '@/features/messaging/whatsapp/server/reply'
+import { resolveOwnerUserId } from '@/lib/auth/owner'
 import type { WhatsAppTextMessage } from '@/features/messaging/whatsapp/server/types'
 
 export function createWhatsAppChallengeResponse(request: Request) {
@@ -36,9 +37,11 @@ function extractIncomingTextMessage(body: unknown): WhatsAppTextMessage | null {
 }
 
 export async function handleIncomingWhatsAppWebhook(body: unknown) {
-  const ownerUserId = process.env.WHATSAPP_OWNER_USER_ID
   const message = extractIncomingTextMessage(body)
-  if (!message || !ownerUserId) return
+  if (!message) return
+
+  const ownerUserId = await resolveOwnerUserId()
+  if (!ownerUserId) return
 
   try {
     const ticket = await createTicketFromCapturedInput(

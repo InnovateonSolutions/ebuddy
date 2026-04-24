@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   createTicket: vi.fn(),
   sendReply: vi.fn(),
+  resolveOwnerUserId: vi.fn(),
 }))
 
 vi.mock('@/features/tickets/server/capture', () => ({
@@ -11,6 +12,10 @@ vi.mock('@/features/tickets/server/capture', () => ({
 
 vi.mock('@/features/messaging/whatsapp/server/reply', () => ({
   sendWhatsAppReply: mocks.sendReply,
+}))
+
+vi.mock('@/lib/auth/owner', () => ({
+  resolveOwnerUserId: mocks.resolveOwnerUserId,
 }))
 
 import { createWhatsAppChallengeResponse, handleIncomingWhatsAppWebhook } from './service'
@@ -71,7 +76,7 @@ describe('createWhatsAppChallengeResponse', () => {
 describe('handleIncomingWhatsAppWebhook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.WHATSAPP_OWNER_USER_ID = 'user-owner'
+    mocks.resolveOwnerUserId.mockResolvedValue('user-owner')
     mocks.createTicket.mockResolvedValue({
       id: 't1',
       context: 'NEGOCIO',
@@ -121,8 +126,8 @@ describe('handleIncomingWhatsAppWebhook', () => {
     expect(mocks.createTicket).not.toHaveBeenCalled()
   })
 
-  it('ignora cuando OWNER_USER_ID no está configurado', async () => {
-    delete process.env.WHATSAPP_OWNER_USER_ID
+  it('ignora cuando resolveOwnerUserId retorna null', async () => {
+    mocks.resolveOwnerUserId.mockResolvedValue(null)
 
     await handleIncomingWhatsAppWebhook(makeWebhookBody('texto'))
 
