@@ -35,6 +35,7 @@ export type ApiErrorCode =
   | 'CALENDAR_AUTH_REQUIRED'
   | 'CALENDAR_ERROR'
   | 'DATABASE_ERROR'
+  | 'STEP_UP_REQUIRED'
   | 'INTERNAL_ERROR'
 
 export interface CaptureTextInput {

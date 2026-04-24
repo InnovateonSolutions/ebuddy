@@ -164,4 +164,56 @@ describe('permissions', () => {
       resource: '/api/infra/metrics',
     }))
   })
+
+  describe('requireStepUp', () => {
+    it('permite cuando authedAt es reciente', async () => {
+      mocks.auth.mockResolvedValue({
+        user: { id: 'owner-1', authedAt: Date.now() - 5 * 60 * 1000 },
+      })
+
+      const { requireStepUp } = await import('./permissions')
+      const result = await requireStepUp(15 * 60)
+
+      expect('response' in result).toBe(false)
+    })
+
+    it('rechaza con STEP_UP_REQUIRED cuando authedAt es antiguo', async () => {
+      mocks.auth.mockResolvedValue({
+        user: { id: 'owner-1', authedAt: Date.now() - 20 * 60 * 1000 },
+      })
+
+      const { requireStepUp } = await import('./permissions')
+      const result = await requireStepUp(15 * 60)
+
+      expect('response' in result).toBe(true)
+      if (!('response' in result)) return
+      expect(result.response!.status).toBe(403)
+      const body = await result.response!.json()
+      expect(body.code).toBe('STEP_UP_REQUIRED')
+    })
+
+    it('rechaza cuando authedAt ausente', async () => {
+      mocks.auth.mockResolvedValue({ user: { id: 'owner-1' } })
+
+      const { requireStepUp } = await import('./permissions')
+      const result = await requireStepUp(15 * 60)
+
+      expect('response' in result).toBe(true)
+      if (!('response' in result)) return
+      expect(result.response!.status).toBe(403)
+      const body = await result.response!.json()
+      expect(body.code).toBe('STEP_UP_REQUIRED')
+    })
+
+    it('rechaza cuando no hay sesion', async () => {
+      mocks.auth.mockResolvedValue(null)
+
+      const { requireStepUp } = await import('./permissions')
+      const result = await requireStepUp(15 * 60)
+
+      expect('response' in result).toBe(true)
+      if (!('response' in result)) return
+      expect(result.response!.status).toBe(401)
+    })
+  })
 })

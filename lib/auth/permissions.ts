@@ -101,6 +101,22 @@ export async function getAuthorizationContext(sessionArg?: AuthSession) {
   } satisfies AuthorizationContext
 }
 
+export async function requireStepUp(maxAgeSec: number) {
+  const session = (await auth()) as AuthSession
+  if (!session?.user?.id) {
+    return { response: apiError('No autorizado', 'UNAUTHORIZED', 401) } as const
+  }
+
+  const authedAt = (session.user as { authedAt?: number }).authedAt
+  const ageMs = authedAt ? Date.now() - authedAt : Infinity
+
+  if (ageMs > maxAgeSec * 1000) {
+    return { response: apiError('Re-autenticación requerida', 'STEP_UP_REQUIRED', 403) } as const
+  }
+
+  return { userId: session.user.id } as const
+}
+
 export async function requireCapability(capability: Capability, request?: Request, audit?: AuditContext) {
   const authz = await getAuthorizationContext()
   if ('response' in authz) return authz

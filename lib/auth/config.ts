@@ -71,12 +71,17 @@ const authConfig = isAuthCoreConfigured
         jwt({ token, user }) {
           if (user?.id) {
             token.id = user.id
+            token.authedAt = Date.now()
           }
           return token
         },
         session({ session, token }) {
           if (session.user) {
-            ;(session.user as { id?: string }).id = String(token.id ?? token.sub ?? '')
+            const u = session.user as { id?: string; authedAt?: number }
+            u.id = String(token.id ?? token.sub ?? '')
+            if (typeof token.authedAt === 'number') {
+              u.authedAt = token.authedAt
+            }
           }
           return session
         },
