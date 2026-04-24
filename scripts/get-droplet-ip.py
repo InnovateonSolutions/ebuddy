@@ -22,7 +22,7 @@ import urllib.parse
 import urllib.request
 
 
-def get_droplet_ip(droplet_name: str, do_token: str) -> str:
+def get_droplet_info(droplet_name: str, do_token: str) -> tuple[str, int]:
     encoded_name = urllib.parse.quote(droplet_name)
     url = f"https://api.digitalocean.com/v2/droplets?name={encoded_name}"
 
@@ -56,10 +56,21 @@ def get_droplet_ip(droplet_name: str, do_token: str) -> str:
         print(f"ERROR: droplet '{droplet_name}' has no public IPv4 address", file=sys.stderr)
         sys.exit(1)
 
-    return public[0]["ip_address"]
+    droplet_id = droplets[0]["id"]
+    return public[0]["ip_address"], droplet_id
+
+
+def get_droplet_ip(droplet_name: str, do_token: str) -> str:
+    ip, _ = get_droplet_info(droplet_name, do_token)
+    return ip
 
 
 def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description="Obtiene IP (y opcionalmente ID) de un Droplet DO")
+    parser.add_argument("--with-id", action="store_true", help="Emite ip\\nid en dos líneas (para deploy.yml)")
+    args, _ = parser.parse_known_args()
+
     droplet_name = os.environ.get("DROPLET_NAME")
     do_token = os.environ.get("DO_TOKEN")
 
@@ -70,8 +81,13 @@ def main() -> None:
         print("ERROR: DO_TOKEN env var is required", file=sys.stderr)
         sys.exit(1)
 
-    ip = get_droplet_ip(droplet_name, do_token)
-    print(ip)
+    ip, droplet_id = get_droplet_info(droplet_name, do_token)
+
+    if args.with_id:
+        print(ip)
+        print(droplet_id)
+    else:
+        print(ip)
 
 
 if __name__ == "__main__":

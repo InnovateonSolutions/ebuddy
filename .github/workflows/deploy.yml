@@ -233,23 +233,10 @@ jobs:
           WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
           WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
           WHATSAPP_OWNER_USER_ID: ${{ secrets.WHATSAPP_OWNER_USER_ID }}
-          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python3 -c "
-          import os, json, urllib.request
-          payload = json.dumps({
-            'messaging_product': 'whatsapp',
-            'to': os.environ['WHATSAPP_OWNER_USER_ID'],
-            'type': 'text',
-            'text': {'body': f\"🚨 ebuddy Build FALLÓ\n{os.environ['RUN_URL']}\"}
-          }).encode()
-          req = urllib.request.Request(
-            f\"https://graph.facebook.com/v19.0/{os.environ['WHATSAPP_PHONE_NUMBER_ID']}/messages\",
-            data=payload,
-            headers={'Authorization': f\"Bearer {os.environ['WHATSAPP_API_TOKEN']}\", 'Content-Type': 'application/json'}
-          )
-          urllib.request.urlopen(req)
-          "
+          python3 scripts/notify-whatsapp.py \
+            --stage build \
+            --url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
 
   # ── 2. Deploy al Droplet ──────────────────────────────────────
@@ -270,22 +257,8 @@ jobs:
         id: droplet
         run: |
           source infra/config/main.env
-
-          RESULT=$(curl -sf \
-            "https://api.digitalocean.com/v2/droplets?name=${DROPLET_NAME}" \
-            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
-            | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          droplets = data.get('droplets', [])
-          if not droplets:
-              raise SystemExit(f'Droplet {\"$DROPLET_NAME\"} not found')
-          droplet = droplets[0]
-          nets = droplet['networks']['v4']
-          ip = next(n['ip_address'] for n in nets if n['type'] == 'public')
-          print(ip)
-          print(droplet['id'])
-          ")
+          RESULT=$(DROPLET_NAME="${DROPLET_NAME}" DO_TOKEN="${{ secrets.DO_TOKEN }}" \
+            python3 scripts/get-droplet-ip.py --with-id)
           IP=$(echo "$RESULT" | head -1)
           DROPLET_ID=$(echo "$RESULT" | tail -1)
           echo "ip=$IP" >> $GITHUB_OUTPUT
@@ -439,23 +412,10 @@ jobs:
           WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
           WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
           WHATSAPP_OWNER_USER_ID: ${{ secrets.WHATSAPP_OWNER_USER_ID }}
-          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python3 -c "
-          import os, json, urllib.request
-          payload = json.dumps({
-            'messaging_product': 'whatsapp',
-            'to': os.environ['WHATSAPP_OWNER_USER_ID'],
-            'type': 'text',
-            'text': {'body': f\"🚨 ebuddy Deploy FALLÓ\n{os.environ['RUN_URL']}\"}
-          }).encode()
-          req = urllib.request.Request(
-            f\"https://graph.facebook.com/v19.0/{os.environ['WHATSAPP_PHONE_NUMBER_ID']}/messages\",
-            data=payload,
-            headers={'Authorization': f\"Bearer {os.environ['WHATSAPP_API_TOKEN']}\", 'Content-Type': 'application/json'}
-          )
-          urllib.request.urlopen(req)
-          "
+          python3 scripts/notify-whatsapp.py \
+            --stage deploy \
+            --url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   # ── 3. Smoke tests E2E ──────────────────────────────────────
   e2e:
