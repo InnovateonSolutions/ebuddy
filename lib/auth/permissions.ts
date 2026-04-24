@@ -9,7 +9,14 @@ import { apiError } from '@/lib/utils'
 const LEGACY_BOOTSTRAP_OWNER_EMAILS = ['martin.cuevas.t@gmail.com']
 
 export type AppRole = 'OWNER' | 'MEMBER'
-export type Capability = 'infra.read' | 'costs.read' | 'gateway.read'
+export type Capability =
+  | 'infra.read'
+  | 'infra.write'
+  | 'costs.read'
+  | 'gateway.read'
+  | 'gateway.execute'
+  | 'secrets.manage'
+  | 'users.manage'
 
 type AuthSession = {
   user?: {
@@ -20,7 +27,15 @@ type AuthSession = {
 } | null
 
 const ROLE_CAPABILITIES: Record<AppRole, Capability[]> = {
-  OWNER: ['infra.read', 'costs.read', 'gateway.read'],
+  OWNER: [
+    'infra.read',
+    'infra.write',
+    'costs.read',
+    'gateway.read',
+    'gateway.execute',
+    'secrets.manage',
+    'users.manage',
+  ],
   MEMBER: [],
 }
 

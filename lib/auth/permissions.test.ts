@@ -95,6 +95,56 @@ describe('permissions', () => {
     }))
   })
 
+  it('owner tiene las capabilities de ejecucion y gestion', async () => {
+    mocks.auth.mockResolvedValue({ user: { id: 'owner-1', email: 'owner@example.com' } })
+    mocks.dbWhere.mockResolvedValue([{ role: 'OWNER' }])
+
+    const { getAuthorizationContext } = await import('./permissions')
+    const ctx = await getAuthorizationContext()
+
+    expect('response' in ctx).toBe(false)
+    if ('response' in ctx) return
+    expect(ctx.capabilities).toContain('gateway.execute')
+    expect(ctx.capabilities).toContain('infra.write')
+    expect(ctx.capabilities).toContain('secrets.manage')
+    expect(ctx.capabilities).toContain('users.manage')
+  })
+
+  it('member no tiene capabilities de ejecucion ni gestion', async () => {
+    mocks.auth.mockResolvedValue({ user: { id: 'user-2', email: 'user@example.com' } })
+    mocks.dbWhere.mockResolvedValue([{ role: 'MEMBER' }])
+
+    const { getAuthorizationContext } = await import('./permissions')
+    const ctx = await getAuthorizationContext()
+
+    expect('response' in ctx).toBe(false)
+    if ('response' in ctx) return
+    expect(ctx.capabilities).not.toContain('gateway.execute')
+    expect(ctx.capabilities).not.toContain('infra.write')
+    expect(ctx.capabilities).not.toContain('secrets.manage')
+    expect(ctx.capabilities).not.toContain('users.manage')
+  })
+
+  it('requireCapability bloquea gateway.execute a member', async () => {
+    mocks.auth.mockResolvedValue({ user: { id: 'user-2', email: 'user@example.com' } })
+    mocks.dbWhere.mockResolvedValue([{ role: 'MEMBER' }])
+    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'user-2' })
+
+    const { requireCapability } = await import('./permissions')
+    const result = await requireCapability('gateway.execute', new Request('http://localhost/api/gateway/send'), {
+      action: 'gateway.send',
+      resource: '/api/gateway/send',
+    })
+
+    expect('response' in result).toBe(true)
+    if (!('response' in result)) return
+    expect(result.response!.status).toBe(403)
+    expect(mocks.logPrivilegedAccess).toHaveBeenCalledWith(expect.objectContaining({
+      capability: 'gateway.execute',
+      outcome: 'denied',
+    }))
+  })
+
   it('registra acceso permitido cuando la capability existe', async () => {
     mocks.auth.mockResolvedValue({ user: { id: 'owner-1', email: 'owner@example.com' } })
     mocks.dbWhere.mockResolvedValue([{ role: 'OWNER' }])
