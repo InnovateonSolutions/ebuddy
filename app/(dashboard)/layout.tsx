@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { auth, signOut } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
-import { isOwner } from '@/lib/auth/owner'
+import { getAuthorizationContext } from '@/lib/auth/permissions'
 import { NavLink } from '@/features/navigation/components/nav-link'
 import { SearchCommand } from '@/features/navigation/components/search-command'
 import { BottomNav } from '@/features/navigation/components/bottom-nav'
@@ -14,6 +14,8 @@ export default async function DashboardLayout({
 }) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
+  const authz = await getAuthorizationContext(session)
+  if ('response' in authz) redirect('/login')
 
   async function logoutAction() {
     'use server'
@@ -21,7 +23,7 @@ export default async function DashboardLayout({
     await signOut({ redirectTo: '/login' })
   }
 
-  const owner = isOwner(session.user.email)
+  const owner = authz.role === 'OWNER'
   const name = session.user.name ?? session.user.email ?? ''
   const initials = name
     .split(' ')

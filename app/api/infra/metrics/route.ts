@@ -1,20 +1,16 @@
 export const dynamic = 'force-dynamic'
 
 import { getInfraSnapshot } from '@/features/infra/server/service'
-import { apiSuccess, apiError } from '@/lib/utils'
-import { requireAuthenticatedUserId } from '@/lib/auth/request'
-import { auth } from '@/lib/auth/config'
-import { isOwner } from '@/lib/auth/owner'
+import { apiSuccess } from '@/lib/utils'
+import { requireCapability } from '@/lib/auth/permissions'
 
 export async function GET(request: Request) {
-  const requestAuth = requireAuthenticatedUserId(request)
-  if ('response' in requestAuth) return requestAuth.response
+  const authz = await requireCapability('infra.read', request, {
+    action: 'route.access',
+    resource: '/api/infra/metrics',
+  })
+  if ('response' in authz) return authz.response
 
-  const session = await auth()
-  if (!isOwner(session?.user?.email)) {
-    return apiError('Prohibido', 'FORBIDDEN', 403)
-  }
-
-  const snapshot = await getInfraSnapshot(requestAuth.userId)
+  const snapshot = await getInfraSnapshot(authz.userId)
   return apiSuccess(snapshot)
 }

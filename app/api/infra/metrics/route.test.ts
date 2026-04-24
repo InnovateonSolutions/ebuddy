@@ -1,24 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  requireAuthenticatedUserId: vi.fn(),
+  requireCapability: vi.fn(),
   getInfraSnapshot: vi.fn(),
-  auth: vi.fn(),
 }))
 
-vi.mock('@/lib/auth/request', () => ({ requireAuthenticatedUserId: mocks.requireAuthenticatedUserId }))
+vi.mock('@/lib/auth/permissions', () => ({ requireCapability: mocks.requireCapability }))
 vi.mock('@/features/infra/server/service', () => ({ getInfraSnapshot: mocks.getInfraSnapshot }))
-vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
 
 describe('GET /api/infra/metrics', () => {
   beforeEach(() => {
-    mocks.requireAuthenticatedUserId.mockReset()
+    mocks.requireCapability.mockReset()
     mocks.getInfraSnapshot.mockReset()
-    mocks.auth.mockReset()
   })
 
   it('retorna 401 si no hay sesión', async () => {
-    mocks.requireAuthenticatedUserId.mockReturnValue({
+    mocks.requireCapability.mockResolvedValue({
       response: Response.json({ success: false, code: 'UNAUTHORIZED' }, { status: 401 }),
     })
 
@@ -28,13 +25,9 @@ describe('GET /api/infra/metrics', () => {
     expect(res.status).toBe(401)
   })
 
-  it('retorna 403 si el usuario autenticado no es martin.cuevas.t@gmail.com', async () => {
-    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'user-2' })
-    mocks.auth.mockResolvedValue({
-      user: {
-        id: 'user-2',
-        email: 'otro@gmail.com',
-      },
+  it('retorna 403 si el actor no tiene infra.read', async () => {
+    mocks.requireCapability.mockResolvedValue({
+      response: Response.json({ success: false, code: 'FORBIDDEN' }, { status: 403 }),
     })
 
     const { GET } = await import('./route')
@@ -45,12 +38,16 @@ describe('GET /api/infra/metrics', () => {
   })
 
   it('retorna el snapshot unificado para la página de Infra', async () => {
-    mocks.requireAuthenticatedUserId.mockReturnValue({ userId: 'owner-1' })
-    mocks.auth.mockResolvedValue({
-      user: {
-        id: 'owner-1',
-        email: 'martin.cuevas.t@gmail.com',
+    mocks.requireCapability.mockResolvedValue({
+      session: {
+        user: {
+          id: 'owner-1',
+          email: 'owner@example.com',
+        },
       },
+      userId: 'owner-1',
+      role: 'OWNER',
+      capabilities: ['infra.read'],
     })
     mocks.getInfraSnapshot.mockResolvedValue({
       droplet: {

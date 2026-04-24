@@ -57,6 +57,20 @@
       "when": 1776910000000,
       "tag": "0007_ensure_ai_provider_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777000000000,
+      "tag": "0008_add_user_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777010000000,
+      "tag": "0009_add_privileged_access_audit",
+      "breakpoints": true
     }
   ]
 }

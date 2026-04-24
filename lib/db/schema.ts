@@ -18,6 +18,8 @@ export const ticketContextEnum = pgEnum('ticket_context', ['NEGOCIO', 'PERSONAL'
 export const ticketPriorityEnum = pgEnum('ticket_priority', ['ALTA', 'MEDIA', 'BAJA'])
 export const ticketStatusEnum = pgEnum('ticket_status', ['PENDING', 'IN_PROGRESS', 'QA', 'DONE'])
 export const calendarProviderEnum = pgEnum('calendar_provider', ['GOOGLE', 'MICROSOFT'])
+export const userRoleEnum = pgEnum('user_role', ['OWNER', 'MEMBER'])
+export const privilegedAccessOutcomeEnum = pgEnum('privileged_access_outcome', ['allowed', 'denied'])
 
 // ─── Auth.js required tables ─────────────────────────────────
 
@@ -32,6 +34,7 @@ export const users = pgTable('users', {
   image: text('image'),
   // App custom fields
   displayName: text('display_name').notNull().default(''),
+  role: userRoleEnum('role').notNull().default('MEMBER'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -141,6 +144,27 @@ export const calendarTokens = pgTable(
   })
 )
 
+export const privilegedAccessAudit = pgTable(
+  'privileged_access_audit',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    capability: text('capability').notNull(),
+    action: text('action').notNull(),
+    resource: text('resource').notNull(),
+    outcome: privilegedAccessOutcomeEnum('outcome').notNull(),
+    details: text('details'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => ({
+    userCreatedIdx: index('idx_privileged_access_audit_user_created').on(t.userId, t.createdAt),
+  })
+)
+
 // ─── Inferred types ───────────────────────────────────────────
 
 export type User = typeof users.$inferSelect
@@ -148,3 +172,4 @@ export type Ticket = typeof tickets.$inferSelect
 export type NewTicket = typeof tickets.$inferInsert
 export type UserPreferences = typeof userPreferences.$inferSelect
 export type CalendarToken = typeof calendarTokens.$inferSelect
+export type PrivilegedAccessAudit = typeof privilegedAccessAudit.$inferSelect

@@ -48,6 +48,9 @@ class TestDBInitRender:
         assert "'IN_PROGRESS'" in sql
         assert "'QA'" in sql
         assert "'DONE'" in sql
+        assert "'OWNER'" in sql
+        assert "'MEMBER'" in sql
+        assert 'privileged_access_audit' in sql
         assert 'ADD COLUMN "api_key"' in sql
         assert 'ADD COLUMN "api_key_hash"' in sql
         assert 'ADD COLUMN "api_key_preview"' in sql
@@ -79,6 +82,8 @@ class TestDBInitRender:
             "drizzle/0002_add_api_key.sql",
             "drizzle/0003_add_visit_counter.sql",
             "drizzle/0004_secure_api_keys_and_drop_visit_counter.sql",
+            "drizzle/0008_add_user_roles.sql",
+            "drizzle/0009_add_privileged_access_audit.sql",
         ]:
             content = (REPO_ROOT / rel_path).read_text().strip()
             assert content in sql

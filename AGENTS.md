@@ -43,9 +43,11 @@ más profunda.
 Antes de dar un cambio por listo:
 
 - la validación proporcional al cambio está en verde
+- si el objetivo del turno ya es subir cambios, la suite completa relevante ya corrió localmente, no solo checks focalizados
 - no hay scope creep respecto al requerimiento actual
 - el impacto en seguridad, runtime o deploy fue revisado si aplicaba
 - las docs o contratos estructurales se actualizaron si cambió una convención viva
+- si el objetivo incluye integración completa, el trabajo no termina en verde local: también hay que revisar CI/Deploy tras el push y hacer troubleshooting si falla
 
 ## [SIEMPRE] Reglas no negociables
 
@@ -177,6 +179,7 @@ npm run test:run
 - Sin regresiones en la suite completa
 - Sin vulnerabilidades introducidas (XSS, SQL injection, etc.)
 - Sin scope creep respecto al ticket original
+- Cuando la tarea ya va a milestone de push: correr la validación completa relevante del repo, no solo tests focalizados
 - **Si el ticket toca páginas del dashboard:** agregar un test estructural que verifique que la página importa `export const dynamic = 'force-dynamic'` y que no llama a columnas de DB que no existan en el schema actual
 
 ### 6. Commit y push
@@ -203,6 +206,7 @@ Convención de commits:
 - Verificar el resultado en GitHub Actions — **SIEMPRE revisar CI y Deploy, no solo CI**
 - **NO cerrar el ticket hasta que CI y Deploy estén en verde**
 - Si falla: diagnosticar leyendo los logs del workflow antes de asumir la causa
+- Si el objetivo del turno incluye subir cambios, continuar hasta revisar el pipeline y hacer troubleshooting básico del fallo antes de dar la tarea por cerrada
 
 ```bash
 gh run list --limit 5                        # ver estado de CI y Deploy

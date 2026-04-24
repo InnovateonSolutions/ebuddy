@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/config'
-import { isOwner } from '@/lib/auth/owner'
+import { requireCapability } from '@/lib/auth/permissions'
 import { getDOCostSnapshot } from '@/features/costs/server/do-billing'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!isOwner(session.user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const authz = await requireCapability('costs.read', undefined, {
+    action: 'route.access',
+    resource: '/api/costs',
+  })
+  if ('response' in authz) return authz.response
 
   const data = await getDOCostSnapshot()
   return NextResponse.json({ data })

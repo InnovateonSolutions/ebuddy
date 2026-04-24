@@ -11,6 +11,7 @@ import { AiProviderSelector } from '@/features/settings/components/ai-provider-s
 import { OpenClawStatus } from '@/features/settings/components/openclaw-status'
 import { redirect } from 'next/navigation'
 import { CheckCircle2, Circle } from 'lucide-react'
+import { getAuthorizationContext } from '@/lib/auth/permissions'
 
 export default async function SettingsPage({
   searchParams,
@@ -19,6 +20,8 @@ export default async function SettingsPage({
 }) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
+  const authz = await getAuthorizationContext(session)
+  if ('response' in authz) redirect('/login')
 
   const [tokens, prefs, prefsFull] = await Promise.all([
     db
@@ -158,7 +161,9 @@ export default async function SettingsPage({
         ollamaModel={prefsFull.ollamaModel ?? 'llama3:latest'}
       />
 
-      <OpenClawStatus configured={Boolean(env.openclawBaseUrl && env.openclawGatewayToken)} />
+      {authz.capabilities.includes('gateway.read') && (
+        <OpenClawStatus configured={Boolean(env.openclawBaseUrl && env.openclawGatewayToken)} />
+      )}
 
       <ApiKeySection
         hasKey={Boolean(prefs?.apiKeyHash)}

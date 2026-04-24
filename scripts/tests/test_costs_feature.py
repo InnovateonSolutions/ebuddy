@@ -9,16 +9,15 @@ def read(path: str) -> str:
 
 def test_costs_page_is_owner_only():
     page = read("app/(dashboard)/costs/page.tsx")
-    assert "isOwner" in page, "La página /costs debe verificar isOwner"
+    assert "getAuthorizationContext" in page, "La página /costs debe usar autorización centralizada"
     assert "redirect('/today')" in page, "Usuarios no-owner deben ser redirigidos a /today"
     assert "force-dynamic" in page
 
 
 def test_costs_api_route_is_owner_only():
     route = read("app/api/costs/route.ts")
-    assert "isOwner" in route
-    assert "403" in route, "API debe devolver 403 si no es owner"
-    assert "401" in route, "API debe devolver 401 si no hay sesión"
+    assert "requireCapability" in route
+    assert "authz.response" in route, "API debe delegar 401/403 al helper centralizado"
 
 
 def test_costs_service_uses_do_token():

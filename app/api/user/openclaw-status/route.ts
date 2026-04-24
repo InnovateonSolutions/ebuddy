@@ -1,11 +1,14 @@
 export const dynamic = 'force-dynamic'
 
-import { apiSuccess, apiError } from '@/lib/utils'
-import { requireAuthenticatedUserId } from '@/lib/auth/request'
+import { apiSuccess } from '@/lib/utils'
+import { requireCapability } from '@/lib/auth/permissions'
 
 export async function GET(request: Request) {
-  const auth = requireAuthenticatedUserId(request)
-  if ('response' in auth) return auth.response
+  const authz = await requireCapability('gateway.read', request, {
+    action: 'route.access',
+    resource: '/api/user/openclaw-status',
+  })
+  if ('response' in authz) return authz.response
 
   const baseUrl = (process.env.OPENCLAW_BASE_URL ?? '').replace(/\/$/, '')
   const token = process.env.OPENCLAW_GATEWAY_TOKEN ?? ''

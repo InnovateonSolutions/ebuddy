@@ -123,10 +123,12 @@ def test_agents_declares_minimal_definition_of_done_and_pipeline_scope():
 
     assert "## [SIEMPRE] Definition of Done mínima" in content
     assert "la validación proporcional al cambio está en verde" in content
+    assert "si el objetivo del turno ya es subir cambios, la suite completa relevante ya corrió localmente" in content
     assert "no hay scope creep respecto al requerimiento actual" in content
     assert "usar este pipeline completo como camino por defecto para cambios de implementación" in content
     assert "Si la tarea es solo análisis," in content
     assert "basta con validación proporcional." in content
+    assert "si el objetivo incluye integración completa, el trabajo no termina en verde local" in content
 
 
 def test_agents_root_stays_compact_and_avoids_heavy_reference_tables():
@@ -137,3 +139,10 @@ def test_agents_root_stays_compact_and_avoids_heavy_reference_tables():
     assert "## [REFERENCIA] Entorno local para Jira" not in content
     assert "| Módulo | Responsabilidad |" not in content
     assert "| Archivo eliminado | Razón | Reemplazado por |" not in content
+
+
+def test_agents_requires_full_local_validation_before_push_and_pipeline_follow_through():
+    content = read("AGENTS.md")
+
+    assert "Cuando la tarea ya va a milestone de push: correr la validación completa relevante del repo" in content
+    assert "continuar hasta revisar el pipeline y hacer troubleshooting básico del fallo antes de dar la tarea por cerrada" in content
