@@ -3,6 +3,10 @@
   command: openclaw config set agents.defaults.llm.idleTimeoutSeconds 0
   changed_when: true
 
+- name: Restart OpenClaw gateway to apply config
+  command: openclaw restart
+  changed_when: true
+
 - name: Verify OpenClaw config
   command: openclaw doctor
   register: doctor_result

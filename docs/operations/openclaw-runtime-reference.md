@@ -79,6 +79,7 @@ Toda variable nueva tambien debe agregarse al step `Write .env on Droplet` del
 ```bash
 openclaw config set gateway.host 0.0.0.0
 openclaw config set agents.defaults.llm.idleTimeoutSeconds 0  # Ollama puede tardar — deshabilitar timeout
+openclaw restart  # siempre reiniciar después de cambiar config
 openclaw doctor
 ```
 
