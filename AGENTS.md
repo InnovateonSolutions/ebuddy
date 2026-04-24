@@ -47,7 +47,7 @@ Antes de dar un cambio por listo:
 - no hay scope creep respecto al requerimiento actual
 - el impacto en seguridad, runtime o deploy fue revisado si aplicaba
 - las docs o contratos estructurales se actualizaron si cambió una convención viva
-- si el objetivo incluye integración completa, el trabajo no termina en verde local: también hay que revisar CI/Deploy tras el push y hacer troubleshooting si falla
+- **cualquier push requiere revisar CI y Deploy en GitHub Actions — no solo integración completa, sino siempre; el trabajo no termina hasta que ambos estén en verde o el fallo esté diagnosticado**
 
 ## [SIEMPRE] Reglas no negociables
 
@@ -55,6 +55,8 @@ Antes de dar un cambio por listo:
 - No asumir flags, comportamiento por defecto ni formatos de salida
 - No revertir cambios ajenos ni archivos borrados intencionalmente
 - Validar lo relevante antes de commit o push; no empujar cambios sin checks acordes al impacto
+- **Después de cualquier push: revisar CI y Deploy en GitHub Actions antes de dar la tarea por cerrada — sin excepción**
+- Si un job falla: leer los logs del workflow y hacer troubleshooting antes de escalar o cerrar
 - Si aparece una excepción nueva de arquitectura, organización o flujo, primero se actualiza `AGENTS.md` y luego se implementa el cambio
 - Si una decisión cambia arquitectura, permisos, runtime, deploy o seguridad, detenerse y escalar antes de asumir
 
@@ -69,6 +71,7 @@ En cada turno, recorrer este ciclo:
 5. Implementar el mínimo necesario
 6. Ejecutar checks relevantes
 7. Revisar impacto real antes de commit o push
+8. Tras el push: esperar CI y Deploy, revisar resultado, hacer troubleshooting si falla
 
 ## [SIEMPRE] Matriz mínima de validación
 
