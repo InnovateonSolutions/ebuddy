@@ -9,6 +9,7 @@ import { ApiKeySection } from '@/features/settings/components/api-key-section'
 import { PreferencesForm } from '@/features/settings/components/preferences-form'
 import { AiProviderSelector } from '@/features/settings/components/ai-provider-selector'
 import { OpenClawStatus } from '@/features/settings/components/openclaw-status'
+import { AuditLogSection } from '@/features/settings/components/audit-log-section'
 import { redirect } from 'next/navigation'
 import { CheckCircle2, Circle } from 'lucide-react'
 import { getAuthorizationContext } from '@/lib/auth/permissions'
@@ -163,6 +164,10 @@ export default async function SettingsPage({
 
       {authz.capabilities.includes('gateway.read') && (
         <OpenClawStatus configured={Boolean(env.openclawBaseUrl && env.openclawGatewayToken)} />
+      )}
+
+      {authz.capabilities.includes('infra.read') && (
+        <AuditLogSection />
       )}
 
       <ApiKeySection
