@@ -97,6 +97,16 @@ def test_agents_defines_when_to_escalate_rather_than_guess():
     )
 
 
+def test_agents_defines_automation_boundaries():
+    content = read("AGENTS.md")
+
+    assert "## [SIEMPRE] Convención de automatización" in content
+    assert "GitHub Actions es solo orquestador" in content
+    assert "Bash es glue operativo" in content
+    assert "Python y Go se usan para testing o ejecución" in content
+    assert "No esconder lógica compleja dentro de YAML" in content
+
+
 def test_agents_separates_always_conditional_and_reference_layers():
     content = read("AGENTS.md")
 

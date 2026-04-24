@@ -56,12 +56,12 @@ read_gc_json_field() {
   local json_payload="$1"
   local field="$2"
 
-  python3 - "$field" <<'PY' <<<"$json_payload"
+  python3 - "$field" "$json_payload" <<'PY'
 import json
 import sys
 
 field = sys.argv[1]
-raw = sys.stdin.read().strip()
+raw = sys.argv[2].strip()
 if not raw:
     sys.exit(1)
 
@@ -91,6 +91,9 @@ PY
 
 MAX_WAIT=1200
 WAITED=0
+LAST_PROGRESS_SIGNATURE=""
+STALE_POLLS=0
+MAX_STALE_POLLS=3
 while true; do
   GC_STATUS_JSON="$(doctl registry garbage-collection get-active --output json 2>/dev/null || true)"
   [ -z "$GC_STATUS_JSON" ] && break
@@ -103,6 +106,20 @@ while true; do
   FREED_BYTES="$(read_gc_json_field "$GC_STATUS_JSON" freed_bytes 2>/dev/null || echo 0)"
 
   echo "GC activa... (${WAITED}s): status=${STATUS:-desconocido} uuid=${UUID:-desconocido} updated_at=${UPDATED_AT:-n/a} blobs_deleted=${BLOBS_DELETED:-0} freed_bytes=${FREED_BYTES:-0}"
+
+  PROGRESS_SIGNATURE="${STATUS:-desconocido}|${UPDATED_AT:-n/a}|${BLOBS_DELETED:-0}|${FREED_BYTES:-0}"
+  if [ "$PROGRESS_SIGNATURE" = "$LAST_PROGRESS_SIGNATURE" ]; then
+    STALE_POLLS=$((STALE_POLLS + 1))
+  else
+    LAST_PROGRESS_SIGNATURE="$PROGRESS_SIGNATURE"
+    STALE_POLLS=0
+  fi
+
+  if [ "$STALE_POLLS" -ge "$MAX_STALE_POLLS" ]; then
+    echo "Sin avance medible tras $((STALE_POLLS + 1)) lecturas; se deja de esperar la GC activa"
+    break
+  fi
+
   sleep 30
   WAITED=$((WAITED + 30))
   [ "$WAITED" -ge "$MAX_WAIT" ] && { echo "Timeout esperando GC"; break; }

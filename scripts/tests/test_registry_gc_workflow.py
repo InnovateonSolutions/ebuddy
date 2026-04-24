@@ -145,3 +145,61 @@ esac
     assert result.returncode == 0, result.stderr + result.stdout
     assert "No se pudieron listar tags antiguas" in result.stderr
     assert "Registry GC completado" in result.stdout
+
+
+def test_registry_gc_script_exits_when_active_gc_has_no_progress(tmp_path):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    state_file = tmp_path / "get_active_calls"
+    doctl = fake_bin / "doctl"
+    doctl.write_text(
+        f"""#!/usr/bin/env bash
+set -euo pipefail
+
+case "$*" in
+  "registry repository list-tags ebuddy-prod/ebuddy --no-header --format Tag")
+    printf '%s\\n' latest migrator
+    ;;
+  "registry garbage-collection start ebuddy-prod --force --include-untagged-manifests --output json")
+    printf '%s\\n' '[{{"uuid":"fake-gc","status":"requested"}}]'
+    ;;
+  "registry garbage-collection get-active --output json")
+    count=0
+    if [ -f "{state_file}" ]; then
+      count="$(cat "{state_file}")"
+    fi
+    count=$((count + 1))
+    printf '%s' "$count" > "{state_file}"
+    printf '%s\\n' '[{{"uuid":"fake-gc","status":"running","updated_at":"2026-04-24T18:58:00Z","blobs_deleted":0,"freed_bytes":0}}]'
+    ;;
+  "registry garbage-collection list ebuddy-prod --output json")
+    printf '%s\\n' '[{{"uuid":"fake-gc","status":"running","blobs_deleted":0,"freed_bytes":0}}]'
+    ;;
+  *)
+    printf 'unexpected doctl call: %s\\n' "$*" >&2
+    exit 99
+    ;;
+esac
+"""
+    )
+    doctl.chmod(0o755)
+
+    sleep = fake_bin / "sleep"
+    sleep.write_text("#!/usr/bin/env bash\nexit 0\n")
+    sleep.chmod(0o755)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}:{env['PATH']}"
+
+    result = subprocess.run(
+        ["bash", "scripts/registry-gc.sh"],
+        cwd=REPO_ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert "Sin avance medible" in result.stdout
+    assert int(state_file.read_text()) < 10

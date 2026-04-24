@@ -61,6 +61,13 @@ Antes de dar un cambio por listo:
 - Si aparece una excepción nueva de arquitectura, organización o flujo, primero se actualiza `AGENTS.md` y luego se implementa el cambio
 - Si una decisión cambia arquitectura, permisos, runtime, deploy o seguridad, detenerse y escalar antes de asumir
 
+## [SIEMPRE] Convención de automatización
+
+- GitHub Actions es solo orquestador: dispara jobs, pasa inputs/secrets y compone pasos
+- Bash es glue operativo: enlaza CLIs, variables de entorno y comandos del sistema
+- Python y Go se usan para testing o ejecución cuando sean la mejor herramienta para lógica, parsing, validaciones, contratos o binarios operativos
+- No esconder lógica compleja dentro de YAML si puede vivir en un script probado y reutilizable
+
 ## [SIEMPRE] Bucle corto por turno
 
 En cada turno, recorrer este ciclo:
