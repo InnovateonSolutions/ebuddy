@@ -17,6 +17,7 @@ export type Capability =
   | 'gateway.execute'
   | 'secrets.manage'
   | 'users.manage'
+  | 'tickets.write'
 
 type AuthSession = {
   user?: {
@@ -35,8 +36,9 @@ const ROLE_CAPABILITIES: Record<AppRole, Capability[]> = {
     'gateway.execute',
     'secrets.manage',
     'users.manage',
+    'tickets.write',
   ],
-  MEMBER: [],
+  MEMBER: ['tickets.write'],
 }
 
 function bootstrapOwnerEmails() {

@@ -1,15 +1,21 @@
 import { apiSuccess, apiError } from '@/lib/utils'
-import { requireAuthenticatedUserId } from '@/lib/auth/request'
+import { requireCapability, requireStepUp } from '@/lib/auth/permissions'
 import { updateTicketSchema } from '@/features/tickets/server/contracts'
 import { updateTicket, deleteTicket } from '@/features/tickets/server/mutations'
 
+const STEP_UP_MAX_AGE_SEC = 15 * 60
+
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAuthenticatedUserId(request)
-  if ('response' in auth) return auth.response
-  const { userId } = auth
+  const authz = await requireCapability('tickets.write', request, {
+    action: 'ticket.update',
+    resource: '/api/tickets/[id]',
+  })
+  if ('response' in authz) return authz.response
+
+  const { id } = await params
 
   let body: unknown
   try { body = await request.json() } catch {
@@ -21,7 +27,7 @@ export async function PATCH(
   if (Object.keys(parsed.data).length === 0)
     return apiError('No se enviaron campos para actualizar', 'VALIDATION_ERROR')
 
-  const ticket = await updateTicket(params.id, userId, parsed.data)
+  const ticket = await updateTicket(id, authz.userId, parsed.data)
   if (!ticket) return apiError('Ticket no encontrado', 'NOT_FOUND', 404)
 
   return apiSuccess(ticket)
@@ -29,13 +35,20 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAuthenticatedUserId(request)
-  if ('response' in auth) return auth.response
-  const { userId } = auth
+  const authz = await requireCapability('tickets.write', request, {
+    action: 'ticket.delete',
+    resource: '/api/tickets/[id]',
+  })
+  if ('response' in authz) return authz.response
 
-  const deleted = await deleteTicket(params.id, userId)
+  const stepUp = await requireStepUp(STEP_UP_MAX_AGE_SEC)
+  if ('response' in stepUp) return stepUp.response
+
+  const { id } = await params
+
+  const deleted = await deleteTicket(id, authz.userId)
   if (!deleted) return apiError('Ticket no encontrado', 'NOT_FOUND', 404)
 
   return apiSuccess({ deleted: true })

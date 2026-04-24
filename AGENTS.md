@@ -243,6 +243,70 @@ Para usar otro estado de cierre: `./scripts/jira/close-issue.sh KAN-XX "In Revie
 
 ---
 
+## [SIEMPRE] Patrones de seguridad obligatorios
+
+Estos patrones están implementados y deben aplicarse en cada ruta o función nueva que los necesite.
+
+### Capability system (8 capabilities activas)
+
+| Capability | Rutas que la usan |
+|---|---|
+| `infra.read` | `GET /api/infra/metrics`, `GET /api/admin/audit` |
+| `infra.write` | `POST /api/infra/sync` |
+| `costs.read` | `GET /api/costs` |
+| `gateway.read` | `GET /api/user/openclaw-status` |
+| `gateway.execute` | `POST /api/gateway/chat` |
+| `secrets.manage` | `POST /api/user/api-key` |
+| `users.manage` | `GET /api/admin/users`, `PATCH /api/admin/users/[id]/role` |
+| `tickets.write` | `PATCH /api/tickets/[id]`, `DELETE /api/tickets/[id]` |
+
+Toda ruta que toque datos o acciones del owner debe llamar `requireCapability()` con audit context (3er argumento).
+MEMBER tiene solo `tickets.write`. OWNER tiene todas.
+
+### Cuándo usar `requireStepUp(15 * 60)`
+
+Obligatorio en operaciones destructivas o de alto impacto:
+- `DELETE` de cualquier recurso
+- Cambio de rol de usuario
+- Regeneración de API key
+- Cualquier operación que no sea reversible en menos de 1 minuto
+
+### Persistencia de estado de spokes (`upsertIntegrationStatus`)
+
+Después de cada check o conexión exitosa/fallida de un spoke, llamar:
+
+```ts
+import { upsertIntegrationStatus } from '@/lib/integrations/service'
+await upsertIntegrationStatus('nombre-spoke', 'active' | 'error' | 'inactive', { metadata })
+```
+
+Spokes registrados: `openclaw`, `ollama`, `google-calendar`, `microsoft-calendar`, `do-billing`, `do-metrics`.
+Nunca guardar tokens en metadata. Usar `.catch(() => {})` — el upsert no debe romper el flujo principal.
+
+### Resolución del owner (`resolveOwnerUserId`)
+
+**Nunca** usar `process.env.WHATSAPP_OWNER_USER_ID` directamente en código de producción.
+Usar siempre:
+
+```ts
+import { resolveOwnerUserId } from '@/lib/auth/owner'
+const ownerId = await resolveOwnerUserId() // DB primero, env var como fallback
+```
+
+### Network enforcement (`assertInternalServiceUrl`)
+
+Para cualquier URL de servicio interno (no APIs públicas externas):
+
+```ts
+import { assertInternalServiceUrl } from '@/lib/network'
+assertInternalServiceUrl(url, 'nombre-servicio')
+```
+
+Aplica a: Ollama, OpenClaw, y cualquier servicio que corra en red privada/Tailscale.
+No aplica a: DigitalOcean API, Google/Microsoft OAuth (son públicos por diseño).
+
+---
+
 ## [SIEMPRE] Organización de módulos compartidos (`lib/`)
 
 Toda la lógica reutilizable vive en `lib/`. Las rutas y páginas deben ser delgadas
