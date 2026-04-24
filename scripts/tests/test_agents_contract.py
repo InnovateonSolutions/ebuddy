@@ -19,6 +19,9 @@ def test_agents_requires_single_organizational_convention():
     assert "Todo helper reutilizable nuevo vive en `lib/`" in content, (
         "AGENTS.md debe blindar `lib/` como única casa de lógica compartida"
     )
+    assert "si la lógica pertenece claramente a un dominio y solo se reutiliza dentro de ese dominio" in content, (
+        "AGENTS.md debe aclarar cuándo una pieza debe quedarse en features y no subir a lib"
+    )
 
 
 def test_agents_requires_navigation_consistency_between_public_and_private_surfaces():
@@ -63,3 +66,74 @@ def test_agents_requires_openclaw_installation_to_be_managed_by_ansible():
     assert "Los comandos `openclaw ...` en shell se permiten solo para:" in content, (
         "AGENTS.md debe distinguir entre diagnóstico temporal y configuración persistente de OpenClaw"
     )
+
+
+def test_agents_prioritizes_iterative_execution_over_full_context_dump():
+    content = read("AGENTS.md")
+
+    assert "AGENTS.md no intenta capturar todo el contexto del sistema." in content, (
+        "AGENTS.md debe dejar claro que su objetivo es orientar la ejecución, no reemplazar toda la documentación"
+    )
+    assert "La meta es dar a cualquier agente una guía corta para iterar con seguridad" in content, (
+        "AGENTS.md debe favorecer iteración sana y bajo costo de contexto"
+    )
+    assert "Bucle corto por turno" in content, (
+        "AGENTS.md debe incluir un bucle operativo corto para orientar cada turno"
+    )
+    assert "Matriz mínima de validación" in content, (
+        "AGENTS.md debe mapear checks por tipo de cambio"
+    )
+    assert "No releer secciones `REFERENCIA` salvo que el cambio toque directamente ese ámbito." in content, (
+        "AGENTS.md debe desalentar cargar referencia pesada por defecto"
+    )
+
+
+def test_agents_defines_when_to_escalate_rather_than_guess():
+    content = read("AGENTS.md")
+
+    assert "Cuándo escalar antes de seguir" in content
+    assert "cambia arquitectura, permisos, runtime, deploy o seguridad" in content, (
+        "AGENTS.md debe dejar explícito cuándo no conviene seguir asumiendo"
+    )
+
+
+def test_agents_separates_always_conditional_and_reference_layers():
+    content = read("AGENTS.md")
+
+    assert "## Mapa de lectura rápida" in content
+    assert "`SIEMPRE`" in content
+    assert "`CONDICIONAL`" in content
+    assert "`REFERENCIA`" in content
+    assert "## [SIEMPRE] Reglas no negociables" in content
+    assert "## [CONDICIONAL] Pipeline de desarrollo obligatorio" in content
+    assert "## [REFERENCIA] OpenClaw — Integración de mensajería" in content
+
+
+def test_agents_root_points_to_dedicated_reference_docs_for_heavy_runtime_detail():
+    content = read("AGENTS.md")
+
+    assert "docs/operations/deploy-runtime-reference.md" in content
+    assert "docs/operations/openclaw-runtime-reference.md" in content
+    assert "Para edge cases de deploy, migraciones y diagnóstico de producción, abrir" in content
+    assert "Abrir detalle completo en `docs/operations/openclaw-runtime-reference.md`." in content
+
+
+def test_agents_declares_minimal_definition_of_done_and_pipeline_scope():
+    content = read("AGENTS.md")
+
+    assert "## [SIEMPRE] Definition of Done mínima" in content
+    assert "la validación proporcional al cambio está en verde" in content
+    assert "no hay scope creep respecto al requerimiento actual" in content
+    assert "usar este pipeline completo como camino por defecto para cambios de implementación" in content
+    assert "Si la tarea es solo análisis," in content
+    assert "basta con validación proporcional." in content
+
+
+def test_agents_root_stays_compact_and_avoids_heavy_reference_tables():
+    content = read("AGENTS.md")
+
+    assert "## [REFERENCIA] Stack tecnológico" not in content
+    assert "## [REFERENCIA] Estructura de tests estructurales" not in content
+    assert "## [REFERENCIA] Entorno local para Jira" not in content
+    assert "| Módulo | Responsabilidad |" not in content
+    assert "| Archivo eliminado | Razón | Reemplazado por |" not in content

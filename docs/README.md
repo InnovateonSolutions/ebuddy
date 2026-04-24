@@ -119,6 +119,8 @@ ebuddy/
 | [Seguridad](security/overview.md) | Controles actuales y supuestos de seguridad |
 | [Runbook](operations/runbook.md) | Operación manual en producción |
 | [Monitoreo](operations/monitoring.md) | Observabilidad y alertas |
+| [Deploy Runtime Reference](operations/deploy-runtime-reference.md) | Edge cases y patrones vivos de deploy/runtime |
+| [OpenClaw Runtime Reference](operations/openclaw-runtime-reference.md) | Integración operativa y límites de OpenClaw |
 
 ---
 
