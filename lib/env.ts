@@ -1,7 +1,4 @@
-/**
- * Valida variables de entorno requeridas al startup.
- * Si falta alguna, el servidor falla rápido con un mensaje claro.
- */
+import { assertInternalServiceUrl } from '@/lib/network'
 
 const requiredServerEnvVars = [
   'DATABASE_URL',
@@ -23,10 +20,15 @@ function getEnv(key: RequiredServerKey): string {
   return value
 }
 
+const _ollamaBaseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'
+const _openclawBaseUrl = process.env.OPENCLAW_BASE_URL ?? ''
+assertInternalServiceUrl(_ollamaBaseUrl, 'ollama')
+assertInternalServiceUrl(_openclawBaseUrl, 'openclaw')
+
 export const env = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
-  ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
-  openclawBaseUrl: process.env.OPENCLAW_BASE_URL ?? '',
+  ollamaBaseUrl: _ollamaBaseUrl,
+  openclawBaseUrl: _openclawBaseUrl,
   openclawGatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN ?? '',
   openclawHookToken: process.env.OPENCLAW_HOOK_TOKEN ?? '',
   get doMonitoringToken() { return process.env.DO_MONITORING_TOKEN ?? '' },
