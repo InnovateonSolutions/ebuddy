@@ -3,8 +3,9 @@ export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
 import { getAuthorizationContext } from '@/lib/auth/permissions'
-import { listCampaigns } from '@/features/campaigns/server/service'
+import { listCampaigns, getLatestCampaignNotes } from '@/features/campaigns/server/service'
 import { CampaignVaultUploader } from '@/features/campaigns/components/campaign-vault-uploader'
+import { CampaignNotesList } from '@/features/campaigns/components/campaign-notes-list'
 
 export default async function CampaignsPage() {
   const session = await auth()
@@ -13,10 +14,10 @@ export default async function CampaignsPage() {
   const authz = await getAuthorizationContext(session)
   if ('response' in authz) redirect('/login')
 
-  const campaigns = (await listCampaigns(authz.userId)).map((campaign) => ({
-    ...campaign,
-    updatedAt: campaign.updatedAt.toISOString(),
-  }))
+  const [campaigns, activeData] = await Promise.all([
+    listCampaigns(authz.userId),
+    getLatestCampaignNotes(authz.userId),
+  ])
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -28,7 +29,14 @@ export default async function CampaignsPage() {
         </p>
       </section>
 
-      <CampaignVaultUploader initialCampaigns={campaigns} />
+      <CampaignVaultUploader initialCampaigns={campaigns.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() }))} />
+
+      {activeData && (
+        <CampaignNotesList
+          campaignName={activeData.campaign.name}
+          notes={activeData.notes}
+        />
+      )}
     </div>
   )
 }
