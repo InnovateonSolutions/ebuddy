@@ -36,6 +36,17 @@ variable "gitlab_domain_name" {
   type        = string
 }
 
+variable "gitlab_mail_domain_name" {
+  description = "Dominio usado como remitente SMTP de GitLab y verificado en Resend"
+  type        = string
+}
+
+variable "gitlab_resend_dkim_public_key" {
+  description = "Valor completo del TXT DKIM de Resend para gitlab_mail_domain_name, incluyendo el prefijo p="
+  type        = string
+  default     = ""
+}
+
 variable "enable_route53" {
   description = "Si es true, Terraform crea/actualiza el registro A en AWS Route 53"
   type        = bool

@@ -21,6 +21,27 @@ def test_route53_creates_gitlab_record_to_droplet_ip():
     )
 
 
+def test_route53_manages_resend_mail_domain_records():
+    dns = read("infra/terraform/dns.tf")
+    variables = read("infra/terraform/variables.tf")
+    workflow = read(".github/workflows/terraform.yml")
+
+    assert 'variable "gitlab_mail_domain_name"' in variables
+    assert 'variable "gitlab_resend_dkim_public_key"' in variables
+    assert 'resource "aws_route53_record" "gitlab_resend_dkim"' in dns
+    assert 'resource "aws_route53_record" "gitlab_resend_mx"' in dns
+    assert 'resource "aws_route53_record" "gitlab_resend_spf"' in dns
+    assert 'resource "aws_route53_record" "gitlab_resend_tracking"' in dns
+    assert "resend._domainkey.${var.gitlab_mail_domain_name}" in dns
+    assert "send.${var.gitlab_mail_domain_name}" in dns
+    assert "links.${var.gitlab_mail_domain_name}" in dns
+    assert "feedback-smtp.us-east-1.amazonses.com" in dns
+    assert "include:amazonses.com" in dns
+    assert "links1.resend-dns.com" in dns
+    assert "TF_VAR_gitlab_mail_domain_name=$GITLAB_SMTP_DOMAIN" in workflow
+    assert "GITLAB_RESEND_DKIM_PUBLIC_KEY" in workflow
+
+
 def test_terraform_exposes_gitlab_domain_variable_and_output():
     variables = read("infra/terraform/variables.tf")
     outputs = read("infra/terraform/outputs.tf")
