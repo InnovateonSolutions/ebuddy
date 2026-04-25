@@ -1,0 +1,90 @@
+---
+- name: Install GitLab apt prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - openssh-server
+      - perl
+      - tzdata
+    state: present
+    update_cache: true
+
+- name: Ensure GitLab keyring directory exists
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download GitLab repository signing key
+  ansible.builtin.get_url:
+    url: https://packages.gitlab.com/gpg.key
+    dest: /tmp/gitlab.asc
+    mode: "0644"
+
+- name: Dearmor GitLab repository signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor --yes --output /usr/share/keyrings/gitlab_gitlab-ce-archive-keyring.gpg /tmp/gitlab.asc
+  changed_when: true
+
+- name: Configure GitLab CE apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/gitlab_gitlab-ce-archive-keyring.gpg] https://packages.gitlab.com/gitlab/gitlab-ce/ubuntu/ {{ ansible_distribution_release }} main"
+    filename: gitlab_gitlab-ce
+    state: present
+    update_cache: true
+
+- name: Install GitLab CE omnibus package
+  ansible.builtin.apt:
+    name: gitlab-ce
+    state: present
+    update_cache: true
+
+- name: Configure GitLab external URL
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: "^external_url "
+    line: "external_url '{{ gitlab_external_url | default('http://gitlab.elitemini.tailnet') }}'"
+    create: true
+    mode: "0600"
+  register: gitlab_external_url_config
+
+- name: Disable Let's Encrypt auto management for internal install
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: "^letsencrypt\\['enable'\\]"
+    line: "letsencrypt['enable'] = false"
+    create: true
+    mode: "0600"
+  register: gitlab_letsencrypt_config
+
+- name: Set GitLab SSH port
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: "^gitlab_rails\\['gitlab_shell_ssh_port'\\]"
+    line: "gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_shell_ssh_port | default(22) }}"
+    create: true
+    mode: "0600"
+  register: gitlab_ssh_port_config
+
+- name: Reconfigure GitLab
+  ansible.builtin.command:
+    cmd: gitlab-ctl reconfigure
+  when:
+    - gitlab_external_url_config.changed
+      or gitlab_letsencrypt_config.changed
+      or gitlab_ssh_port_config.changed
+  changed_when: true
+
+- name: Ensure GitLab service is enabled and running
+  ansible.builtin.service:
+    name: gitlab-runsvdir
+    state: started
+    enabled: true
+
+- name: Remove temporary GitLab signing key
+  ansible.builtin.file:
+    path: /tmp/gitlab.asc
+    state: absent
