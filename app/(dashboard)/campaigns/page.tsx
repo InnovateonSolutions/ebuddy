@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
 import { getAuthorizationContext } from '@/lib/auth/permissions'
 import { listCampaigns, getLatestCampaignNotes } from '@/features/campaigns/server/service'
-import { CampaignVaultUploader } from '@/features/campaigns/components/campaign-vault-uploader'
 import { VaultViewer } from '@/features/campaigns/components/vault-viewer'
 
 export default async function CampaignsPage() {
@@ -20,23 +19,10 @@ export default async function CampaignsPage() {
   ])
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <section className="dashboard-hero">
-        <p className="dashboard-kicker">Campañas DnD</p>
-        <h1 className="dashboard-title">Mesa y canon</h1>
-        <p className="dashboard-subtitle">
-          Importa tu vault de Obsidian y usa tus notas como memoria viva para preparar sesiones, NPCs y escenas.
-        </p>
-      </section>
-
-      <CampaignVaultUploader initialCampaigns={campaigns.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() }))} />
-
-      {activeData && activeData.notes.length > 0 && (
-        <VaultViewer
-          campaignName={activeData.campaign.name}
-          notes={activeData.notes}
-        />
-      )}
-    </div>
+    <VaultViewer
+      campaignName={activeData?.campaign.name ?? null}
+      notes={activeData?.notes ?? []}
+      campaigns={campaigns.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() }))}
+    />
   )
 }
