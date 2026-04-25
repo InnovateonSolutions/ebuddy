@@ -23,6 +23,7 @@ jobs:
       infra_changed: ${{ steps.filter.outputs.infra_changed }}
       scripts_changed: ${{ steps.filter.outputs.scripts_changed }}
       ansible_changed: ${{ steps.filter.outputs.ansible_changed }}
+      gitlab_changed: ${{ steps.filter.outputs.gitlab_changed }}
 
     steps:
       - uses: actions/checkout@v6
@@ -49,6 +50,7 @@ jobs:
           infra_changed=false
           scripts_changed=false
           ansible_changed=false
+          gitlab_changed=false
 
           while IFS= read -r file; do
             [ -n "$file" ] || continue
@@ -76,6 +78,12 @@ jobs:
                 ansible_changed=true
                 ;;
             esac
+
+            case "$file" in
+              infra/ansible/playbooks/install-gitlab.yml|infra/ansible/roles/gitlab/*|.github/workflows/setup.yml)
+                gitlab_changed=true
+                ;;
+            esac
           done <<EOF
           $CHANGED_FILES
           EOF
@@ -84,6 +92,7 @@ jobs:
           echo "infra_changed=$infra_changed" >> "$GITHUB_OUTPUT"
           echo "scripts_changed=$scripts_changed" >> "$GITHUB_OUTPUT"
           echo "ansible_changed=$ansible_changed" >> "$GITHUB_OUTPUT"
+          echo "gitlab_changed=$gitlab_changed" >> "$GITHUB_OUTPUT"
 
   node-tests:
     name: Node Tests
@@ -223,4 +232,20 @@ jobs:
     with:
       target: elitemini
       playbook: install-node-exporter
+    secrets: inherit
+
+  elitemini-gitlab-setup:
+    name: Elitemini GitLab Setup
+    needs: [detect-changes, python-tests, terratest, terraform-plan]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      needs['detect-changes'].outputs.gitlab_changed == 'true' &&
+      (needs.python-tests.result == 'success' || needs.python-tests.result == 'skipped') &&
+      (needs.terratest.result == 'success' || needs.terratest.result == 'skipped') &&
+      (needs.terraform-plan.result == 'success' || needs.terraform-plan.result == 'skipped')
+    uses: ./.github/workflows/setup.yml
+    with:
+      target: elitemini
+      playbook: install-gitlab
     secrets: inherit

@@ -21,3 +21,12 @@ resource "aws_route53_record" "app" {
   ttl     = 300
   records = [digitalocean_reserved_ip.app.ip_address]
 }
+
+resource "aws_route53_record" "gitlab" {
+  count   = var.enable_route53 ? 1 : 0
+  zone_id = data.aws_route53_zone.main[0].zone_id
+  name    = var.gitlab_domain_name
+  type    = "A"
+  ttl     = 300
+  records = [digitalocean_reserved_ip.app.ip_address]
+}

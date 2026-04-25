@@ -109,6 +109,7 @@ jobs:
           echo "TF_VAR_app_name=$APP_NAME"         >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT"   >> $GITHUB_ENV
           echo "TF_VAR_domain_name=$DOMAIN_NAME"   >> $GITHUB_ENV
+          echo "TF_VAR_gitlab_domain_name=$GITLAB_DOMAIN_NAME" >> $GITHUB_ENV
           echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
           echo "TF_VAR_enable_route53=${{ needs.preflight.outputs.manage_dns }}" >> $GITHUB_ENV
@@ -174,6 +175,7 @@ jobs:
           echo "TF_VAR_app_name=$APP_NAME"         >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT"   >> $GITHUB_ENV
           echo "TF_VAR_domain_name=$DOMAIN_NAME"   >> $GITHUB_ENV
+          echo "TF_VAR_gitlab_domain_name=$GITLAB_DOMAIN_NAME" >> $GITHUB_ENV
           echo "TF_VAR_droplet_size=$DROPLET_SIZE" >> $GITHUB_ENV
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
           echo "TF_VAR_enable_route53=${{ needs.preflight.outputs.manage_dns }}" >> $GITHUB_ENV

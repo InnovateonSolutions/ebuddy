@@ -60,6 +60,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    env_file: /opt/ebuddy/.env
     ports:
       - "80:80"
       - "443:443"

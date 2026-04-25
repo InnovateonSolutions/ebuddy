@@ -46,7 +46,7 @@
   ansible.builtin.lineinfile:
     path: /etc/gitlab/gitlab.rb
     regexp: "^external_url "
-    line: "external_url '{{ gitlab_external_url | default('http://gitlab.elitemini.tailnet') }}'"
+    line: "external_url '{{ gitlab_external_url | default('https://gitlab.innovateoncorp.com') }}'"
     create: true
     mode: "0600"
   register: gitlab_external_url_config
@@ -69,6 +69,24 @@
     mode: "0600"
   register: gitlab_ssh_port_config
 
+- name: Set GitLab nginx listen port for reverse proxy
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: "^nginx\\['listen_port'\\]"
+    line: "nginx['listen_port'] = {{ gitlab_nginx_listen_port | default(8929) }}"
+    create: true
+    mode: "0600"
+  register: gitlab_nginx_port_config
+
+- name: Disable GitLab local HTTPS termination behind Caddy
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: "^nginx\\['listen_https'\\]"
+    line: "nginx['listen_https'] = false"
+    create: true
+    mode: "0600"
+  register: gitlab_nginx_https_config
+
 - name: Reconfigure GitLab
   ansible.builtin.command:
     cmd: gitlab-ctl reconfigure
@@ -76,6 +94,8 @@
     - gitlab_external_url_config.changed
       or gitlab_letsencrypt_config.changed
       or gitlab_ssh_port_config.changed
+      or gitlab_nginx_port_config.changed
+      or gitlab_nginx_https_config.changed
   changed_when: true
 
 - name: Ensure GitLab service is enabled and running

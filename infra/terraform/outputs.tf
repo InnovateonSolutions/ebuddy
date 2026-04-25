@@ -24,6 +24,11 @@ output "dns_record" {
   value       = var.enable_route53 ? "${aws_route53_record.app[0].name} → ${digitalocean_reserved_ip.app.ip_address}" : "DNS manual: crear un registro A para ${var.domain_name} → ${digitalocean_reserved_ip.app.ip_address}"
 }
 
+output "gitlab_url" {
+  description = "URL pública de GitLab"
+  value       = "https://${var.gitlab_domain_name}"
+}
+
 output "ssh_connect" {
   description = "Comando para conectarse al Droplet"
   value       = "ssh root@${digitalocean_reserved_ip.app.ip_address}"

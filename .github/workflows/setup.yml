@@ -48,6 +48,12 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install ansible-core
 
+      - name: Load elitemini config
+        if: inputs.target == 'elitemini'
+        run: |
+          source infra/config/main.env
+          echo "GITLAB_DOMAIN_NAME=$GITLAB_DOMAIN_NAME" >> $GITHUB_ENV
+
       - name: Prepare Ansible SSH key
         if: inputs.target == 'elitemini'
         env:
@@ -79,7 +85,7 @@ jobs:
           export ANSIBLE_PRIVATE_KEY_FILE="$HOME/.ssh/elitemini"
           ansible-playbook \
             "infra/ansible/playbooks/${{ inputs.playbook }}.yml" \
-            --extra-vars "tailscale_auth_key=${TAILSCALE_AUTH_KEY}"
+            --extra-vars "tailscale_auth_key=${TAILSCALE_AUTH_KEY} gitlab_external_url=https://${GITLAB_DOMAIN_NAME} gitlab_nginx_listen_port=8929"
 
       # ── Droplet — IP pública directa ────────────────────────
       - name: Copy playbook to Droplet

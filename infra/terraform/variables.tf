@@ -31,6 +31,11 @@ variable "domain_name" {
   type        = string
 }
 
+variable "gitlab_domain_name" {
+  description = "Subdominio público para GitLab (ej: gitlab.ebuddy.io)"
+  type        = string
+}
+
 variable "enable_route53" {
   description = "Si es true, Terraform crea/actualiza el registro A en AWS Route 53"
   type        = bool
