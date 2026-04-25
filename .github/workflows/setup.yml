@@ -53,6 +53,12 @@ jobs:
         run: |
           source infra/config/main.env
           echo "GITLAB_DOMAIN_NAME=$GITLAB_DOMAIN_NAME" >> $GITHUB_ENV
+          echo "GITLAB_SMTP_ADDRESS=$GITLAB_SMTP_ADDRESS" >> $GITHUB_ENV
+          echo "GITLAB_SMTP_PORT=$GITLAB_SMTP_PORT" >> $GITHUB_ENV
+          echo "GITLAB_SMTP_USERNAME=$GITLAB_SMTP_USERNAME" >> $GITHUB_ENV
+          echo "GITLAB_SMTP_DOMAIN=$GITLAB_SMTP_DOMAIN" >> $GITHUB_ENV
+          echo "GITLAB_EMAIL_FROM=$GITLAB_EMAIL_FROM" >> $GITHUB_ENV
+          echo "GITLAB_EMAIL_REPLY_TO=$GITLAB_EMAIL_REPLY_TO" >> $GITHUB_ENV
 
       - name: Prepare Ansible SSH key
         if: inputs.target == 'elitemini'
@@ -80,12 +86,13 @@ jobs:
         if: inputs.target == 'elitemini'
         env:
           TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
           export ANSIBLE_CONFIG="$GITHUB_WORKSPACE/infra/ansible/ansible.cfg"
           export ANSIBLE_PRIVATE_KEY_FILE="$HOME/.ssh/elitemini"
           ansible-playbook \
             "infra/ansible/playbooks/${{ inputs.playbook }}.yml" \
-            --extra-vars "tailscale_auth_key=${TAILSCALE_AUTH_KEY} gitlab_external_url=https://${GITLAB_DOMAIN_NAME} gitlab_nginx_listen_port=8929"
+            --extra-vars "tailscale_auth_key=${TAILSCALE_AUTH_KEY} gitlab_external_url=https://${GITLAB_DOMAIN_NAME} gitlab_nginx_listen_port=8929 gitlab_smtp_address=${GITLAB_SMTP_ADDRESS} gitlab_smtp_port=${GITLAB_SMTP_PORT} gitlab_smtp_username=${GITLAB_SMTP_USERNAME} gitlab_smtp_domain=${GITLAB_SMTP_DOMAIN} gitlab_email_from=${GITLAB_EMAIL_FROM} gitlab_email_reply_to=${GITLAB_EMAIL_REPLY_TO} resend_api_key=${RESEND_API_KEY}"
 
       # ── Droplet — IP pública directa ────────────────────────
       - name: Copy playbook to Droplet

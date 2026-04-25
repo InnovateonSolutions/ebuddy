@@ -87,6 +87,27 @@
     mode: "0600"
   register: gitlab_nginx_https_config
 
+- name: Enable GitLab SMTP delivery
+  ansible.builtin.blockinfile:
+    path: /etc/gitlab/gitlab.rb
+    marker: "# {mark} ANSIBLE MANAGED GITLAB SMTP"
+    block: |
+      gitlab_rails['smtp_enable'] = true
+      gitlab_rails['smtp_address'] = '{{ gitlab_smtp_address }}'
+      gitlab_rails['smtp_port'] = {{ gitlab_smtp_port }}
+      gitlab_rails['smtp_user_name'] = '{{ gitlab_smtp_username }}'
+      gitlab_rails['smtp_password'] = '{{ resend_api_key }}'
+      gitlab_rails['smtp_domain'] = '{{ gitlab_smtp_domain }}'
+      gitlab_rails['smtp_authentication'] = 'login'
+      gitlab_rails['smtp_enable_starttls_auto'] = true
+      gitlab_rails['smtp_tls'] = false
+      gitlab_rails['gitlab_email_from'] = '{{ gitlab_email_from }}'
+      gitlab_rails['gitlab_email_reply_to'] = '{{ gitlab_email_reply_to }}'
+    create: true
+    mode: "0600"
+  no_log: true
+  register: gitlab_smtp_config
+
 - name: Reconfigure GitLab
   ansible.builtin.command:
     cmd: gitlab-ctl reconfigure
@@ -96,6 +117,7 @@
       or gitlab_ssh_port_config.changed
       or gitlab_nginx_port_config.changed
       or gitlab_nginx_https_config.changed
+      or gitlab_smtp_config.changed
   changed_when: true
 
 - name: Ensure GitLab service is enabled and running

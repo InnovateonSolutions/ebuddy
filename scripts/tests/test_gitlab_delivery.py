@@ -32,6 +32,12 @@ def test_main_env_declares_gitlab_domain_and_elitemini_ip():
     main_env = read("infra/config/main.env")
     assert "GITLAB_DOMAIN_NAME=gitlab.innovateoncorp.com" in main_env
     assert "ELITEMINI_TAILSCALE_IP=100.80.59.3" in main_env
+    assert "GITLAB_SMTP_ADDRESS=smtp.resend.com" in main_env
+    assert "GITLAB_SMTP_PORT=587" in main_env
+    assert "GITLAB_SMTP_USERNAME=resend" in main_env
+    assert "GITLAB_SMTP_DOMAIN=mail.innovateoncorp.com" in main_env
+    assert "GITLAB_EMAIL_FROM=gitlab@mail.innovateoncorp.com" in main_env
+    assert "GITLAB_EMAIL_REPLY_TO=martin.cuevas.t@gmail.com" in main_env
 
 
 def test_caddyfile_exposes_gitlab_subdomain_and_proxies_to_elitemini():
@@ -47,6 +53,9 @@ def test_setup_workflow_passes_gitlab_external_url_to_ansible():
         "setup.yml debe pasar gitlab_external_url al playbook para una instalacion reproducible"
     )
     assert "https://${GITLAB_DOMAIN_NAME}" in workflow or "https://gitlab.innovateoncorp.com" in workflow
+    assert "RESEND_API_KEY" in workflow, (
+        "setup.yml debe recibir RESEND_API_KEY desde GitHub Secrets para configurar SMTP en GitLab"
+    )
 
 
 def test_gitlab_role_configures_reverse_proxy_friendly_nginx_port():
@@ -56,6 +65,12 @@ def test_gitlab_role_configures_reverse_proxy_friendly_nginx_port():
     )
     assert "8929" in role, "El role debe fijar un puerto estable para el proxy publico"
     assert "nginx['listen_https'] = false" in role
+    assert "smtp.resend.com" not in role, (
+        "Los valores no sensibles de SMTP deben venir por variables, no hardcodeados dentro del role"
+    )
+    assert "smtp_password" in role and "resend_api_key" in role, (
+        "El role debe mapear RESEND_API_KEY al campo smtp_password de GitLab"
+    )
 
 
 def test_ci_triggers_gitlab_setup_for_gitlab_ansible_changes():
