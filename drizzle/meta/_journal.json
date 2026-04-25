@@ -71,6 +71,20 @@
       "when": 1777010000000,
       "tag": "0009_add_privileged_access_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777020000000,
+      "tag": "0010_add_integrations",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777030000000,
+      "tag": "0011_add_campaigns",
+      "breakpoints": true
     }
   ]
 }
