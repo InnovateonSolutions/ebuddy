@@ -1,5 +1,6 @@
 import { requireCapability } from '@/lib/auth/permissions'
 import { addObsidianContextToChatBody } from '@/lib/campaign/obsidian'
+import { addCampaignContextToChatBody } from '@/features/campaigns/server/context'
 import { env } from '@/lib/env'
 import { apiError } from '@/lib/utils'
 
@@ -22,7 +23,8 @@ export async function POST(request: Request) {
     return apiError('Body inválido', 'VALIDATION_ERROR', 400)
   }
 
-  const proxiedBody = await addObsidianContextToChatBody(body)
+  const campaignBody = await addCampaignContextToChatBody(body, authz.userId)
+  const proxiedBody = await addObsidianContextToChatBody(campaignBody)
 
   const upstream = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: 'POST',

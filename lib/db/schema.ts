@@ -180,6 +180,46 @@ export const integrations = pgTable('integrations', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+export const campaigns = pgTable(
+  'campaigns',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => ({
+    userUpdatedIdx: index('idx_campaigns_user_updated').on(t.userId, t.updatedAt),
+  })
+)
+
+export const campaignNotes = pgTable(
+  'campaign_notes',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    campaignId: text('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    relativePath: text('relative_path').notNull(),
+    folder: text('folder').notNull().default(''),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    links: text('links').array().notNull().default([]),
+    tags: text('tags').array().notNull().default([]),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => ({
+    campaignPathIdx: index('idx_campaign_notes_campaign_path').on(t.campaignId, t.relativePath),
+  })
+)
+
 // ─── Inferred types ───────────────────────────────────────────
 
 export type User = typeof users.$inferSelect
@@ -189,3 +229,5 @@ export type UserPreferences = typeof userPreferences.$inferSelect
 export type CalendarToken = typeof calendarTokens.$inferSelect
 export type PrivilegedAccessAudit = typeof privilegedAccessAudit.$inferSelect
 export type Integration = typeof integrations.$inferSelect
+export type Campaign = typeof campaigns.$inferSelect
+export type CampaignNote = typeof campaignNotes.$inferSelect

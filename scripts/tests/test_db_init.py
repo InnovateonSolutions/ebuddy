@@ -36,6 +36,8 @@ class TestDBInitRender:
             'CREATE TABLE "user_preferences"',
             'CREATE TABLE "calendar_tokens"',
             'CREATE TABLE "visit_counter"',
+            'CREATE TABLE "campaigns"',
+            'CREATE TABLE "campaign_notes"',
         ]:
             assert expected in sql
 
@@ -84,6 +86,8 @@ class TestDBInitRender:
             "drizzle/0004_secure_api_keys_and_drop_visit_counter.sql",
             "drizzle/0008_add_user_roles.sql",
             "drizzle/0009_add_privileged_access_audit.sql",
+            "drizzle/0010_add_integrations.sql",
+            "drizzle/0011_add_campaigns.sql",
         ]:
             content = (REPO_ROOT / rel_path).read_text().strip()
             assert content in sql

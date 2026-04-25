@@ -39,6 +39,7 @@ def test_stats_page_columns_exist_in_schema():
 def test_dashboard_pages_have_force_dynamic():
     pages = [
         "app/(dashboard)/today/page.tsx",
+        "app/(dashboard)/campaigns/page.tsx",
         "app/(dashboard)/stats/page.tsx",
         "app/(dashboard)/settings/page.tsx",
     ]

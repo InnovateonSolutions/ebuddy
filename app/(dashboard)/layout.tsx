@@ -52,6 +52,7 @@ export default async function DashboardLayout({
               <NavLink href="/today">Hoy</NavLink>
               <NavLink href="/future">Horizonte</NavLink>
               <NavLink href="/kanban">Tablero</NavLink>
+              <NavLink href="/campaigns">DnD</NavLink>
               <NavLink href="/stats">Stats</NavLink>
               {owner && <NavLink href="/infra">Infra</NavLink>}
               {owner && <NavLink href="/costs">Costos</NavLink>}
