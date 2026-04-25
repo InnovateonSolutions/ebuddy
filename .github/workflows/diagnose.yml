@@ -14,14 +14,16 @@ jobs:
             python3 scripts/get-droplet-ip.py)
           echo "ip=$IP" >> $GITHUB_OUTPUT
 
-      - name: Fix archived column via psql
+      - name: Fetch app logs
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ steps.droplet.outputs.ip }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          capture_stdout: true
           script: |
-            DB_URL=$(grep DATABASE_URL /opt/ebuddy/.env | cut -d= -f2-)
-            echo "DB_URL found: ${#DB_URL} chars"
-            docker run --rm -e PGPASSWORD="" postgres:16-alpine \
-              sh -c "psql \"$DB_URL\" -c \"ALTER TABLE tickets ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;\" && echo 'COLUMN OK'" 2>&1
+            echo "=== docker logs (últimas 100 líneas) ==="
+            docker logs ebuddy-prod-app-1 --tail 100 2>&1 || \
+              docker compose -f /opt/ebuddy/docker-compose.prod.yml logs app --tail 100 2>&1
+            echo "=== containers ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
