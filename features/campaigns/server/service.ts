@@ -59,6 +59,7 @@ export async function getLatestCampaignNotes(userId: string, limit = 200) {
 
   const notes = await db
     .select({
+      id: campaignNotes.id,
       title: campaignNotes.title,
       relativePath: campaignNotes.relativePath,
       folder: campaignNotes.folder,
@@ -71,4 +72,42 @@ export async function getLatestCampaignNotes(userId: string, limit = 200) {
     .limit(limit)
 
   return { campaign, notes }
+}
+
+export async function updateCampaignNote(
+  userId: string,
+  noteId: string,
+  content: string
+): Promise<boolean> {
+  const [note] = await db
+    .select({ campaignId: campaignNotes.campaignId })
+    .from(campaignNotes)
+    .where(eq(campaignNotes.id, noteId))
+    .limit(1)
+
+  if (!note) return false
+
+  const [campaign] = await db
+    .select({ id: campaigns.id })
+    .from(campaigns)
+    .where(eq(campaigns.id, note.campaignId))
+    .limit(1)
+
+  if (!campaign || campaign.id !== note.campaignId) return false
+
+  // verify ownership
+  const [owner] = await db
+    .select({ userId: campaigns.userId })
+    .from(campaigns)
+    .where(eq(campaigns.id, note.campaignId))
+    .limit(1)
+
+  if (!owner || owner.userId !== userId) return false
+
+  await db
+    .update(campaignNotes)
+    .set({ content })
+    .where(eq(campaignNotes.id, noteId))
+
+  return true
 }

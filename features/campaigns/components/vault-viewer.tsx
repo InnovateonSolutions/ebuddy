@@ -5,13 +5,14 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
   ChevronDown, ChevronRight, FileText, Search, X,
-  Tag, Upload, Loader2, CheckCircle2,
+  Tag, Upload, Loader2, CheckCircle2, Pencil, Eye, Save,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─── types ───────────────────────────────────────────────────
 
 type Note = {
+  id: string
   title: string
   relativePath: string
   folder: string
@@ -45,6 +46,15 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
   )
   const [showImport, setShowImport] = useState(notes.length === 0)
 
+  // edit state
+  const [editMode, setEditMode] = useState(false)
+  const [editContent, setEditContent] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [localNotes, setLocalNotes] = useState<Note[]>(notes)
+
+  const allNotes = localNotes.length > 0 ? localNotes : notes
+
   // import state
   const inputRef = useRef<HTMLInputElement>(null)
   const [campaigns, setCampaigns] = useState(initialCampaigns)
@@ -54,15 +64,15 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
   const [isImporting, setIsImporting] = useState(false)
 
   const filteredNotes = useMemo(() => {
-    if (!query.trim()) return notes
+    if (!query.trim()) return allNotes
     const q = query.toLowerCase()
-    return notes.filter(
+    return allNotes.filter(
       (n) =>
         n.title.toLowerCase().includes(q) ||
         n.content.toLowerCase().includes(q) ||
         n.tags.some((t) => t.toLowerCase().includes(q))
     )
-  }, [notes, query])
+  }, [allNotes, query])
 
   const byFolder: FolderTree = useMemo(() => {
     return filteredNotes.reduce<FolderTree>((acc, note) => {
@@ -73,7 +83,42 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
   }, [filteredNotes])
 
   const folders = Object.keys(byFolder).sort()
-  const selectedNote = notes.find((n) => n.relativePath === selectedPath) ?? null
+  const selectedNote = allNotes.find((n) => n.relativePath === selectedPath) ?? null
+
+  function startEdit() {
+    if (!selectedNote) return
+    setEditContent(selectedNote.content)
+    setEditMode(true)
+    setSaveError(null)
+  }
+
+  function cancelEdit() {
+    setEditMode(false)
+    setSaveError(null)
+  }
+
+  async function saveEdit() {
+    if (!selectedNote) return
+    setIsSaving(true)
+    setSaveError(null)
+    try {
+      const res = await fetch(`/api/campaigns/notes/${selectedNote.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editContent }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error ?? 'Error al guardar')
+      setLocalNotes((prev) =>
+        prev.map((n) => (n.id === selectedNote.id ? { ...n, content: editContent } : n))
+      )
+      setEditMode(false)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   function toggleFolder(folder: string) {
     setOpenFolders((prev) => {
@@ -243,7 +288,7 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
                     {isOpen && folderNotes.map((note) => (
                       <button
                         key={note.relativePath}
-                        onClick={() => setSelectedPath(note.relativePath)}
+                        onClick={() => { setSelectedPath(note.relativePath); setEditMode(false) }}
                         className={cn(
                           'w-full flex items-center gap-1.5 pl-6 pr-2 py-1 text-left hover:bg-slate-100 transition-colors',
                           selectedPath === note.relativePath && 'bg-slate-200'
@@ -267,37 +312,81 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
           {/* content */}
           <div className="flex-1 overflow-y-auto bg-white">
             {selectedNote ? (
-              <div className="px-8 py-6 max-w-3xl">
-                <div className="mb-5 pb-4 border-b border-slate-100">
-                  <h1 className="text-xl font-bold text-slate-900">{selectedNote.title}</h1>
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                    <span className="text-xs text-slate-400 font-mono">{selectedNote.relativePath}</span>
-                    {selectedNote.tags.map((tag) => (
+              <div className="flex flex-col h-full">
+                {/* note header */}
+                <div className="flex-shrink-0 flex items-start justify-between gap-4 px-8 py-4 border-b border-slate-100">
+                  <div className="min-w-0">
+                    <h1 className="text-xl font-bold text-slate-900">{selectedNote.title}</h1>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="text-xs text-slate-400 font-mono">{selectedNote.relativePath}</span>
+                      {selectedNote.tags.map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => { setQuery(tag); setEditMode(false) }}
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] text-slate-500 transition-colors"
+                        >
+                          <Tag size={9} />{tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {editMode ? (
+                      <>
+                        {saveError && <span className="text-xs text-red-600">{saveError}</span>}
+                        <button
+                          onClick={cancelEdit}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          <Eye size={13} /> Vista
+                        </button>
+                        <button
+                          onClick={saveEdit}
+                          disabled={isSaving}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:opacity-60 transition-colors"
+                        >
+                          {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                          Guardar
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        key={tag}
-                        onClick={() => setQuery(tag)}
-                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] text-slate-500 transition-colors"
+                        onClick={startEdit}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                       >
-                        <Tag size={9} />{tag}
+                        <Pencil size={13} /> Editar
                       </button>
-                    ))}
+                    )}
                   </div>
                 </div>
-                <div className="prose prose-sm prose-slate max-w-none
-                  prose-headings:font-semibold prose-headings:text-slate-800
-                  prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm
-                  prose-p:text-slate-700 prose-p:leading-relaxed
-                  prose-strong:text-slate-900
-                  prose-ul:text-slate-700 prose-ol:text-slate-700 prose-li:my-0.5
-                  prose-blockquote:border-l-slate-300 prose-blockquote:text-slate-500
-                  prose-code:text-slate-700 prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:text-xs
-                  prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg
-                  prose-table:text-sm prose-th:text-slate-700 prose-td:text-slate-600
-                  prose-hr:border-slate-200 prose-a:text-blue-600">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {selectedNote.content}
-                  </ReactMarkdown>
-                </div>
+
+                {/* note body */}
+                {editMode ? (
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="flex-1 px-8 py-6 font-mono text-sm text-slate-700 bg-slate-50 resize-none focus:outline-none focus:bg-white transition-colors"
+                    spellCheck={false}
+                  />
+                ) : (
+                  <div className="flex-1 overflow-y-auto px-8 py-6">
+                    <div className="prose prose-sm prose-slate max-w-3xl
+                      prose-headings:font-semibold prose-headings:text-slate-800
+                      prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm
+                      prose-p:text-slate-700 prose-p:leading-relaxed
+                      prose-strong:text-slate-900
+                      prose-ul:text-slate-700 prose-ol:text-slate-700 prose-li:my-0.5
+                      prose-blockquote:border-l-slate-300 prose-blockquote:text-slate-500
+                      prose-code:text-slate-700 prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:text-xs
+                      prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg
+                      prose-table:text-sm prose-th:text-slate-700 prose-td:text-slate-600
+                      prose-hr:border-slate-200 prose-a:text-blue-600">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {selectedNote.content}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-sm text-slate-400">
