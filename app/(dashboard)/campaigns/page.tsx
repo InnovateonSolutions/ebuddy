@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth/config'
 import { getAuthorizationContext } from '@/lib/auth/permissions'
 import { listCampaigns, getLatestCampaignNotes } from '@/features/campaigns/server/service'
 import { CampaignVaultUploader } from '@/features/campaigns/components/campaign-vault-uploader'
-import { CampaignNotesList } from '@/features/campaigns/components/campaign-notes-list'
+import { VaultViewer } from '@/features/campaigns/components/vault-viewer'
 
 export default async function CampaignsPage() {
   const session = await auth()
@@ -20,7 +20,7 @@ export default async function CampaignsPage() {
   ])
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       <section className="dashboard-hero">
         <p className="dashboard-kicker">Campañas DnD</p>
         <h1 className="dashboard-title">Mesa y canon</h1>
@@ -31,8 +31,8 @@ export default async function CampaignsPage() {
 
       <CampaignVaultUploader initialCampaigns={campaigns.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() }))} />
 
-      {activeData && (
-        <CampaignNotesList
+      {activeData && activeData.notes.length > 0 && (
+        <VaultViewer
           campaignName={activeData.campaign.name}
           notes={activeData.notes}
         />
