@@ -1,11 +1,11 @@
 'use client'
 
-import { useRef, useMemo, useState } from 'react'
+import { useRef, useMemo, useState, useCallback, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
   ChevronDown, ChevronRight, FileText, Search, X,
-  Tag, Upload, Loader2, CheckCircle2, Pencil, Eye, Save,
+  Tag, Upload, Loader2, CheckCircle2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -47,13 +47,20 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
   const [showImport, setShowImport] = useState(notes.length === 0)
 
   // edit state
-  const [editMode, setEditMode] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [localNotes, setLocalNotes] = useState<Note[]>(notes)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const allNotes = localNotes.length > 0 ? localNotes : notes
+
+  // reset edit when switching notes
+  useEffect(() => {
+    setIsEditing(false)
+    setSaveState('idle')
+  }, [selectedPath])
 
   // import state
   const inputRef = useRef<HTMLInputElement>(null)
@@ -85,39 +92,43 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
   const folders = Object.keys(byFolder).sort()
   const selectedNote = allNotes.find((n) => n.relativePath === selectedPath) ?? null
 
-  function startEdit() {
-    if (!selectedNote) return
-    setEditContent(selectedNote.content)
-    setEditMode(true)
-    setSaveError(null)
-  }
-
-  function cancelEdit() {
-    setEditMode(false)
-    setSaveError(null)
-  }
-
-  async function saveEdit() {
-    if (!selectedNote) return
-    setIsSaving(true)
-    setSaveError(null)
+  const save = useCallback(async (noteId: string, content: string) => {
+    setSaveState('saving')
     try {
-      const res = await fetch(`/api/campaigns/notes/${selectedNote.id}`, {
+      const res = await fetch(`/api/campaigns/notes/${noteId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editContent }),
+        body: JSON.stringify({ content }),
       })
       const result = await res.json()
       if (!result.success) throw new Error(result.error ?? 'Error al guardar')
-      setLocalNotes((prev) =>
-        prev.map((n) => (n.id === selectedNote.id ? { ...n, content: editContent } : n))
-      )
-      setEditMode(false)
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Error al guardar')
-    } finally {
-      setIsSaving(false)
+      setLocalNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, content } : n)))
+      setSaveState('saved')
+    } catch {
+      setSaveState('error')
     }
+  }, [])
+
+  function openEdit() {
+    if (!selectedNote) return
+    setEditContent(selectedNote.content)
+    setIsEditing(true)
+    setSaveState('idle')
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
+
+  function handleChange(value: string) {
+    setEditContent(value)
+    setSaveState('idle')
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      if (selectedNote) save(selectedNote.id, value)
+    }, 1200)
+  }
+
+  function handleBlur() {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    if (selectedNote && saveState !== 'saved') save(selectedNote.id, editContent)
   }
 
   function toggleFolder(folder: string) {
@@ -288,7 +299,7 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
                     {isOpen && folderNotes.map((note) => (
                       <button
                         key={note.relativePath}
-                        onClick={() => { setSelectedPath(note.relativePath); setEditMode(false) }}
+                        onClick={() => setSelectedPath(note.relativePath)}
                         className={cn(
                           'w-full flex items-center gap-1.5 pl-6 pr-2 py-1 text-left hover:bg-slate-100 transition-colors',
                           selectedPath === note.relativePath && 'bg-slate-200'
@@ -314,15 +325,14 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
             {selectedNote ? (
               <div className="flex flex-col h-full">
                 {/* note header */}
-                <div className="flex-shrink-0 flex items-start justify-between gap-4 px-8 py-4 border-b border-slate-100">
-                  <div className="min-w-0">
-                    <h1 className="text-xl font-bold text-slate-900">{selectedNote.title}</h1>
-                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      <span className="text-xs text-slate-400 font-mono">{selectedNote.relativePath}</span>
+                <div className="flex-shrink-0 flex items-center gap-3 px-8 py-3 border-b border-slate-100">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-xl font-bold text-slate-900 truncate">{selectedNote.title}</h1>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       {selectedNote.tags.map((tag) => (
                         <button
                           key={tag}
-                          onClick={() => { setQuery(tag); setEditMode(false) }}
+                          onClick={() => { setQuery(tag); setIsEditing(false) }}
                           className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] text-slate-500 transition-colors"
                         >
                           <Tag size={9} />{tag}
@@ -330,46 +340,31 @@ export function VaultViewer({ notes, campaignName, campaigns: initialCampaigns }
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {editMode ? (
-                      <>
-                        {saveError && <span className="text-xs text-red-600">{saveError}</span>}
-                        <button
-                          onClick={cancelEdit}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                        >
-                          <Eye size={13} /> Vista
-                        </button>
-                        <button
-                          onClick={saveEdit}
-                          disabled={isSaving}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:opacity-60 transition-colors"
-                        >
-                          {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                          Guardar
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={startEdit}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                      >
-                        <Pencil size={13} /> Editar
-                      </button>
-                    )}
+                  <div className="flex-shrink-0 text-xs text-slate-400 min-w-[60px] text-right">
+                    {saveState === 'saving' && <span className="flex items-center gap-1 justify-end"><Loader2 size={11} className="animate-spin" />guardando</span>}
+                    {saveState === 'saved' && <span className="text-emerald-600">guardado</span>}
+                    {saveState === 'error' && <span className="text-red-500">error</span>}
+                    {saveState === 'idle' && isEditing && <span className="text-slate-300">Esc para salir</span>}
                   </div>
                 </div>
 
-                {/* note body */}
-                {editMode ? (
+                {/* note body — click to edit */}
+                {isEditing ? (
                   <textarea
+                    ref={textareaRef}
                     value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    className="flex-1 px-8 py-6 font-mono text-sm text-slate-700 bg-slate-50 resize-none focus:outline-none focus:bg-white transition-colors"
+                    onChange={(e) => handleChange(e.target.value)}
+                    onBlur={handleBlur}
+                    onKeyDown={(e) => { if (e.key === 'Escape') { handleBlur(); setIsEditing(false) } }}
+                    className="flex-1 px-8 py-6 font-mono text-sm text-slate-700 bg-white resize-none focus:outline-none leading-relaxed"
                     spellCheck={false}
                   />
                 ) : (
-                  <div className="flex-1 overflow-y-auto px-8 py-6">
+                  <div
+                    className="flex-1 overflow-y-auto px-8 py-6 cursor-text"
+                    onClick={openEdit}
+                    title="Click para editar"
+                  >
                     <div className="prose prose-sm prose-slate max-w-3xl
                       prose-headings:font-semibold prose-headings:text-slate-800
                       prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm
