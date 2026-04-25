@@ -31,6 +31,7 @@ export const env = {
   openclawBaseUrl: _openclawBaseUrl,
   openclawGatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN ?? '',
   openclawHookToken: process.env.OPENCLAW_HOOK_TOKEN ?? '',
+  obsidianVaultPath: process.env.OBSIDIAN_VAULT_PATH ?? '',
   get doMonitoringToken() { return process.env.DO_MONITORING_TOKEN ?? '' },
 
   // Core — requeridas

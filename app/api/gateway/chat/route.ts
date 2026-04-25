@@ -1,4 +1,5 @@
 import { requireCapability } from '@/lib/auth/permissions'
+import { addObsidianContextToChatBody } from '@/lib/campaign/obsidian'
 import { env } from '@/lib/env'
 import { apiError } from '@/lib/utils'
 
@@ -21,13 +22,15 @@ export async function POST(request: Request) {
     return apiError('Body inválido', 'VALIDATION_ERROR', 400)
   }
 
+  const proxiedBody = await addObsidianContextToChatBody(body)
+
   const upstream = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${env.openclawGatewayToken}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(proxiedBody),
     signal: AbortSignal.timeout(30000),
   })
 

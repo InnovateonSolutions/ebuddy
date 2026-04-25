@@ -39,6 +39,7 @@ Estas cuatro son las que `lib/env.ts` valida en startup.
 |---|---|
 | `NEXT_PUBLIC_APP_URL` | URL pública de la app |
 | `DO_MONITORING_TOKEN` | Token read-only para consultar DigitalOcean Monitoring desde runtime |
+| `OBSIDIAN_VAULT_PATH` | Ruta absoluta del vault de Obsidian montado en el servidor para contexto de Dungeon Master |
 
 ### Google Calendar
 
