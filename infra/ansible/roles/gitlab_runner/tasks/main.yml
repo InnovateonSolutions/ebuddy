@@ -7,14 +7,50 @@
     fail_msg: "gitlab_runner_token is required to register the GitLab Runner"
   no_log: true
 
-- name: Install GitLab Runner apt prerequisites
+# ── Docker CE (repositorio oficial) ─────────────────────────────────────────
+
+- name: Install Docker apt prerequisites
   ansible.builtin.apt:
     name:
       - apt-transport-https
       - ca-certificates
       - curl
-      - docker.io
       - gnupg
+    state: present
+    update_cache: true
+
+- name: Create Docker keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /tmp/docker.asc
+    mode: "0644"
+
+- name: Dearmor Docker GPG key
+  ansible.builtin.command:
+    cmd: gpg --dearmor --yes --output /etc/apt/keyrings/docker.gpg /tmp/docker.asc
+  changed_when: true
+
+- name: Add Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    filename: docker
+    state: present
+    update_cache: true
+
+- name: Install Docker CE
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
     state: present
     update_cache: true
 
@@ -24,11 +60,12 @@
     state: started
     enabled: true
 
-- name: Ensure GitLab Runner keyring directory exists
+- name: Remove temporary Docker GPG key
   ansible.builtin.file:
-    path: /usr/share/keyrings
-    state: directory
-    mode: "0755"
+    path: /tmp/docker.asc
+    state: absent
+
+# ── GitLab Runner ────────────────────────────────────────────────────────────
 
 - name: Download GitLab Runner repository signing key
   ansible.builtin.get_url:

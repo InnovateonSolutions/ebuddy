@@ -72,7 +72,10 @@ def test_gitlab_runner_playbook_targets_runner_role():
 def test_gitlab_runner_role_installs_docker_executor_runner():
     role = read("infra/ansible/roles/gitlab_runner/tasks/main.yml")
     assert "gitlab-runner" in role
-    assert "docker.io" in role or "docker-ce" in role
+    assert "docker-ce" in role
+    assert "docker-buildx-plugin" in role
+    assert "docker-compose-plugin" in role
+    assert "download.docker.com" in role
     assert "gitlab-runner register" in role
     assert "--executor docker" in role
     assert "--docker-image ubuntu:24.04" in role
