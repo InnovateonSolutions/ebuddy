@@ -142,6 +142,31 @@
   when: not gitlab_runner_registered
   no_log: true
   register: gitlab_runner_register_result
+  failed_when: false
+
+- name: Show runner container logs on registration failure
+  ansible.builtin.command: docker logs --tail 30 gitlab-runner
+  register: runner_logs
+  changed_when: false
+  when:
+    - not gitlab_runner_registered
+    - gitlab_runner_register_result.rc is defined
+    - gitlab_runner_register_result.rc != 0
+
+- name: Print runner logs
+  ansible.builtin.debug:
+    msg: "{{ runner_logs.stdout_lines + runner_logs.stderr_lines }}"
+  when:
+    - runner_logs is defined
+    - runner_logs.stdout_lines is defined
+
+- name: Fail if registration failed
+  ansible.builtin.fail:
+    msg: "GitLab Runner registration failed (rc={{ gitlab_runner_register_result.rc }}). Ver logs del contenedor arriba."
+  when:
+    - not gitlab_runner_registered
+    - gitlab_runner_register_result.rc is defined
+    - gitlab_runner_register_result.rc != 0
 
 - name: Restart GitLab Runner container after registration
   ansible.builtin.command: docker restart gitlab-runner
