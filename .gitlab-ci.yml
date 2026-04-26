@@ -26,9 +26,11 @@ build-ci-image:
     - when: manual
       allow_failure: true
   script:
-    - echo "$DO_TOKEN" | docker login registry.digitalocean.com -u docr --password-stdin
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"registry.digitalocean.com\":{\"auth\":\"$(printf 'docr:%s' "$DO_TOKEN" | base64 | tr -d '\n')\"}}}" > ~/.docker/config.json
     - docker build --pull -t $CI_IMAGE infra/docker/ci/
     - docker push $CI_IMAGE
+    - rm -f ~/.docker/config.json
 
 # ── Validate ─────────────────────────────────────────────────────────────────
 
