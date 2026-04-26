@@ -116,6 +116,12 @@
       }}
   no_log: true
 
+- name: Verify GitLab is reachable from runner container
+  ansible.builtin.command: >-
+    docker exec gitlab-runner curl -sf --max-time 10
+    {{ gitlab_runner_url | default('https://gitlab.innovateoncorp.com') }}/-/health
+  changed_when: false
+
 - name: Register GitLab Runner via docker exec
   ansible.builtin.command:
     cmd: >-
