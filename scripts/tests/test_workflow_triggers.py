@@ -142,7 +142,7 @@ def test_ci_workflow_detects_application_and_infrastructure_changes():
         "permissions:",
         "id-token: write",
         "app/*|features/*|components/*|hooks/*|lib/*|types/*|public/*|db/*|drizzle/*",
-        "infra/*|.github/workflows/terraform.yml",
+        "infra/terraform/*|infra/config/*|.github/workflows/terraform.yml",
         "terraform-plan:",
         "needs['detect-changes'].outputs.infra_changed",
         "needs['detect-changes'].outputs.app_changed",
