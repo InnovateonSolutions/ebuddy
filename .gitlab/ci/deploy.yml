@@ -198,7 +198,9 @@ deploy-app:
 e2e-smoke:
   stage: deploy
   image: $CI_IMAGE
-  needs: [deploy-app]
+  needs:
+    - job: deploy-app
+      optional: true
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   script:
