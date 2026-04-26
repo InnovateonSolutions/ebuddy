@@ -77,7 +77,7 @@ def test_gitlab_runner_role_installs_docker_executor_runner():
     assert "docker-compose-plugin" in role
     assert "download.docker.com" in role
     # Runner como contenedor Docker
-    assert "gitlab/gitlab-runner" in role
+    assert "gitlab/gitlab-runner:alpine" in role
     assert "/var/run/docker.sock:/var/run/docker.sock" in role
     assert "/srv/gitlab-runner/config:/etc/gitlab-runner" in role
     assert "restart always" in role

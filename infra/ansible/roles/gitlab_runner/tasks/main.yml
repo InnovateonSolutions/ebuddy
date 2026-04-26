@@ -86,7 +86,7 @@
     --restart always
     --volume /srv/gitlab-runner/config:/etc/gitlab-runner
     --volume /var/run/docker.sock:/var/run/docker.sock
-    gitlab/gitlab-runner:latest
+    gitlab/gitlab-runner:alpine
   when: runner_container_check.rc != 0
 
 - name: Check GitLab Runner registration
