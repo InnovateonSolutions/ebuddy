@@ -1,0 +1,110 @@
+---
+- name: Ensure GitLab Runner token is provided
+  ansible.builtin.assert:
+    that:
+      - gitlab_runner_token is defined
+      - gitlab_runner_token | length > 0
+    fail_msg: "gitlab_runner_token is required to register the GitLab Runner"
+  no_log: true
+
+- name: Install GitLab Runner apt prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - docker.io
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Ensure Docker service is enabled and running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Ensure GitLab Runner keyring directory exists
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download GitLab Runner repository signing key
+  ansible.builtin.get_url:
+    url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    dest: /tmp/gitlab-runner.asc
+    mode: "0644"
+
+- name: Dearmor GitLab Runner repository signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor --yes --output /usr/share/keyrings/gitlab-runner-archive-keyring.gpg /tmp/gitlab-runner.asc
+  changed_when: true
+
+- name: Configure GitLab Runner apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/gitlab-runner-archive-keyring.gpg] https://packages.gitlab.com/runner/gitlab-runner/ubuntu/ {{ ansible_distribution_release }} main"
+    filename: gitlab-runner
+    state: present
+    update_cache: true
+
+- name: Install GitLab Runner package
+  ansible.builtin.apt:
+    name: gitlab-runner
+    state: present
+    update_cache: true
+
+- name: Allow gitlab-runner user to use Docker
+  ansible.builtin.user:
+    name: gitlab-runner
+    groups: docker
+    append: true
+  register: gitlab_runner_docker_group
+
+- name: Check GitLab Runner config
+  ansible.builtin.stat:
+    path: /etc/gitlab-runner/config.toml
+  register: gitlab_runner_config
+
+- name: Read GitLab Runner config
+  ansible.builtin.slurp:
+    path: /etc/gitlab-runner/config.toml
+  register: gitlab_runner_config_content
+  when: gitlab_runner_config.stat.exists
+  no_log: true
+
+- name: Set GitLab Runner registration state
+  ansible.builtin.set_fact:
+    gitlab_runner_registered: >-
+      {{
+        gitlab_runner_config.stat.exists
+        and 'name = "elitemini-linux-docker"' in (gitlab_runner_config_content.content | b64decode)
+      }}
+  no_log: true
+
+- name: Register GitLab Runner with Docker executor
+  ansible.builtin.command:
+    cmd: >-
+      gitlab-runner register
+      --non-interactive
+      --url "{{ gitlab_runner_url | default('https://gitlab.innovateoncorp.com') }}"
+      --token "{{ gitlab_runner_token }}"
+      --executor docker
+      --docker-image ubuntu:24.04
+      --description elitemini-linux-docker
+      --tag-list linux,docker,elitemini
+      --run-untagged=false
+      --locked=false
+  when: not gitlab_runner_registered
+  no_log: true
+
+- name: Ensure GitLab Runner service is enabled and running
+  ansible.builtin.service:
+    name: gitlab-runner
+    state: "{{ 'restarted' if gitlab_runner_docker_group.changed else 'started' }}"
+    enabled: true
+
+- name: Remove temporary GitLab Runner signing key
+  ansible.builtin.file:
+    path: /tmp/gitlab-runner.asc
+    state: absent

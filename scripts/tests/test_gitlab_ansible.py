@@ -54,3 +54,48 @@ def test_setup_workflow_can_dispatch_gitlab_playbook():
     assert "install-gitlab" in workflow, (
         "setup.yml debe exponer install-gitlab como playbook manual para elitemini"
     )
+
+
+def test_gitlab_runner_playbook_exists_for_elitemini():
+    assert (REPO_ROOT / "infra" / "ansible" / "playbooks" / "install-gitlab-runner.yml").exists(), (
+        "El GitLab Runner de elitemini debe declararse en un playbook Ansible versionado"
+    )
+
+
+def test_gitlab_runner_playbook_targets_runner_role():
+    playbook = read("infra/ansible/playbooks/install-gitlab-runner.yml")
+    assert "hosts: elitemini" in playbook
+    assert "gather_facts: true" in playbook
+    assert "- role: gitlab_runner" in playbook
+
+
+def test_gitlab_runner_role_installs_docker_executor_runner():
+    role = read("infra/ansible/roles/gitlab_runner/tasks/main.yml")
+    assert "gitlab-runner" in role
+    assert "docker.io" in role or "docker-ce" in role
+    assert "gitlab-runner register" in role
+    assert "--executor docker" in role
+    assert "--docker-image ubuntu:24.04" in role
+    assert "--tag-list linux,docker,elitemini" in role
+    assert "gitlab_runner_token" in role
+    assert "no_log: true" in role
+
+
+def test_gitlab_runner_bootstrap_is_documented_outside_github_actions():
+    doc = read("docs/operations/gitlab-runner.md")
+    github_setup = read(".github/workflows/setup.yml")
+
+    assert "GITLAB_RUNNER_TOKEN" in doc
+    assert "ansible-playbook infra/ansible/playbooks/install-gitlab-runner.yml" in doc
+    assert "gitlab_runner_token=$GITLAB_RUNNER_TOKEN" in doc
+    assert "install-gitlab-runner" not in github_setup
+
+
+def test_gitlab_ci_uses_self_hosted_runner_tags_for_initial_validation():
+    workflow = read(".gitlab-ci.yml")
+
+    assert "linux" in workflow
+    assert "docker" in workflow
+    assert "elitemini" in workflow
+    assert "python3 -m pytest scripts/tests/ -v" in workflow
+    assert "ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml" in workflow

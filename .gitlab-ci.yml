@@ -1,0 +1,24 @@
+stages:
+  - validate
+
+default:
+  tags:
+    - linux
+    - docker
+    - elitemini
+
+python-structural-tests:
+  stage: validate
+  image: python:3.12-slim
+  before_script:
+    - pip install -r scripts/requirements-test.txt
+  script:
+    - python3 -m pytest scripts/tests/ -v --tb=short
+
+ansible-syntax:
+  stage: validate
+  image: python:3.12-slim
+  before_script:
+    - pip install ansible-core
+  script:
+    - ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml --extra-vars "gitlab_runner_token=dummy"

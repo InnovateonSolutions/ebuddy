@@ -1,0 +1,6 @@
+---
+- name: Install GitLab Runner on elitemini
+  hosts: elitemini
+  gather_facts: true
+  roles:
+    - role: gitlab_runner
