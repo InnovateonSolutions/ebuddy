@@ -55,6 +55,12 @@ resource "digitalocean_firewall" "app" {
     source_addresses = ["0.0.0.0/0", "::/0"] # HTTP/3 (QUIC)
   }
 
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "2222"
+    source_addresses = ["0.0.0.0/0", "::/0"] # GitLab SSH proxy → elitemini
+  }
+
   # ── Outbound — todo permitido ──────────────────────────────
   # Necesario para: DOCR pull, Supabase, OpenAI, Anthropic, Google APIs
 
