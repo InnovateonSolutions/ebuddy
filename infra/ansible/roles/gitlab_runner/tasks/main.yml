@@ -137,9 +137,6 @@
     --docker-image ubuntu:24.04
     --docker-volumes /var/run/docker.sock:/var/run/docker.sock
     --description elitemini-linux-docker
-    --tag-list linux,docker,elitemini
-    --run-untagged=false
-    --locked=false
     > /tmp/runner_register.log 2>&1
   when: not gitlab_runner_registered
   no_log: true

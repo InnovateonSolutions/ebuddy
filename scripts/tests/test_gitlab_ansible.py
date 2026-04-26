@@ -86,7 +86,7 @@ def test_gitlab_runner_role_installs_docker_executor_runner():
     assert "gitlab/gitlab-runner:alpine register" in role
     assert "--executor docker" in role
     assert "--docker-image ubuntu:24.04" in role
-    assert "--tag-list linux,docker,elitemini" in role
+    assert "--description elitemini-linux-docker" in role
     assert "gitlab_runner_token" in role
     assert "no_log: true" in role
 
