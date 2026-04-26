@@ -126,45 +126,44 @@
   failed_when: gitlab_reachability.rc != 0
 
 - name: Register GitLab Runner via docker run --rm
-  ansible.builtin.command:
-    cmd: >-
-      docker run --rm
-      --volume /srv/gitlab-runner/config:/etc/gitlab-runner
-      gitlab/gitlab-runner:alpine register
-      --non-interactive
-      --url "{{ gitlab_runner_url | default('https://gitlab.innovateoncorp.com') }}"
-      --token "{{ gitlab_runner_token }}"
-      --executor docker
-      --docker-image ubuntu:24.04
-      --docker-volumes /var/run/docker.sock:/var/run/docker.sock
-      --description elitemini-linux-docker
-      --tag-list linux,docker,elitemini
-      --run-untagged=false
-      --locked=false
+  ansible.builtin.shell: >-
+    docker run --rm
+    --volume /srv/gitlab-runner/config:/etc/gitlab-runner
+    gitlab/gitlab-runner:alpine register
+    --non-interactive
+    --url "{{ gitlab_runner_url | default('https://gitlab.innovateoncorp.com') }}"
+    --token "{{ gitlab_runner_token }}"
+    --executor docker
+    --docker-image ubuntu:24.04
+    --docker-volumes /var/run/docker.sock:/var/run/docker.sock
+    --description elitemini-linux-docker
+    --tag-list linux,docker,elitemini
+    --run-untagged=false
+    --locked=false
+    > /tmp/runner_register.log 2>&1
   when: not gitlab_runner_registered
   no_log: true
   register: gitlab_runner_register_result
   failed_when: false
 
-- name: Show runner container logs on registration failure
-  ansible.builtin.command: docker logs --tail 30 gitlab-runner
-  register: runner_logs
-  changed_when: false
+- name: Read registration log
+  ansible.builtin.slurp:
+    path: /tmp/runner_register.log
+  register: runner_register_log
+  when: not gitlab_runner_registered
+  failed_when: false
+
+- name: Show registration output
+  ansible.builtin.debug:
+    msg: "{{ (runner_register_log.content | b64decode).splitlines() }}"
   when:
     - not gitlab_runner_registered
-    - gitlab_runner_register_result.rc is defined
-    - gitlab_runner_register_result.rc != 0
-
-- name: Print runner logs
-  ansible.builtin.debug:
-    msg: "{{ runner_logs.stdout_lines + runner_logs.stderr_lines }}"
-  when:
-    - runner_logs is defined
-    - runner_logs.stdout_lines is defined
+    - runner_register_log is defined
+    - runner_register_log.content is defined
 
 - name: Fail if registration failed
   ansible.builtin.fail:
-    msg: "GitLab Runner registration failed (rc={{ gitlab_runner_register_result.rc }}). Ver logs del contenedor arriba."
+    msg: "GitLab Runner registration failed (rc={{ gitlab_runner_register_result.rc }}). Ver output arriba."
   when:
     - not gitlab_runner_registered
     - gitlab_runner_register_result.rc is defined
