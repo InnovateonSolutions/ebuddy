@@ -60,6 +60,12 @@
     state: started
     enabled: true
 
+- name: Wait for Docker socket to be ready
+  ansible.builtin.wait_for:
+    path: /var/run/docker.sock
+    state: present
+    timeout: 30
+
 - name: Remove temporary Docker GPG key
   ansible.builtin.file:
     path: /tmp/docker.asc
