@@ -22,7 +22,7 @@ on:
         description: 'Playbook a ejecutar'
         required: true
         type: choice
-        options: [install-node-exporter, install-tailscale, configure-openclaw, install-gitlab]
+        options: [install-node-exporter, install-tailscale, configure-openclaw, install-gitlab, install-gitlab-runner]
 
 jobs:
   setup:
@@ -87,12 +87,13 @@ jobs:
         env:
           TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          GITLAB_RUNNER_TOKEN: ${{ secrets.GITLAB_RUNNER_TOKEN }}
         run: |
           export ANSIBLE_CONFIG="$GITHUB_WORKSPACE/infra/ansible/ansible.cfg"
           export ANSIBLE_PRIVATE_KEY_FILE="$HOME/.ssh/elitemini"
           ansible-playbook \
             "infra/ansible/playbooks/${{ inputs.playbook }}.yml" \
-            --extra-vars "tailscale_auth_key=${TAILSCALE_AUTH_KEY} gitlab_external_url=https://${GITLAB_DOMAIN_NAME} gitlab_nginx_listen_port=8929 gitlab_smtp_address=${GITLAB_SMTP_ADDRESS} gitlab_smtp_port=${GITLAB_SMTP_PORT} gitlab_smtp_username=${GITLAB_SMTP_USERNAME} gitlab_smtp_domain=${GITLAB_SMTP_DOMAIN} gitlab_email_from=${GITLAB_EMAIL_FROM} gitlab_email_reply_to=${GITLAB_EMAIL_REPLY_TO} resend_api_key=${RESEND_API_KEY}"
+            --extra-vars "tailscale_auth_key=${TAILSCALE_AUTH_KEY} gitlab_external_url=https://${GITLAB_DOMAIN_NAME} gitlab_nginx_listen_port=8929 gitlab_smtp_address=${GITLAB_SMTP_ADDRESS} gitlab_smtp_port=${GITLAB_SMTP_PORT} gitlab_smtp_username=${GITLAB_SMTP_USERNAME} gitlab_smtp_domain=${GITLAB_SMTP_DOMAIN} gitlab_email_from=${GITLAB_EMAIL_FROM} gitlab_email_reply_to=${GITLAB_EMAIL_REPLY_TO} resend_api_key=${RESEND_API_KEY} gitlab_runner_token=${GITLAB_RUNNER_TOKEN}"
 
       # ── Droplet — IP pública directa ────────────────────────
       - name: Copy playbook to Droplet

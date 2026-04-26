@@ -81,14 +81,21 @@ def test_gitlab_runner_role_installs_docker_executor_runner():
     assert "no_log: true" in role
 
 
-def test_gitlab_runner_bootstrap_is_documented_outside_github_actions():
+def test_gitlab_runner_bootstrap_is_dispatchable_not_automatic():
     doc = read("docs/operations/gitlab-runner.md")
-    github_setup = read(".github/workflows/setup.yml")
+    setup = read(".github/workflows/setup.yml")
+    ci = read(".github/workflows/ci.yml")
 
+    # Documentado en el runbook
     assert "GITLAB_RUNNER_TOKEN" in doc
     assert "ansible-playbook infra/ansible/playbooks/install-gitlab-runner.yml" in doc
-    assert "gitlab_runner_token=$GITLAB_RUNNER_TOKEN" in doc
-    assert "install-gitlab-runner" not in github_setup
+
+    # Disponible como dispatch manual en setup.yml con el token como secret
+    assert "install-gitlab-runner" in setup
+    assert "GITLAB_RUNNER_TOKEN" in setup
+
+    # NO se dispara automáticamente desde CI (evita re-registro accidental)
+    assert "install-gitlab-runner" not in ci
 
 
 def test_gitlab_ci_uses_self_hosted_runner_tags_for_initial_validation():
