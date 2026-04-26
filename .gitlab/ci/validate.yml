@@ -1,0 +1,81 @@
+# ── Validate ─────────────────────────────────────────────────────────────────
+
+.node-base:
+  image: node:22-slim
+  cache:
+    key: node-$CI_COMMIT_REF_SLUG
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+
+node-tests:
+  extends: .node-base
+  stage: validate
+  rules:
+    - changes:
+        - app/**/*
+        - features/**/*
+        - components/**/*
+        - hooks/**/*
+        - lib/**/*
+        - types/**/*
+        - public/**/*
+        - db/**/*
+        - drizzle/**/*
+        - package.json
+        - package-lock.json
+        - tsconfig.json
+        - next.config.*
+  script:
+    - npm run test:run
+    - npx tsc --noEmit
+  variables:
+    ANTHROPIC_API_KEY: test-dummy
+    OPENAI_API_KEY: test-dummy
+    AUTH_SECRET: test-dummy-secret-32-chars-minimum
+    DATABASE_URL: postgresql://ebuddy:ebuddy@localhost:5432/ebuddy
+
+python-tests:
+  stage: validate
+  image: $CI_IMAGE
+  needs:
+    - job: build-ci-image
+      optional: true
+  rules:
+    - changes:
+        - scripts/**/*
+        - .gitlab-ci.yml
+        - .gitlab/ci/**/*
+        - infra/ansible/**/*
+  script:
+    - python3 -m pytest scripts/tests/ -v --tb=short
+
+ansible-syntax:
+  stage: validate
+  image: $CI_IMAGE
+  needs:
+    - job: build-ci-image
+      optional: true
+  rules:
+    - changes:
+        - infra/ansible/**/*
+  script:
+    - ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml --extra-vars "gitlab_runner_token=dummy"
+    - ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab.yml --extra-vars "gitlab_runner_token=dummy tailscale_auth_key=dummy gitlab_external_url=https://x resend_api_key=dummy gitlab_nginx_listen_port=8929 gitlab_smtp_address=x gitlab_smtp_port=587 gitlab_smtp_username=x gitlab_smtp_domain=x gitlab_email_from=x gitlab_email_reply_to=x"
+
+terratest:
+  stage: validate
+  image: golang:1.24-bookworm
+  rules:
+    - changes:
+        - infra/terraform/**/*
+        - scripts/terratest/**/*
+        - scripts/go.mod
+        - scripts/go.sum
+  cache:
+    key: go-$CI_COMMIT_REF_SLUG
+    paths:
+      - scripts/vendor/
+  script:
+    - cd scripts && go mod tidy && go test ./terratest/... -v

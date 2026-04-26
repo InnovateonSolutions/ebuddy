@@ -30,5 +30,5 @@ def test_env_example_has_cron_secret():
     assert "CRON_SECRET" in env
 
 def test_operations_yml_has_notification_cron():
-    ops = read(".github/workflows/operations.yml")
+    ops = read(".github/workflows/old/operations.yml")
     assert "due-notifications" in ops or "notify" in ops

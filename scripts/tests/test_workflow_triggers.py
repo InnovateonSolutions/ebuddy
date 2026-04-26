@@ -7,7 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # ── Triggers ──────────────────────────────────────────────────────────────────
 
 def test_deploy_workflow_uses_positive_paths_filter():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     assert "workflow_call:" in workflow
     assert "workflow_dispatch:" in workflow
@@ -17,7 +17,7 @@ def test_deploy_workflow_uses_positive_paths_filter():
 
 
 def test_deploy_workflow_is_not_directly_triggered_by_push():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     assert "\n  push:\n" not in workflow
     assert "\n  pull_request:\n" not in workflow
@@ -35,7 +35,7 @@ def test_deploy_workflow_writes_prometheus_config_hardcoded():
     Patrón consistente con NODE_ENV y AUTH_URL que también son hardcoded en este step.
     No deben venir de GitHub Secrets porque no son sensibles ni varían entre deploys.
     """
-    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     assert 'echo "PROMETHEUS_URL=http://host.docker.internal:9090"' in workflow, (
         "PROMETHEUS_URL debe estar hardcoded para que el dashboard de infra pueda "
@@ -47,7 +47,7 @@ def test_deploy_workflow_writes_prometheus_config_hardcoded():
 
 
 def test_deploy_workflow_overwrites_docker_compose_on_droplet():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     block_start = workflow.index("- name: Update docker-compose.prod.yml on Droplet")
     block_end = workflow.index("# Escribe /opt/ebuddy/.env", block_start)
@@ -59,7 +59,7 @@ def test_deploy_workflow_overwrites_docker_compose_on_droplet():
 def test_deploy_workflow_fails_fast_if_remote_deploy_command_fails():
     """La lógica del deploy vive en scripts/droplet-deploy.sh (no inline en el YAML).
     El script debe usar set -euo pipefail y el workflow debe invocarlo."""
-    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
     script = (REPO_ROOT / "scripts" / "droplet-deploy.sh").read_text()
 
     assert "droplet-deploy.sh" in workflow, "deploy.yml debe invocar scripts/droplet-deploy.sh"
@@ -73,7 +73,7 @@ def test_ci_components_path_triggers_app_changed():
     sin cobertura de test. components/* debe estar en el mismo case arm
     que establece app_changed, no en infra ni scripts.
     """
-    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    ci = (REPO_ROOT / ".github" / "workflows" / "old" / "ci.yml").read_text()
 
     # El glob components/* debe aparecer junto a app/* en el mismo case arm
     assert "app/*|features/*|components/*" in ci
@@ -99,7 +99,7 @@ def test_ci_workflow_grants_actions_write_for_reusable_deploy():
     caller (ci.yml). Si ci.yml no declara actions: write, GitHub rechaza el
     run de deploy.yml con startup_failure cuando solicita ese permiso.
     """
-    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    ci = (REPO_ROOT / ".github" / "workflows" / "old" / "ci.yml").read_text()
     assert "actions: write" in ci
 
 
@@ -109,7 +109,7 @@ def test_ci_deploy_workflow_changes_trigger_app_changed():
     Gap descubierto: al cambiar deploy.yml sin tocar código de app, el deploy
     era skipped y había que hacer workflow_dispatch manual para validarlo.
     """
-    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    ci = (REPO_ROOT / ".github" / "workflows" / "old" / "ci.yml").read_text()
 
     app_arm_pos = ci.index("app_changed=true")
     deploy_yml_pos = ci.index(".github/workflows/deploy.yml")
@@ -125,7 +125,7 @@ def test_ci_ci_workflow_changes_trigger_scripts_changed():
     Garantiza que modificar el propio CI siempre ejercita los tests
     estructurales que lo protegen.
     """
-    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    ci = (REPO_ROOT / ".github" / "workflows" / "old" / "ci.yml").read_text()
 
     scripts_arm_pos = ci.index("scripts_changed=true")
     ci_yml_pos = ci.index(".github/workflows/ci.yml")
@@ -136,7 +136,7 @@ def test_ci_ci_workflow_changes_trigger_scripts_changed():
 
 
 def test_ci_workflow_detects_application_and_infrastructure_changes():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "ci.yml").read_text()
 
     for expected_path in (
         "permissions:",
@@ -152,7 +152,7 @@ def test_ci_workflow_detects_application_and_infrastructure_changes():
 
 
 def test_ci_workflow_stops_after_validation_and_does_not_embed_deploy():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "ci.yml").read_text()
 
     assert "\n  deploy:\n" not in workflow, (
         "ci.yml debe terminar en validación; el deploy a producción debe vivir en un workflow separado"
@@ -163,7 +163,7 @@ def test_ci_workflow_stops_after_validation_and_does_not_embed_deploy():
 
 
 def test_deploy_workflow_can_start_after_successful_ci_on_main():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     assert "workflows: [CI]" in workflow or "workflows:\n      - CI" in workflow, (
         "deploy.yml debe reaccionar a CI verde para mantener CD separado de la validación"
@@ -178,7 +178,7 @@ def test_deploy_workflow_can_start_after_successful_ci_on_main():
 
 
 def test_deploy_workflow_requires_explicit_force_for_manual_main_redeploy():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     assert "force:" in workflow, (
         "workflow_dispatch debe exponer un input force para distinguir redeploy manual real de un dispatch redundante"
@@ -203,9 +203,9 @@ def test_workflows_use_node24_native_actions():
         "actions/setup-go@v6",
     ]
     workflows_with_actions = [
-        ".github/workflows/ci.yml",
-        ".github/workflows/deploy.yml",
-        ".github/workflows/operations.yml",
+        ".github/workflows/old/ci.yml",
+        ".github/workflows/old/deploy.yml",
+        ".github/workflows/old/operations.yml",
     ]
     for rel_path in workflows_with_actions:
         workflow = (REPO_ROOT / rel_path).read_text()
@@ -240,7 +240,7 @@ def test_bootstrap_deploy_workflow_is_removed():
 class TestDeployWorkflowBuildStep:
 
     def setup_method(self):
-        self.workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+        self.workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     # ── Método de autenticación DOCR ─────────────────────────────────────────
 
@@ -336,7 +336,7 @@ class TestDeployWorkflowBuildStep:
 
     def test_gc_in_operations_workflow(self):
         """El GC de registry debe vivir en operations.yml vía script dedicado."""
-        ops = (REPO_ROOT / ".github" / "workflows" / "operations.yml").read_text()
+        ops = (REPO_ROOT / ".github" / "workflows" / "old" / "operations.yml").read_text()
         assert "bash scripts/registry-gc.sh" in ops
         assert "schedule" in ops
 
@@ -491,7 +491,7 @@ class TestDeployWorkflowBuildStep:
 class TestDeployJobDroplet:
 
     def setup_method(self):
-        self.workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+        self.workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
     def test_scp_docker_compose_uses_strip_components_zero(self):
         """strip_components >= 1 excluye silenciosamente archivos sin subdirectorios.

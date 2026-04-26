@@ -1,6 +1,18 @@
+include:
+  - local: .gitlab/ci/validate.yml
+  - local: .gitlab/ci/terraform.yml
+  - local: .gitlab/ci/deploy.yml
+  - local: .gitlab/ci/setup.yml
+  - local: .gitlab/ci/operations.yml
+
 stages:
   - build
   - validate
+  - plan
+  - apply
+  - deploy
+  - setup
+  - ops
 
 variables:
   CI_IMAGE: registry.digitalocean.com/ebuddy-prod/ci:latest
@@ -11,9 +23,9 @@ default:
     - docker
     - elitemini
 
-# ── Build CI image ───────────────────────────────────────────────────────────
-# Requiere DO_TOKEN como variable en GitLab:
-# Settings → CI/CD → Variables → DO_TOKEN (masked)
+# ── Build CI image ────────────────────────────────────────────────────────────
+# Solo corre cuando cambia el Dockerfile, o manualmente.
+# Prerequisito: DO_TOKEN en GitLab CI/CD Variables.
 
 build-ci-image:
   stage: build
@@ -31,23 +43,3 @@ build-ci-image:
     - docker build --pull -t $CI_IMAGE infra/docker/ci/
     - docker push $CI_IMAGE
     - rm -f ~/.docker/config.json
-
-# ── Validate ─────────────────────────────────────────────────────────────────
-
-python-structural-tests:
-  stage: validate
-  image: $CI_IMAGE
-  needs:
-    - job: build-ci-image
-      optional: true
-  script:
-    - python3 -m pytest scripts/tests/ -v --tb=short
-
-ansible-syntax:
-  stage: validate
-  image: $CI_IMAGE
-  needs:
-    - job: build-ci-image
-      optional: true
-  script:
-    - ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml --extra-vars "gitlab_runner_token=dummy"

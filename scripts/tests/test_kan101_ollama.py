@@ -75,5 +75,5 @@ def test_preferences_api_accepts_ai_provider():
     assert "aiProvider" in content
 
 def test_deploy_yml_has_ollama_url():
-    content = read(".github/workflows/deploy.yml")
+    content = read(".github/workflows/old/deploy.yml")
     assert "OLLAMA_BASE_URL" in content

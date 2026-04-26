@@ -18,7 +18,7 @@ def test_registry_gc_script_exists():
 
 
 def test_operations_workflow_uses_registry_gc_script():
-    workflow = read(".github/workflows/operations.yml")
+    workflow = read(".github/workflows/old/operations.yml")
 
     assert "bash scripts/registry-gc.sh" in workflow, (
         "operations.yml debe delegar el GC de DOCR a scripts/registry-gc.sh"
@@ -26,7 +26,7 @@ def test_operations_workflow_uses_registry_gc_script():
 
 
 def test_operations_workflow_no_longer_inlines_registry_gc_logic():
-    workflow = read(".github/workflows/operations.yml")
+    workflow = read(".github/workflows/old/operations.yml")
 
     assert 'doctl registry repository list-tags "$REGISTRY/$REPO"' not in workflow
     assert 'doctl registry repository delete-tag "$REGISTRY/$REPO" "$tag" --force' not in workflow

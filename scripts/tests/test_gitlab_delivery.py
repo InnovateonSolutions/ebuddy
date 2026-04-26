@@ -24,7 +24,7 @@ def test_route53_creates_gitlab_record_to_droplet_ip():
 def test_route53_manages_resend_mail_domain_records():
     dns = read("infra/terraform/dns.tf")
     variables = read("infra/terraform/variables.tf")
-    workflow = read(".github/workflows/terraform.yml")
+    workflow = read(".github/workflows/old/terraform.yml")
 
     assert 'variable "gitlab_mail_domain_name"' in variables
     assert 'variable "gitlab_resend_dkim_public_key"' in variables
@@ -69,7 +69,7 @@ def test_caddyfile_exposes_gitlab_subdomain_and_proxies_to_elitemini():
 
 
 def test_setup_workflow_passes_gitlab_external_url_to_ansible():
-    workflow = read(".github/workflows/setup.yml")
+    workflow = read(".github/workflows/old/setup.yml")
     assert "gitlab_external_url" in workflow, (
         "setup.yml debe pasar gitlab_external_url al playbook para una instalacion reproducible"
     )
@@ -95,7 +95,7 @@ def test_gitlab_role_configures_reverse_proxy_friendly_nginx_port():
 
 
 def test_ci_triggers_gitlab_setup_for_gitlab_ansible_changes():
-    workflow = read(".github/workflows/ci.yml")
+    workflow = read(".github/workflows/old/ci.yml")
     assert "gitlab_changed" in workflow, (
         "CI debe distinguir cambios de GitLab para disparar el playbook correcto"
     )
@@ -105,7 +105,7 @@ def test_ci_triggers_gitlab_setup_for_gitlab_ansible_changes():
 
 
 def test_deploy_writes_gitlab_proxy_env_to_droplet():
-    deploy = read(".github/workflows/deploy.yml")
+    deploy = read(".github/workflows/old/deploy.yml")
     assert "GITLAB_DOMAIN_NAME=gitlab.innovateoncorp.com" in deploy or "GITLAB_DOMAIN_NAME=$" in deploy
     assert "ELITEMINI_TAILSCALE_IP=100.80.59.3" in deploy or "ELITEMINI_TAILSCALE_IP=$" in deploy
 

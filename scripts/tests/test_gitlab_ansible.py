@@ -50,7 +50,7 @@ def test_gitlab_role_enables_gitlab_service():
 
 
 def test_setup_workflow_can_dispatch_gitlab_playbook():
-    workflow = read(".github/workflows/setup.yml")
+    workflow = read(".github/workflows/old/setup.yml")
     assert "install-gitlab" in workflow, (
         "setup.yml debe exponer install-gitlab como playbook manual para elitemini"
     )
@@ -93,8 +93,8 @@ def test_gitlab_runner_role_installs_docker_executor_runner():
 
 def test_gitlab_runner_bootstrap_is_dispatchable_not_automatic():
     doc = read("docs/operations/gitlab-runner.md")
-    setup = read(".github/workflows/setup.yml")
-    ci = read(".github/workflows/ci.yml")
+    setup = read(".github/workflows/old/setup.yml")
+    ci = read(".github/workflows/old/ci.yml")
 
     # Documentado en el runbook
     assert "GITLAB_RUNNER_TOKEN" in doc
@@ -109,13 +109,14 @@ def test_gitlab_runner_bootstrap_is_dispatchable_not_automatic():
 
 
 def test_gitlab_ci_uses_self_hosted_runner_tags_for_initial_validation():
-    workflow = read(".gitlab-ci.yml")
+    root = read(".gitlab-ci.yml")
+    validate = read(".gitlab/ci/validate.yml")
 
-    assert "linux" in workflow
-    assert "docker" in workflow
-    assert "elitemini" in workflow
-    assert "python3 -m pytest scripts/tests/ -v" in workflow
-    assert "ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml" in workflow
+    assert "linux" in root
+    assert "docker" in root
+    assert "elitemini" in root
+    assert "python3 -m pytest scripts/tests/ -v" in validate
+    assert "ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml" in validate
 
 
 def test_gitlab_ci_builds_and_uses_custom_ci_image():

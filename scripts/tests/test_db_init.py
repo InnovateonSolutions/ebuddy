@@ -130,7 +130,7 @@ class TestDBInitCLI:
         assert permissions == 0o600, f"Expected 600, got {oct(permissions)}"
 
     def test_operations_workflow_no_longer_installs_jinja_for_db_init(self):
-        workflow = (REPO_ROOT / ".github" / "workflows" / "operations.yml").read_text()
+        workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "operations.yml").read_text()
 
         assert "pip install jinja2" not in workflow
         assert "python3 scripts/db-init.py --output /tmp/init.sql" in workflow

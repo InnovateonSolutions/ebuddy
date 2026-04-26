@@ -30,7 +30,7 @@ def test_package_json_exposes_e2e_navigation_scripts():
 
 
 def test_ci_runs_browser_navigation_checks_for_app_changes():
-    workflow = read(".github/workflows/ci.yml")
+    workflow = read(".github/workflows/old/ci.yml")
 
     assert "Browser E2E" in workflow, (
         "ci.yml debe incluir un job de navegador para navegabilidad crítica"

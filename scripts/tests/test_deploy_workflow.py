@@ -4,7 +4,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _deploy_yml() -> str:
-    return (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+    return (REPO_ROOT / ".github" / "workflows" / "old" / "deploy.yml").read_text()
 
 
 def test_prometheus_url_written_to_env_on_deploy():

@@ -1,0 +1,216 @@
+name: Operations
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 00:00 America/Tijuana (UTC-6) — sin deploys activos
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Operacion a ejecutar'
+        required: true
+        default: registry-gc
+        type: choice
+        options:
+          - registry-gc
+          - sync-secrets
+          - infra-verify
+          - droplet-smoke
+          - db-connectivity
+          - db-init
+          - whatsapp-config
+          - due-notifications
+
+jobs:
+  registry-gc:
+    name: Registry Garbage Collection
+    if: github.event_name == 'schedule' || github.event.inputs.task == 'registry-gc'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_TOKEN }}
+
+      - name: Run registry garbage collection
+        run: bash scripts/registry-gc.sh
+
+  sync-secrets:
+    name: Sync Runtime Secrets
+    if: ${{ github.event.inputs.task == 'sync-secrets' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load config
+        id: config
+        run: |
+          source infra/config/main.env
+          echo "droplet_name=${APP_NAME}-${ENVIRONMENT}-droplet" >> $GITHUB_OUTPUT
+          echo "app_url=$NEXT_PUBLIC_APP_URL" >> $GITHUB_OUTPUT
+
+      - name: Get Droplet IP
+        id: droplet
+        run: |
+          IP=$(DROPLET_NAME="${{ steps.config.outputs.droplet_name }}" \
+            DO_TOKEN="${{ secrets.DO_TOKEN }}" \
+            python3 scripts/get-droplet-ip.py)
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Write runtime env
+        uses: appleboy/ssh-action@v1
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
+          WHATSAPP_OWNER_USER_ID: ${{ secrets.WHATSAPP_OWNER_USER_ID }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          DO_MONITORING_TOKEN: ${{ secrets.DO_MONITORING_TOKEN }}
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+          OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
+          OPENCLAW_BASE_URL: ${{ secrets.OPENCLAW_BASE_URL }}
+          OPENCLAW_HOOK_TOKEN: ${{ secrets.OPENCLAW_HOOK_TOKEN }}
+          OPENCLAW_GATEWAY_TOKEN: ${{ secrets.OPENCLAW_GATEWAY_TOKEN }}
+        with:
+          host: ${{ steps.droplet.outputs.ip }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          envs: DATABASE_URL,AUTH_SECRET,OPENAI_API_KEY,ANTHROPIC_API_KEY,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,GOOGLE_REDIRECT_URI,RESEND_API_KEY,CRON_SECRET,WHATSAPP_WEBHOOK_VERIFY_TOKEN,WHATSAPP_PHONE_NUMBER_ID,WHATSAPP_API_TOKEN,WHATSAPP_OWNER_USER_ID,EMAIL_FROM,DO_MONITORING_TOKEN,DO_TOKEN,OLLAMA_BASE_URL,OPENCLAW_BASE_URL,OPENCLAW_HOOK_TOKEN,OPENCLAW_GATEWAY_TOKEN
+          script: |
+            env | grep -E '^(DATABASE_URL|AUTH_SECRET|OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GOOGLE_REDIRECT_URI|RESEND_API_KEY|CRON_SECRET|WHATSAPP_WEBHOOK_VERIFY_TOKEN|WHATSAPP_PHONE_NUMBER_ID|WHATSAPP_API_TOKEN|WHATSAPP_OWNER_USER_ID|EMAIL_FROM|DO_MONITORING_TOKEN|DO_TOKEN|OLLAMA_BASE_URL|OPENCLAW_BASE_URL|OPENCLAW_HOOK_TOKEN|OPENCLAW_GATEWAY_TOKEN)=' \
+              > /opt/ebuddy/.env
+            echo "NODE_ENV=production" >> /opt/ebuddy/.env
+            echo "AUTH_URL=https://ebuddy.innovateoncorp.com" >> /opt/ebuddy/.env
+            echo "PROMETHEUS_URL=http://host.docker.internal:9090" >> /opt/ebuddy/.env
+            echo "ELITEMINI_INSTANCE=100.80.59.3:9100" >> /opt/ebuddy/.env
+            chmod 600 /opt/ebuddy/.env
+            echo "✓ /opt/ebuddy/.env actualizado ($(wc -l < /opt/ebuddy/.env) vars)"
+
+  infra-verify:
+    name: Verify Infrastructure State
+    if: ${{ github.event.inputs.task == 'infra-verify' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            scripts/go.mod
+            scripts/go.sum
+
+      - name: Build infra-verify
+        working-directory: scripts
+        run: go build -o /tmp/infra-verify ./infra-verify/
+
+      - name: Verify infrastructure state
+        run: /tmp/infra-verify
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+          APP_NAME: ebuddy
+          ENVIRONMENT: prod
+
+  droplet-smoke:
+    name: Droplet Smoke Test
+    if: ${{ github.event.inputs.task == 'droplet-smoke' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            scripts/go.mod
+            scripts/go.sum
+
+      - name: Build smoke test
+        working-directory: scripts
+        run: go build -o /tmp/smoke-droplet ./smoke-droplet/
+
+      - name: Resolve Droplet IP
+        id: ip
+        run: echo "droplet_ip=$(python3 scripts/get-droplet-ip.py)" >> "$GITHUB_OUTPUT"
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+          DROPLET_NAME: ebuddy-prod-droplet
+
+      - name: Run smoke test
+        run: /tmp/smoke-droplet
+        env:
+          DROPLET_IP: ${{ steps.ip.outputs.droplet_ip }}
+          APP_URL: https://ebuddy.innovateoncorp.com
+
+  db-connectivity:
+    name: DB Connectivity
+    if: ${{ github.event.inputs.task == 'db-connectivity' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            scripts/go.mod
+            scripts/go.sum
+
+      - name: Build connectivity checker
+        working-directory: scripts
+        run: go build -o /tmp/check-db ./check-db/
+
+      - name: Check TCP + TLS connectivity to PostgreSQL
+        run: /tmp/check-db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  db-init:
+    name: Initialize DB Schema
+    if: ${{ github.event.inputs.task == 'db-init' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Render init SQL
+        run: python3 scripts/db-init.py --output /tmp/init.sql
+        env:
+          ENVIRONMENT: prod
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Apply schema
+        run: psql "$DATABASE_URL" -f /tmp/init.sql
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  whatsapp-config:
+    name: Validate WhatsApp Config
+    if: ${{ github.event.inputs.task == 'whatsapp-config' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate WhatsApp configuration
+        run: bash scripts/check-whatsapp-config.sh
+        env:
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}

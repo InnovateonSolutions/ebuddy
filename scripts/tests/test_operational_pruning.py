@@ -61,8 +61,8 @@ def test_runbook_does_not_describe_legacy_operational_paths():
 
 def test_unique_environment_is_prod_across_operational_configs():
     main_env = read("infra/config/main.env")
-    operations = read(".github/workflows/operations.yml")
-    diagnose = read(".github/workflows/diagnose.yml")
+    operations = read(".github/workflows/old/operations.yml")
+    diagnose = read(".github/workflows/old/diagnose.yml")
 
     assert "ENVIRONMENT=prod" in main_env
     assert "DROPLET_NAME=ebuddy-prod-droplet" in main_env

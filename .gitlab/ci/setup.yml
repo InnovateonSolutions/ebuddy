@@ -1,0 +1,60 @@
+# ── Setup — Ansible playbooks ─────────────────────────────────────────────────
+# Todos los jobs son manuales. Requieren TAILSCALE_AUTH_KEY y ELITEMINI_SSH_KEY.
+
+.ansible-base:
+  stage: setup
+  image: $CI_IMAGE
+  when: manual
+  before_script:
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$ELITEMINI_SSH_KEY" > ~/.ssh/elitemini && chmod 600 ~/.ssh/elitemini
+    - curl -fsSL https://tailscale.com/install.sh | sh
+    - tailscale up --authkey "$TAILSCALE_AUTH_KEY" --accept-routes --hostname gitlab-runner-ci
+    - source infra/config/main.env
+    - export ANSIBLE_CONFIG="$CI_PROJECT_DIR/infra/ansible/ansible.cfg"
+    - export ANSIBLE_PRIVATE_KEY_FILE="$HOME/.ssh/elitemini"
+
+setup-node-exporter:
+  extends: .ansible-base
+  script:
+    - ansible-playbook infra/ansible/playbooks/install-node-exporter.yml
+
+setup-gitlab:
+  extends: .ansible-base
+  script:
+    - ansible-playbook infra/ansible/playbooks/install-gitlab.yml
+      --extra-vars "tailscale_auth_key=$TAILSCALE_AUTH_KEY
+      gitlab_external_url=https://$GITLAB_DOMAIN_NAME
+      gitlab_nginx_listen_port=8929
+      gitlab_smtp_address=$GITLAB_SMTP_ADDRESS
+      gitlab_smtp_port=$GITLAB_SMTP_PORT
+      gitlab_smtp_username=$GITLAB_SMTP_USERNAME
+      gitlab_smtp_domain=$GITLAB_SMTP_DOMAIN
+      gitlab_email_from=$GITLAB_EMAIL_FROM
+      gitlab_email_reply_to=$GITLAB_EMAIL_REPLY_TO
+      resend_api_key=$RESEND_API_KEY"
+
+setup-gitlab-runner:
+  extends: .ansible-base
+  script:
+    - ansible-playbook infra/ansible/playbooks/install-gitlab-runner.yml
+      --extra-vars "gitlab_runner_token=$GITLAB_RUNNER_TOKEN"
+
+.droplet-base:
+  stage: setup
+  image: $CI_IMAGE
+  when: manual
+  before_script:
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$DO_SSH_PRIVATE_KEY" > ~/.ssh/droplet && chmod 600 ~/.ssh/droplet
+    - source infra/config/main.env
+    - export DROPLET_IP=$(DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet" DO_TOKEN="$DO_TOKEN" python3 scripts/get-droplet-ip.py)
+
+setup-ssh-proxy:
+  extends: .droplet-base
+  script:
+    - scp -i ~/.ssh/droplet -o StrictHostKeyChecking=no
+      infra/playbooks/configure-gitlab-ssh-proxy.sh
+      root@$DROPLET_IP:/tmp/
+    - ssh -i ~/.ssh/droplet -o StrictHostKeyChecking=no root@$DROPLET_IP
+      "bash /tmp/configure-gitlab-ssh-proxy.sh"

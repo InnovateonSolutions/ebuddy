@@ -5,7 +5,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_setup_workflow_uses_ansible_for_elitemini_playbooks():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "setup.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "setup.yml").read_text()
 
     assert "ansible-playbook" in workflow, (
         "setup.yml debe ejecutar ansible-playbook para el target elitemini"
@@ -25,7 +25,7 @@ def test_setup_workflow_uses_ansible_for_elitemini_playbooks():
 
 
 def test_setup_workflow_keeps_shell_transport_for_droplet_setup():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "setup.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "setup.yml").read_text()
 
     assert "Copy playbook to Droplet" in workflow
     assert "Run playbook on Droplet" in workflow
@@ -60,7 +60,7 @@ def test_ansible_cfg_uses_core_compatible_callback():
 
 
 def test_ci_triggers_elitemini_setup_when_ansible_folder_changes():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    workflow = (REPO_ROOT / ".github" / "workflows" / "old" / "ci.yml").read_text()
 
     assert "ansible_changed" in workflow, (
         "ci.yml debe detectar cambios en infra/ansible para disparar setup automatico"

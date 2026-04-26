@@ -1,0 +1,72 @@
+# ── Terraform ────────────────────────────────────────────────────────────────
+
+.terraform-base:
+  image: hashicorp/terraform:1.10
+  variables:
+    TF_VAR_do_token: $DO_TOKEN
+  cache:
+    key: tf-providers-$CI_COMMIT_REF_SLUG
+    paths:
+      - infra/terraform/.terraform/
+  before_script:
+    - cd infra/terraform
+    - source ../config/main.env
+    - export TF_VAR_do_region=$DO_REGION
+    - export TF_VAR_app_name=$APP_NAME
+    - export TF_VAR_environment=$ENVIRONMENT
+    - export TF_VAR_domain_name=$DOMAIN_NAME
+    - export TF_VAR_gitlab_domain_name=$GITLAB_DOMAIN_NAME
+    - export TF_VAR_gitlab_mail_domain_name=$GITLAB_SMTP_DOMAIN
+    - export TF_VAR_gitlab_resend_dkim_public_key=$GITLAB_RESEND_DKIM_PUBLIC_KEY
+    - export TF_VAR_droplet_size=$DROPLET_SIZE
+    - export TF_VAR_alert_email=$ALERT_EMAIL
+    - export TF_VAR_enable_route53=true
+    - |
+      # Deriva la SSH pub key desde el deploy key
+      echo "$DO_SSH_PRIVATE_KEY" > /tmp/deploy-key && chmod 600 /tmp/deploy-key
+      export TF_VAR_ssh_pub_key="$(ssh-keygen -y -f /tmp/deploy-key)"
+    - |
+      # Crea el bucket de estado si no existe
+      AWS_ACCESS_KEY_ID=$DO_SPACES_ACCESS_KEY \
+      AWS_SECRET_ACCESS_KEY=$DO_SPACES_SECRET_KEY \
+      aws s3api create-bucket \
+        --bucket ebuddy-tfstate \
+        --region us-east-1 \
+        --endpoint-url https://nyc3.digitaloceanspaces.com 2>&1 \
+        | grep -v "BucketAlreadyOwnedByYou" || true
+    - |
+      for i in 1 2 3; do
+        terraform init \
+          -backend-config="access_key=$DO_SPACES_ACCESS_KEY" \
+          -backend-config="secret_key=$DO_SPACES_SECRET_KEY" && break
+        [ $i -lt 3 ] && echo "terraform init retry $i/3..." && sleep 15
+      done
+    # AWS credentials para Route 53
+    - export AWS_ACCESS_KEY_ID=$TF_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$TF_AWS_SECRET_ACCESS_KEY
+    - export AWS_DEFAULT_REGION=us-east-1
+
+terraform-plan:
+  extends: .terraform-base
+  stage: plan
+  rules:
+    - changes:
+        - infra/terraform/**/*
+        - infra/config/**/*
+  script:
+    - terraform validate
+    - terraform plan -no-color
+
+terraform-apply:
+  extends: .terraform-base
+  stage: apply
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - infra/terraform/**/*
+        - infra/config/**/*
+      when: manual
+  script:
+    - terraform apply -auto-approve -no-color
+  environment:
+    name: production

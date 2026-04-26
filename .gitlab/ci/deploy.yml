@@ -1,0 +1,213 @@
+# ── Deploy ───────────────────────────────────────────────────────────────────
+
+.docr-login: &docr-login
+  - mkdir -p ~/.docker
+  - |
+    echo "{\"auths\":{\"registry.digitalocean.com\":{\"auth\":\"$(printf 'docr:%s' "$DO_TOKEN" | base64 | tr -d '\n')\"}}}" \
+      > ~/.docker/config.json
+
+.droplet-ssh-key: &droplet-ssh-key
+  - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+  - echo "$DO_SSH_PRIVATE_KEY" > ~/.ssh/droplet && chmod 600 ~/.ssh/droplet
+  - ssh-keyscan -H $(python3 scripts/get-droplet-ip.py) >> ~/.ssh/known_hosts 2>/dev/null || true
+
+.get-droplet-ip: &get-droplet-ip
+  - |
+    source infra/config/main.env
+    export DROPLET_IP=$(DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet" DO_TOKEN="$DO_TOKEN" python3 scripts/get-droplet-ip.py)
+    echo "DROPLET_IP=$DROPLET_IP" >> build.env
+
+build-push:
+  stage: deploy
+  image: docker:27
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
+    IMAGE_NAME: registry.digitalocean.com/ebuddy-prod/ebuddy
+    NEXT_PUBLIC_APP_URL: https://ebuddy.innovateoncorp.com
+    NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - app/**/*
+        - features/**/*
+        - components/**/*
+        - hooks/**/*
+        - lib/**/*
+        - types/**/*
+        - public/**/*
+        - db/**/*
+        - drizzle/**/*
+        - middleware.ts
+        - package.json
+        - package-lock.json
+        - tsconfig.json
+        - next.config.*
+        - tailwind.config.ts
+        - Dockerfile
+        - docker-compose.yml
+        - docker-compose.prod.yml
+        - infra/caddy/**/*
+  script:
+    - *docr-login
+    - docker buildx create --use --name builder 2>/dev/null || docker buildx use builder
+    - |
+      for i in 1 2; do
+        docker buildx build \
+          --push \
+          --tag $IMAGE_NAME:sha-$CI_COMMIT_SHORT_SHA \
+          --tag $IMAGE_NAME:latest \
+          --build-arg NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+          --build-arg NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=$NEXT_PUBLIC_GOOGLE_AUTH_ENABLED \
+          --cache-from type=registry,ref=$IMAGE_NAME:buildcache \
+          --cache-to type=registry,ref=$IMAGE_NAME:buildcache,mode=max \
+          . && break
+        [ $i -lt 2 ] && echo "Retry build..." && sleep 30
+      done
+    - rm -f ~/.docker/config.json
+  artifacts:
+    reports:
+      dotenv: build.env
+
+build-migrator:
+  stage: deploy
+  image: docker:27
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
+    IMAGE_NAME: registry.digitalocean.com/ebuddy-prod/ebuddy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - drizzle/**/*
+        - lib/db/**/*
+        - drizzle.config.ts
+        - package.json
+        - package-lock.json
+        - Dockerfile
+  script:
+    - *docr-login
+    - docker buildx create --use --name builder 2>/dev/null || docker buildx use builder
+    - |
+      for i in 1 2; do
+        docker buildx build \
+          --push \
+          --target migrator \
+          --tag $IMAGE_NAME:migrator \
+          --cache-from type=registry,ref=$IMAGE_NAME:buildcache \
+          . && break
+        [ $i -lt 2 ] && echo "Retry migrator build..." && sleep 30
+      done
+    - rm -f ~/.docker/config.json
+
+deploy-app:
+  stage: deploy
+  image: $CI_IMAGE
+  needs:
+    - job: build-push
+      optional: false
+    - job: build-migrator
+      optional: true
+    - job: build-ci-image
+      optional: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - app/**/*
+        - features/**/*
+        - components/**/*
+        - hooks/**/*
+        - lib/**/*
+        - types/**/*
+        - public/**/*
+        - db/**/*
+        - drizzle/**/*
+        - middleware.ts
+        - package.json
+        - Dockerfile
+        - docker-compose.prod.yml
+        - infra/caddy/**/*
+        - scripts/droplet-deploy.sh
+  script:
+    - *droplet-ssh-key
+    - *get-droplet-ip
+    - source build.env
+    - SSH="ssh -i ~/.ssh/droplet -o StrictHostKeyChecking=no root@$DROPLET_IP"
+    - SCP="scp -i ~/.ssh/droplet -o StrictHostKeyChecking=no"
+    # Sube configs
+    - $SCP infra/caddy/Caddyfile root@$DROPLET_IP:/opt/ebuddy/
+    - $SCP infra/prometheus/prometheus.yml root@$DROPLET_IP:/opt/ebuddy/
+    - $SCP docker-compose.prod.yml root@$DROPLET_IP:/opt/ebuddy/
+    - $SCP scripts/droplet-deploy.sh root@$DROPLET_IP:/usr/local/bin/droplet-deploy.sh
+    # Refresca credenciales DOCR en el droplet
+    - |
+      $SSH "mkdir -p /root/.docker && \
+        AUTH=\$(printf 'docr:%s' '$DO_TOKEN' | base64 -w 0) && \
+        printf '{\"auths\":{\"registry.digitalocean.com\":{\"auth\":\"%s\"}}}\n' \"\$AUTH\" \
+          > /root/.docker/config.json && chmod 600 /root/.docker/config.json"
+    # Escribe .env en el droplet
+    - |
+      $SSH "cat > /opt/ebuddy/.env << 'ENVEOF'
+      DATABASE_URL=$DATABASE_URL
+      AUTH_SECRET=$AUTH_SECRET
+      OPENAI_API_KEY=$OPENAI_API_KEY
+      ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+      GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+      GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+      GOOGLE_REDIRECT_URI=$GOOGLE_REDIRECT_URI
+      RESEND_API_KEY=$RESEND_API_KEY
+      CRON_SECRET=$CRON_SECRET
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN=$WHATSAPP_WEBHOOK_VERIFY_TOKEN
+      WHATSAPP_PHONE_NUMBER_ID=$WHATSAPP_PHONE_NUMBER_ID
+      WHATSAPP_API_TOKEN=$WHATSAPP_API_TOKEN
+      WHATSAPP_OWNER_USER_ID=$WHATSAPP_OWNER_USER_ID
+      EMAIL_FROM=$EMAIL_FROM
+      DO_MONITORING_TOKEN=$DO_MONITORING_TOKEN
+      DO_TOKEN=$DO_TOKEN
+      OLLAMA_BASE_URL=$OLLAMA_BASE_URL
+      OPENCLAW_BASE_URL=$OPENCLAW_BASE_URL
+      OPENCLAW_HOOK_TOKEN=$OPENCLAW_HOOK_TOKEN
+      OPENCLAW_GATEWAY_TOKEN=$OPENCLAW_GATEWAY_TOKEN
+      MICROSOFT_CLIENT_ID=$MICROSOFT_CLIENT_ID
+      MICROSOFT_CLIENT_SECRET=$MICROSOFT_CLIENT_SECRET
+      MICROSOFT_REDIRECT_URI=$MICROSOFT_REDIRECT_URI
+      MICROSOFT_TENANT_ID=$MICROSOFT_TENANT_ID
+      NODE_ENV=production
+      AUTH_URL=https://ebuddy.innovateoncorp.com
+      PROMETHEUS_URL=http://host.docker.internal:9090
+      ELITEMINI_INSTANCE=100.80.59.3:9100
+      ELITEMINI_TAILSCALE_IP=100.80.59.3
+      GITLAB_DOMAIN_NAME=gitlab.innovateoncorp.com
+      ENVEOF
+      chmod 600 /opt/ebuddy/.env"
+    # Corre migraciones si cambió el schema
+    - |
+      if [ -n "$CI_JOB_NEEDS" ] || docker image inspect registry.digitalocean.com/ebuddy-prod/ebuddy:migrator &>/dev/null 2>&1; then
+        $SSH "docker pull registry.digitalocean.com/ebuddy-prod/ebuddy:migrator && \
+          docker run --rm --env-file /opt/ebuddy/.env \
+          registry.digitalocean.com/ebuddy-prod/ebuddy:migrator" || true
+      fi
+    # Deploy
+    - $SSH "chmod +x /usr/local/bin/droplet-deploy.sh && bash /usr/local/bin/droplet-deploy.sh"
+    # Reload Caddy
+    - |
+      $SSH "for i in 1 2 3 4 5 6 7 8; do
+        docker compose -f /opt/ebuddy/docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile && exit 0
+        sleep 2
+      done
+      docker compose -f /opt/ebuddy/docker-compose.prod.yml up -d --force-recreate caddy"
+
+e2e-smoke:
+  stage: deploy
+  image: $CI_IMAGE
+  needs: [deploy-app]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  script:
+    - |
+      for i in $(seq 1 12); do
+        curl -fsS https://ebuddy.innovateoncorp.com/api/health | grep -q '"status":"ok"' && exit 0
+        sleep 5
+      done
+      echo "App no respondió saludable" && exit 1
+    - bash scripts/e2e/smoke.sh
+  variables:
+    APP_URL: https://ebuddy.innovateoncorp.com

@@ -1,0 +1,88 @@
+# ── Operations ───────────────────────────────────────────────────────────────
+# Jobs programados y manuales de mantenimiento.
+# Programados: configurar en GitLab → CI/CD → Schedules → cron: "0 6 * * *"
+
+.ops-base:
+  stage: ops
+  image: $CI_IMAGE
+  needs: []
+
+registry-gc:
+  extends: .ops-base
+  only:
+    - schedules
+  script:
+    - bash scripts/registry-gc.sh
+  variables:
+    DO_TOKEN: $DO_TOKEN
+
+sync-secrets:
+  extends: .ops-base
+  when: manual
+  before_script:
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$DO_SSH_PRIVATE_KEY" > ~/.ssh/droplet && chmod 600 ~/.ssh/droplet
+    - source infra/config/main.env
+    - export DROPLET_IP=$(DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet" DO_TOKEN="$DO_TOKEN" python3 scripts/get-droplet-ip.py)
+  script:
+    - |
+      ssh -i ~/.ssh/droplet -o StrictHostKeyChecking=no root@$DROPLET_IP "cat > /opt/ebuddy/.env << 'ENVEOF'
+      DATABASE_URL=$DATABASE_URL
+      AUTH_SECRET=$AUTH_SECRET
+      OPENAI_API_KEY=$OPENAI_API_KEY
+      ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+      GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+      GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+      GOOGLE_REDIRECT_URI=$GOOGLE_REDIRECT_URI
+      RESEND_API_KEY=$RESEND_API_KEY
+      CRON_SECRET=$CRON_SECRET
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN=$WHATSAPP_WEBHOOK_VERIFY_TOKEN
+      WHATSAPP_PHONE_NUMBER_ID=$WHATSAPP_PHONE_NUMBER_ID
+      WHATSAPP_API_TOKEN=$WHATSAPP_API_TOKEN
+      WHATSAPP_OWNER_USER_ID=$WHATSAPP_OWNER_USER_ID
+      EMAIL_FROM=$EMAIL_FROM
+      DO_MONITORING_TOKEN=$DO_MONITORING_TOKEN
+      DO_TOKEN=$DO_TOKEN
+      OLLAMA_BASE_URL=$OLLAMA_BASE_URL
+      OPENCLAW_BASE_URL=$OPENCLAW_BASE_URL
+      OPENCLAW_HOOK_TOKEN=$OPENCLAW_HOOK_TOKEN
+      OPENCLAW_GATEWAY_TOKEN=$OPENCLAW_GATEWAY_TOKEN
+      NODE_ENV=production
+      AUTH_URL=https://ebuddy.innovateoncorp.com
+      PROMETHEUS_URL=http://host.docker.internal:9090
+      ELITEMINI_INSTANCE=100.80.59.3:9100
+      ELITEMINI_TAILSCALE_IP=100.80.59.3
+      GITLAB_DOMAIN_NAME=gitlab.innovateoncorp.com
+      ENVEOF
+      chmod 600 /opt/ebuddy/.env && echo '✓ .env actualizado'"
+
+diagnose:
+  extends: .ops-base
+  when: manual
+  before_script:
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$DO_SSH_PRIVATE_KEY" > ~/.ssh/droplet && chmod 600 ~/.ssh/droplet
+    - source infra/config/main.env
+    - export DROPLET_IP=$(DROPLET_NAME="${APP_NAME}-${ENVIRONMENT}-droplet" DO_TOKEN="$DO_TOKEN" python3 scripts/get-droplet-ip.py)
+  script:
+    - |
+      ssh -i ~/.ssh/droplet -o StrictHostKeyChecking=no root@$DROPLET_IP "
+        echo '=== docker logs (últimas 100 líneas) ==='
+        docker logs ebuddy-prod-app-1 --tail 100 2>&1 || \
+          docker compose -f /opt/ebuddy/docker-compose.prod.yml logs app --tail 100 2>&1
+        echo '=== containers ==='
+        docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+      "
+
+db-connectivity:
+  extends: .ops-base
+  when: manual
+  script:
+    - cd scripts && go build -o /tmp/check-db ./check-db/ && /tmp/check-db
+  image: golang:1.24-bookworm
+
+whatsapp-config:
+  extends: .ops-base
+  when: manual
+  script:
+    - bash scripts/check-whatsapp-config.sh

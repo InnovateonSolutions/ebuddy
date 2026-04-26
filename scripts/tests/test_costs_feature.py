@@ -33,7 +33,7 @@ def test_costs_service_handles_missing_token():
 
 
 def test_do_token_written_to_env_on_deploy():
-    deploy = read(".github/workflows/deploy.yml")
+    deploy = read(".github/workflows/old/deploy.yml")
     assert "DO_TOKEN: ${{ secrets.DO_TOKEN }}" in deploy, (
         "DO_TOKEN debe estar en el bloque env: del step Write .env"
     )
