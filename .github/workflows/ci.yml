@@ -62,7 +62,7 @@ jobs:
             esac
 
             case "$file" in
-              infra/*|.github/workflows/terraform.yml)
+              infra/terraform/*|infra/config/*|.github/workflows/terraform.yml)
                 infra_changed=true
                 ;;
             esac

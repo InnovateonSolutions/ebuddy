@@ -116,16 +116,30 @@ jobs:
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
           echo "TF_VAR_enable_route53=${{ needs.preflight.outputs.manage_dns }}" >> $GITHUB_ENV
 
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: tf-providers-${{ hashFiles('infra/terraform/.terraform.lock.hcl') }}
+          restore-keys: tf-providers-
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '~> 1.10'
 
-      # Credenciales DO Spaces vía -backend-config para no pisar las de OIDC (AWS)
+      # Credenciales DO Spaces vía -backend-config para no pisar las de OIDC (AWS).
+      # Retry 3 veces: registry.terraform.io devuelve 502 esporádico al descargar providers.
       - name: Terraform Init
+        env:
+          TF_PLUGIN_CACHE_DIR: ~/.terraform.d/plugin-cache
         run: |
-          terraform init \
-            -backend-config="access_key=${{ secrets.DO_SPACES_ACCESS_KEY }}" \
-            -backend-config="secret_key=${{ secrets.DO_SPACES_SECRET_KEY }}"
+          mkdir -p ~/.terraform.d/plugin-cache
+          for i in 1 2 3; do
+            terraform init \
+              -backend-config="access_key=${{ secrets.DO_SPACES_ACCESS_KEY }}" \
+              -backend-config="secret_key=${{ secrets.DO_SPACES_SECRET_KEY }}" && break
+            [ $i -lt 3 ] && echo "terraform init retry $i/3..." && sleep 15
+          done
 
       - name: Terraform Validate
         run: terraform validate
@@ -184,15 +198,28 @@ jobs:
           echo "TF_VAR_alert_email=$ALERT_EMAIL"   >> $GITHUB_ENV
           echo "TF_VAR_enable_route53=${{ needs.preflight.outputs.manage_dns }}" >> $GITHUB_ENV
 
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: tf-providers-${{ hashFiles('infra/terraform/.terraform.lock.hcl') }}
+          restore-keys: tf-providers-
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '~> 1.10'
 
       - name: Terraform Init
+        env:
+          TF_PLUGIN_CACHE_DIR: ~/.terraform.d/plugin-cache
         run: |
-          terraform init \
-            -backend-config="access_key=${{ secrets.DO_SPACES_ACCESS_KEY }}" \
-            -backend-config="secret_key=${{ secrets.DO_SPACES_SECRET_KEY }}"
+          mkdir -p ~/.terraform.d/plugin-cache
+          for i in 1 2 3; do
+            terraform init \
+              -backend-config="access_key=${{ secrets.DO_SPACES_ACCESS_KEY }}" \
+              -backend-config="secret_key=${{ secrets.DO_SPACES_SECRET_KEY }}" && break
+            [ $i -lt 3 ] && echo "terraform init retry $i/3..." && sleep 15
+          done
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color
