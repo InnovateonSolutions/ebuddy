@@ -134,11 +134,12 @@
       --locked=false
   when: not gitlab_runner_registered
   no_log: true
+  register: gitlab_runner_register_result
 
 - name: Ensure GitLab Runner service is enabled and running
   ansible.builtin.service:
     name: gitlab-runner
-    state: "{{ 'restarted' if gitlab_runner_docker_group.changed else 'started' }}"
+    state: "{{ 'restarted' if (gitlab_runner_docker_group.changed or gitlab_runner_register_result.changed) else 'started' }}"
     enabled: true
 
 - name: Remove temporary GitLab Runner signing key
