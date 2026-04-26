@@ -116,3 +116,23 @@ def test_gitlab_ci_uses_self_hosted_runner_tags_for_initial_validation():
     assert "elitemini" in workflow
     assert "python3 -m pytest scripts/tests/ -v" in workflow
     assert "ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml" in workflow
+
+
+def test_gitlab_ci_builds_and_uses_custom_ci_image():
+    workflow = read(".gitlab-ci.yml")
+    dockerfile = read("infra/docker/ci/Dockerfile")
+
+    # El pipeline construye la imagen custom
+    assert "build-ci-image" in workflow
+    assert "registry.digitalocean.com/ebuddy-prod/ci" in workflow
+    assert "docker build" in workflow
+    assert "docker push" in workflow
+
+    # Los jobs usan la imagen custom, no python:3.12-slim directamente
+    assert "CI_IMAGE" in workflow
+    assert "python:3.12-slim" not in workflow
+
+    # El Dockerfile preinstala las deps de CI
+    assert "pytest" in dockerfile
+    assert "ansible-core" in dockerfile
+    assert "docker-ce-cli" in dockerfile

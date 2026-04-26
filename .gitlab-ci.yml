@@ -1,5 +1,9 @@
 stages:
+  - build
   - validate
+
+variables:
+  CI_IMAGE: registry.digitalocean.com/ebuddy-prod/ci:latest
 
 default:
   tags:
@@ -7,18 +11,41 @@ default:
     - docker
     - elitemini
 
+# ── Build CI image ───────────────────────────────────────────────────────────
+# Requiere DO_TOKEN como variable en GitLab:
+# Settings → CI/CD → Variables → DO_TOKEN (masked)
+
+build-ci-image:
+  stage: build
+  image: docker:27
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  rules:
+    - changes:
+        - infra/docker/ci/Dockerfile
+    - when: manual
+      allow_failure: true
+  script:
+    - echo "$DO_TOKEN" | docker login registry.digitalocean.com -u docr --password-stdin
+    - docker build --pull -t $CI_IMAGE infra/docker/ci/
+    - docker push $CI_IMAGE
+
+# ── Validate ─────────────────────────────────────────────────────────────────
+
 python-structural-tests:
   stage: validate
-  image: python:3.12-slim
-  before_script:
-    - pip install -r scripts/requirements-test.txt
+  image: $CI_IMAGE
+  needs:
+    - job: build-ci-image
+      optional: true
   script:
     - python3 -m pytest scripts/tests/ -v --tb=short
 
 ansible-syntax:
   stage: validate
-  image: python:3.12-slim
-  before_script:
-    - pip install ansible-core
+  image: $CI_IMAGE
+  needs:
+    - job: build-ci-image
+      optional: true
   script:
     - ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook --syntax-check infra/ansible/playbooks/install-gitlab-runner.yml --extra-vars "gitlab_runner_token=dummy"
