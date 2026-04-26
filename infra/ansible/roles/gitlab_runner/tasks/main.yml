@@ -125,10 +125,12 @@
   changed_when: false
   failed_when: gitlab_reachability.rc != 0
 
-- name: Register GitLab Runner via docker exec
+- name: Register GitLab Runner via docker run --rm
   ansible.builtin.command:
     cmd: >-
-      docker exec gitlab-runner gitlab-runner register
+      docker run --rm
+      --volume /srv/gitlab-runner/config:/etc/gitlab-runner
+      gitlab/gitlab-runner:alpine register
       --non-interactive
       --url "{{ gitlab_runner_url | default('https://gitlab.innovateoncorp.com') }}"
       --token "{{ gitlab_runner_token }}"

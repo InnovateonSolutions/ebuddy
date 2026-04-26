@@ -82,7 +82,8 @@ def test_gitlab_runner_role_installs_docker_executor_runner():
     assert "/srv/gitlab-runner/config:/etc/gitlab-runner" in role
     assert "restart always" in role
     # Registro via docker exec
-    assert "docker exec gitlab-runner gitlab-runner register" in role
+    assert "docker run --rm" in role
+    assert "gitlab/gitlab-runner:alpine register" in role
     assert "--executor docker" in role
     assert "--docker-image ubuntu:24.04" in role
     assert "--tag-list linux,docker,elitemini" in role
