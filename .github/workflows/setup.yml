@@ -22,7 +22,7 @@ on:
         description: 'Playbook a ejecutar'
         required: true
         type: choice
-        options: [install-node-exporter, install-tailscale, configure-openclaw, install-gitlab, install-gitlab-runner]
+        options: [install-node-exporter, install-tailscale, configure-openclaw, install-gitlab, install-gitlab-runner, configure-gitlab-ssh-proxy]
 
 jobs:
   setup:
